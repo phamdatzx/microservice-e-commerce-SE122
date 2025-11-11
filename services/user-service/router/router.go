@@ -21,11 +21,16 @@ func SetupRouter(appRouter *AppRouter) *gin.Engine {
 		middleware.ErrorHandler(),
 	)
 
-	api := engine.Group("/api/v1")
+	api := engine.Group("/api/user")
 	{
 		// Each controller registers its own routes
 		RegisterUserRoutes(api, *appRouter.UserController)
 	}
+
+	//publicApi := engine.Group("/api/public")
+	//{
+	//	RegisterPublicUserRoutes(publicApi, *appRouter.UserController)
+	//}
 
 	return engine
 }
