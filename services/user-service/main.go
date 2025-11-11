@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"user-service/config"
 	"user-service/controller"
 	"user-service/model"
@@ -12,6 +13,7 @@ import (
 func main() {
 	//
 
+	fmt.Println("Hello World")
 	// Kết nối DB
 	config.ConnectDatabase()
 

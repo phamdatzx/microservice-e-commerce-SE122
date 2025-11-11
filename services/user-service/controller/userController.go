@@ -5,12 +5,14 @@ import (
 	"strings"
 	"user-service/dto"
 	appError "user-service/error"
-	"user-service/model"
 	"user-service/service"
 	"user-service/utils"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 )
+
+var validate = validator.New()
 
 type UserController struct {
 	service service.UserService
@@ -21,12 +23,26 @@ func NewUserController(service service.UserService) *UserController {
 }
 
 func (c *UserController) Register(ctx *gin.Context) {
-	var user model.User
-	if err := ctx.ShouldBindJSON(&user); err != nil {
+	var request dto.RegisterRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	resultUser, err := c.service.RegisterUser(user)
+
+	// ✅ validate struct
+	if err := validate.Struct(request); err != nil {
+		// lấy chi tiết lỗi
+		var errors string
+		for _, err := range err.(validator.ValidationErrors) {
+			errors += err.Field() + " is invalid: " + err.Tag() + ", "
+		}
+
+		_ = ctx.Error(appError.NewAppError(400, errors))
+		ctx.Abort()
+		return
+	}
+
+	resultUser, err := c.service.RegisterUser(request)
 	if err != nil {
 		_ = ctx.Error(err)
 		ctx.Abort()
@@ -53,6 +69,7 @@ func (c *UserController) Login(ctx *gin.Context) {
 
 }
 
+// auth-forward verify controller
 func (c *UserController) Verify(ctx *gin.Context) {
 	//get auth header
 	authHeader := ctx.GetHeader("Authorization")
@@ -84,4 +101,22 @@ func (c *UserController) Verify(ctx *gin.Context) {
 	ctx.Header("X-User-Role", claims.Role)
 
 	utils.SuccessResponse(ctx, 200, "Verify successfully", nil)
+}
+
+func (c *UserController) ActivateAccount(ctx *gin.Context) {
+	token := ctx.Query("token")
+	if token == "" {
+		ctx.Error(appError.NewAppError(401, "Invalid token"))
+		ctx.Abort()
+		return
+	}
+
+	err := c.service.ActivateAccount(token)
+	if err != nil {
+		_ = ctx.Error(err)
+		ctx.Abort()
+		return
+	}
+
+	utils.SuccessResponse(ctx, 200, "Activate account successfully", nil)
 }
