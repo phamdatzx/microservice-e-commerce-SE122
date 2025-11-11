@@ -36,7 +36,7 @@ func (r *userRepository) CheckUserExists(username string) (bool, error) {
 
 func (r *userRepository) GetUserByUsername(username string) (*model.User, error) {
 	var user model.User
-	err := r.db.First(&user, "user_name = ?", username).Error
+	err := r.db.First(&user, "username = ?", username).Error
 	if err != nil {
 		return nil, err
 	}
