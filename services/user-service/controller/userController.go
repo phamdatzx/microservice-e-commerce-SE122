@@ -106,17 +106,56 @@ func (c *UserController) Verify(ctx *gin.Context) {
 func (c *UserController) ActivateAccount(ctx *gin.Context) {
 	token := ctx.Query("token")
 	if token == "" {
-		ctx.Error(appError.NewAppError(401, "Invalid token"))
+		ctx.Error(appError.NewAppError(401, "Token is required"))
 		ctx.Abort()
 		return
 	}
 
-	err := c.service.ActivateAccount(token)
-	if err != nil {
+	if err := c.service.ActivateAccount(token); err != nil {
 		_ = ctx.Error(err)
 		ctx.Abort()
 		return
 	}
 
 	utils.SuccessResponse(ctx, 200, "Activate account successfully", nil)
+}
+
+func (c *UserController) SendResetPasswordRequest(ctx *gin.Context) {
+	var request dto.SendResetPasswordRequestDto
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
+
+	if err := c.service.SendResetPasswordRequest(request); err != nil {
+		_ = ctx.Error(appError.NewAppError(400, err.Error()))
+		ctx.Abort()
+		return
+	}
+
+	utils.SuccessResponse(ctx, 200, "SendResetPasswordRequest successfully", nil)
+}
+
+func (c *UserController) ResetPassword(ctx *gin.Context) {
+	//get token from param
+	token := ctx.Query("token")
+	if token == "" {
+		ctx.Error(appError.NewAppError(401, "Token is required"))
+		ctx.Abort()
+		return
+	}
+
+	//get body
+	var request dto.ResetPasswordRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := c.service.ResetPassword(token, request); err != nil {
+		_ = ctx.Error(err)
+		ctx.Abort()
+		return
+	}
+
+	utils.SuccessResponse(ctx, 200, "Reset account password successfully", nil)
 }

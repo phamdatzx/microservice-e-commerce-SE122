@@ -12,6 +12,8 @@ type UserService interface {
 	RegisterUser(user dto.RegisterRequest) (dto.UserResponse, error)
 	Login(request dto.LoginRequest) (dto.LoginResponse, error)
 	ActivateAccount(token string) error
+	SendResetPasswordRequest(request dto.SendResetPasswordRequestDto) error
+	ResetPassword(token string, request dto.ResetPasswordRequest) error
 }
 
 type userService struct {
@@ -86,4 +88,32 @@ func (s *userService) ActivateAccount(token string) error {
 	}
 
 	return s.repo.ActivateAccount(claims.UserID)
+}
+
+func (s *userService) SendResetPasswordRequest(request dto.SendResetPasswordRequestDto) error {
+
+	user, err := s.repo.GetUserByUsername(request.Username)
+	if err != nil {
+		return err
+	}
+
+	token, err := utils.GenerateToken(user.ID.String(), user.Username, user.Role)
+	if err != nil {
+		return err
+	}
+
+	return utils.SendEmail([]string{user.Email}, "Reset your account password", utils.BuildResetPasswordEmailContent(token, user.Email))
+}
+
+func (s *userService) ResetPassword(token string, request dto.ResetPasswordRequest) error {
+	//verify and get claims
+	claims, err := utils.VerifyToken(token)
+	if err != nil {
+		return err
+	}
+	//get user from db
+	user, _ := s.repo.GetUserByUsername(claims.Username)
+	//change new password
+	user.Password, _ = utils.HashPassword(request.Password)
+	return s.repo.Save(user)
 }

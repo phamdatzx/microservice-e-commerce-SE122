@@ -11,6 +11,7 @@ type UserRepository interface {
 	CheckUserExists(username string) (bool, error)
 	GetUserByUsername(username string) (*model.User, error)
 	ActivateAccount(id string) error
+	Save(user *model.User) error
 }
 
 type userRepository struct {
@@ -54,4 +55,8 @@ func (r *userRepository) ActivateAccount(id string) error {
 	user.IsActive = true
 	r.db.Save(&user)
 	return nil
+}
+
+func (r *userRepository) Save(user *model.User) error {
+	return r.db.Save(user).Error
 }

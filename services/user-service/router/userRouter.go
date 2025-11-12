@@ -13,5 +13,7 @@ func RegisterUserRoutes(rg *gin.RouterGroup, c controller.UserController) {
 		user.POST("/login", c.Login)
 		user.POST("/verify", c.Verify)
 		user.POST("/activate", c.ActivateAccount)
+		user.POST("/send-reset-password", c.SendResetPasswordRequest)
+		user.POST("/reset-password", c.ResetPassword)
 	}
 }

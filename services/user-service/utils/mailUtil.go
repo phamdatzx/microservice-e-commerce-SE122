@@ -39,7 +39,30 @@ func SendEmail(to []string, subject, body string) error {
 
 // BuildActivationEmailContent tạo nội dung email kích hoạt tài khoản
 func BuildActivationEmailContent(token, email string) string {
-	activationLink := fmt.Sprintf("https://yourdomain.com/activate?token=%s", token)
+	clientUrl := os.Getenv("CLIENT_URL")
+	activationLink := fmt.Sprintf(clientUrl+"/activate?token=%s", token)
+
+	content := fmt.Sprintf(`
+Hi %s,
+
+Cảm ơn bạn đã đăng ký tài khoản.
+
+Vui lòng nhấn vào link dưới đây để kích hoạt tài khoản của bạn:
+
+%s
+
+Link này sẽ hết hạn sau 24 giờ.
+
+Trân trọng,
+Your App Team
+`, email, activationLink)
+
+	return content
+}
+
+func BuildResetPasswordEmailContent(token, email string) string {
+	clientUrl := os.Getenv("CLIENT_URL")
+	activationLink := fmt.Sprintf(clientUrl+"/reset-password?token=%s", token)
 
 	content := fmt.Sprintf(`
 Hi %s,
