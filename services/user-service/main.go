@@ -10,6 +10,7 @@ import (
 	"user-service/service"
 
 	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
@@ -27,12 +28,13 @@ func main() {
 	userService := service.NewUserService(userRepo)
 	userController := controller.NewUserController(userService)
 
+	r := gin.Default()
+	r.Use(cors.Default())
+
 	// Setup routes
-	r := router.SetupRouter(&router.AppRouter{
+	router.SetupRouter(r, &router.AppRouter{
 		UserController: userController,
 	})
-
-	r.Use(cors.Default())
 
 	r.Run(":8080") // chạy server ở port 8080
 }
