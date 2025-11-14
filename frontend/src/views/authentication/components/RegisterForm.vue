@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { ref, useTemplateRef, onMounted, onBeforeUnmount } from 'vue'
-import '../assets/style.css'
 import PasswordToggleBtn from './PasswordToggleBtn.vue'
 import { handlePasswordToggle } from '@/utils/handlePasswordToggle'
+import './assets/formStyle.css'
 </script>
 
 <template>

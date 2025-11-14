@@ -1,23 +1,19 @@
 <script setup lang="ts">
-import { useTemplateRef } from 'vue'
-import PasswordToggleBtn from './PasswordToggleBtn.vue'
-import { handlePasswordToggle } from '@/utils/handlePasswordToggle'
-import './assets/formStyle.css'
 import { isValidEmail } from '@/utils/isValidEmail'
+import './assets/formStyle.css'
+import { useTemplateRef } from 'vue'
 
-const password = useTemplateRef('password')
 const email = useTemplateRef('email')
 
 const handleLoginFormSubmit = (e: Event) => {
-  if (!email.value || !password.value) return
+  if (!email.value) return
 
   e.preventDefault()
 
   const emailValue = email.value.value
-  const passwordValue = password.value.value
 
   // Basic validation
-  if (!emailValue || !passwordValue) {
+  if (!emailValue) {
     alert('Please fill in all fields')
     return
   }
@@ -56,36 +52,4 @@ const handleLoginFormSubmit = (e: Event) => {
       required
     />
   </div>
-
-  <div class="form-group">
-    <label for="password" class="form-label">Password</label>
-    <div style="position: relative">
-      <input
-        type="password"
-        ref="password"
-        id="password"
-        name="password"
-        class="form-input"
-        placeholder="••••"
-        required
-      />
-      <PasswordToggleBtn @click="handlePasswordToggle" />
-    </div>
-  </div>
-
-  <div style="text-align: right; margin-bottom: 32px">
-    <RouterLink class="forgot-link" to="/forgot-password">Forget Password ?</RouterLink>
-  </div>
 </template>
-
-<style scoped>
-.forgot-link {
-  color: #9ca3af;
-  text-decoration: none;
-  font-size: 14px;
-
-  &:hover {
-    color: #22c55e;
-  }
-}
-</style>

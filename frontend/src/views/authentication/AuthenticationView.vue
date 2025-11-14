@@ -1,19 +1,53 @@
 <script setup lang="ts">
-import { ref, useTemplateRef, onMounted, onBeforeUnmount, watch } from 'vue'
-import { RouterLink, RouterView } from 'vue-router'
-import './assets/style.css'
+import { ref, onMounted, onBeforeUnmount, watch, reactive } from 'vue'
+import { RouterLink } from 'vue-router'
 
 const props = defineProps(['FormComponent', 'formType'])
 
-const isLogingIn = ref(props.formType === 'login')
+const contents = reactive({
+  title: '',
+  subtitle: '',
+  mainBtnText: '',
+  switchText: '',
+  switchLinkUrl: '',
+  switchLinkText: '',
+})
+
+const setContents = (formType: string) => {
+  if (formType === 'login') {
+    contents.title = 'Welcome Back'
+    contents.subtitle = 'LOGIN TO CONTINUE'
+    contents.mainBtnText = 'LOG IN'
+    contents.switchText = 'NEW USER ?'
+    contents.switchLinkUrl = '/register'
+    contents.switchLinkText = 'SIGN UP'
+  } else if (formType === 'register') {
+    contents.title = 'Register'
+    contents.subtitle = 'JOIN TO US'
+    contents.mainBtnText = 'REGISTER'
+    contents.switchText = 'ALREADY USER ?'
+    contents.switchLinkUrl = '/login'
+    contents.switchLinkText = 'LOG IN'
+  } else if (formType === 'forgot-password') {
+    contents.title = 'Forgot Password'
+    contents.subtitle = 'RESET YOUR PASSWORD'
+    contents.mainBtnText = 'RESET PASSWORD'
+    contents.switchText = 'REMEMBERED YOUR PASSWORD ?'
+    contents.switchLinkUrl = '/login'
+    contents.switchLinkText = 'LOG IN'
+  }
+}
+
 watch(
   () => props.formType,
   (newVal) => {
-    isLogingIn.value = newVal === 'login'
+    setContents(newVal)
   },
 )
 
 onMounted(() => {
+  setContents(props.formType)
+
   // Add smooth scrolling for anchor links
   const anchorLinks = document.querySelectorAll<HTMLAnchorElement>('a[href^="#"]')
 
@@ -76,22 +110,20 @@ onMounted(() => {
 
         <div class="form-section">
           <div style="width: 100%; max-width: 400px">
-            <h1 class="title">{{ isLogingIn ? 'Welcome Back' : 'Register' }}</h1>
-            <p class="subtitle">{{ isLogingIn ? 'LOGIN TO CONTINUE' : 'JOIN TO US' }}</p>
+            <h1 class="title">{{ contents.title }}</h1>
+            <p class="subtitle">{{ contents.subtitle }}</p>
 
             <form class="login-form" id="loginForm" ref="loginForm" @submit="handleLoginFormSubmit">
               <FormComponent />
 
               <button type="submit" class="login-btn" ref="loginBtn">
-                {{ isLogingIn ? 'LOG IN' : 'REGISTER' }}
+                {{ contents.mainBtnText }}
               </button>
 
               <div style="text-align: center; font-size: 14px">
-                <span style="color: #9ca3af; margin-right: 8px">{{
-                  isLogingIn ? 'NEW USER ?' : 'ALREADY USER ?'
-                }}</span>
-                <RouterLink :to="isLogingIn ? '/register' : '/login'" class="switch-link">{{
-                  isLogingIn ? 'SIGN UP' : 'LOG IN'
+                <span style="color: #9ca3af; margin-right: 8px">{{ contents.switchText }}</span>
+                <RouterLink :to="contents.switchLinkUrl" class="switch-link">{{
+                  contents.switchLinkText
                 }}</RouterLink>
               </div>
             </form>
@@ -121,39 +153,23 @@ onMounted(() => {
   justify-content: center;
 }
 
+.title {
+  font-size: 36px;
+  font-weight: 700;
+  color: #22c55e;
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  color: #999;
+  font-size: 14px;
+  letter-spacing: 1px;
+  margin-bottom: 40px;
+}
+
 .form-section {
   display: flex;
   justify-content: center;
-}
-
-.form-group {
-  margin-bottom: 24px;
-}
-
-.form-label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 600;
-  color: #333;
-  font-size: 14px;
-}
-
-.form-input {
-  width: 100%;
-  padding: 15px 16px;
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 14px;
-  transition: border-color 0.3s ease;
-
-  &:focus {
-    outline: none;
-    border-color: #22c55e;
-  }
-
-  &::placeholder {
-    color: #9ca3af;
-  }
 }
 
 .login-btn {
@@ -172,6 +188,16 @@ onMounted(() => {
 
 .login-btn:hover {
   transform: translateY(-1px);
+}
+
+.switch-link {
+  color: #22c55e;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.switch-link:hover {
+  text-decoration: underline;
 }
 
 /* Responsive Design */
