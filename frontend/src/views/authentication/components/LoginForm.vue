@@ -3,27 +3,25 @@ import { onMounted, ref, useTemplateRef } from 'vue'
 import PasswordToggleBtn from './PasswordToggleBtn.vue'
 import { handlePasswordToggle } from '@/utils/handlePasswordToggle'
 import './assets/formStyle.css'
-import { isValidEmail } from '@/utils/isValidEmail'
 import axios from 'axios'
 
 const BE_URL = 'http://localhost:8080/api/user/login'
 
-const email = ref('')
+const username = ref('')
 const password = ref('')
 
 const handleLoginFormSubmit = () => {
-  if (!isValidEmail(email.value)) {
-    alert('Please enter a valid email address')
-    return
-  }
-
   axios
     .post(BE_URL, {
-      email: email.value,
+      username: username.value,
       password: password.value,
     })
     .then((response) => {
-      alert('Login successful: ' + response.data)
+      if (response.data.status === 200) {
+        alert('Login successful: ' + response.data)
+      } else {
+        alert('Login failed: ' + response.data)
+      }
     })
     .catch((error) => {
       alert('Login failed: ' + error)
@@ -38,14 +36,13 @@ defineExpose({
 
 <template>
   <div class="form-group">
-    <label for="email" class="form-label">Email Address</label>
+    <label for="username" class="form-label">Username</label>
     <input
-      type="email"
-      id="email"
-      name="email"
+      type="text"
+      name="username"
       class="form-input"
-      placeholder="Example@gmail.com"
-      v-model="email"
+      placeholder="Username"
+      v-model="username"
       required
     />
   </div>

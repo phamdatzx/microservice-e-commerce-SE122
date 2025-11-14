@@ -3,24 +3,35 @@ import PasswordToggleBtn from './PasswordToggleBtn.vue'
 import { handlePasswordToggle } from '@/utils/handlePasswordToggle'
 import './assets/formStyle.css'
 import { ref } from 'vue'
-import { isValidEmail } from '@/utils/isValidEmail'
+import axios from 'axios'
 
+const BE_URL = 'http://localhost:8080/api/user/register'
+
+const name = ref('')
+const username = ref('')
 const email = ref('')
 const password = ref('')
 const confirmPassword = ref('')
-const name = ref('')
 
 const handleRegisterFormSubmit = () => {
-  if (!isValidEmail(email.value)) {
-    alert('Please enter a valid email address')
-    return
-  }
-
-  setTimeout(() => {
-    alert('Register functionality will be done here!')
-    // loginBtn.value.textContent = originalText
-    // loginBtn.value.disabled = false
-  }, 500)
+  axios
+    .post(BE_URL, {
+      name: name.value,
+      username: username.value,
+      email: email.value,
+      password: password.value,
+      role: 'customer',
+    })
+    .then((response) => {
+      if (response.data.status === 200) {
+        alert('Register successful: ' + response.data)
+      } else {
+        alert('Register failed: ' + response.data)
+      }
+    })
+    .catch((error) => {
+      alert('Login failed: ' + error)
+    })
 }
 
 // EXPOSES
@@ -35,7 +46,6 @@ defineExpose({
     <input
       class="form-input"
       type="text"
-      id="name"
       name="name"
       placeholder="Jhon Deo"
       required
@@ -44,14 +54,26 @@ defineExpose({
   </div>
 
   <div class="form-group">
-    <label class="form-label" for="email">Email Address</label>
+    <label class="form-label" for="username">Username</label>
     <input
       class="form-input"
+      type="text"
+      name="username"
+      v-model="username"
+      placeholder="Username"
+      required
+    />
+  </div>
+
+  <div class="form-group">
+    <label for="email" class="form-label">Email Address</label>
+    <input
       type="email"
       id="email"
       name="email"
-      v-model="email"
+      class="form-input"
       placeholder="Example@gmail.com"
+      v-model="email"
       required
     />
   </div>

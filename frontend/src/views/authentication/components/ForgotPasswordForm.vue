@@ -1,33 +1,27 @@
 <script setup lang="ts">
-import { isValidEmail } from '@/utils/isValidEmail'
 import './assets/formStyle.css'
 import { ref } from 'vue'
+import axios from 'axios'
 
-const email = ref('')
+const BE_URL = 'http://localhost:8080/api/user/send-reset-password'
+
+const username = ref('')
 
 const handleForgotPasswordFormSubmit = () => {
-  // Basic validation
-  if (!email.value) {
-    alert('Please fill in all fields')
-    return
-  }
-
-  if (!isValidEmail(email.value)) {
-    alert('Please enter a valid email address')
-    return
-  }
-
-  // // Simulate login process
-  // const originalText = loginBtn.value.textContent
-
-  // loginBtn.value.textContent = 'LOGGING IN...'
-  // loginBtn.value.disabled = true
-
-  setTimeout(() => {
-    alert('Forgot password functionality will be done here!')
-    // loginBtn.value.textContent = originalText
-    // loginBtn.value.disabled = false
-  }, 500)
+  axios
+    .post(BE_URL, {
+      username: username.value,
+    })
+    .then((response) => {
+      if (response.data.status === 200) {
+        alert('Login successful: ' + response.data)
+      } else {
+        alert('Login failed: ' + response.data)
+      }
+    })
+    .catch((error) => {
+      alert('Login failed: ' + error)
+    })
 }
 
 // EXPOSES
@@ -38,14 +32,13 @@ defineExpose({
 
 <template>
   <div class="form-group">
-    <label for="email" class="form-label">Email Address</label>
+    <label class="form-label" for="username">Username</label>
     <input
-      type="email"
-      id="email"
-      name="email"
       class="form-input"
-      placeholder="Example@gmail.com"
-      v-model="email"
+      type="text"
+      name="username"
+      v-model="username"
+      placeholder="Username"
       required
     />
   </div>
