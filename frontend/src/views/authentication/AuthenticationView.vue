@@ -1,8 +1,19 @@
 <script setup lang="ts">
+import axios from 'axios'
 import { ref, onMounted, onBeforeUnmount, watch, reactive } from 'vue'
 import { RouterLink } from 'vue-router'
+import LoginForm from './components/LoginForm.vue'
+import RegisterForm from './components/RegisterForm.vue'
+import ForgotPasswordForm from './components/ForgotPasswordForm.vue'
 
-const props = defineProps(['FormComponent', 'formType'])
+// const BE_API = import.meta.env.VITE_BE_API_URL
+const BE_API = 'http://localhost:8080/api/user'
+
+const props = defineProps(['formType'])
+
+const loginForm = ref()
+const registerForm = ref()
+const forgotPasswordForm = ref()
 
 const contents = reactive({
   title: '',
@@ -12,7 +23,6 @@ const contents = reactive({
   switchLinkUrl: '',
   switchLinkText: '',
 })
-
 const setContents = (formType: string) => {
   if (formType === 'login') {
     contents.title = 'Welcome Back'
@@ -37,7 +47,6 @@ const setContents = (formType: string) => {
     contents.switchLinkText = 'LOG IN'
   }
 }
-
 watch(
   () => props.formType,
   (newVal) => {
@@ -48,50 +57,60 @@ watch(
 onMounted(() => {
   setContents(props.formType)
 
-  // Add smooth scrolling for anchor links
-  const anchorLinks = document.querySelectorAll<HTMLAnchorElement>('a[href^="#"]')
+  // // Add smooth scrolling for anchor links
+  // const anchorLinks = document.querySelectorAll<HTMLAnchorElement>('a[href^="#"]')
 
-  const handleAnchorClick = (e: Event) => {
-    e.preventDefault()
-    const target = document.querySelector(
-      (e.currentTarget as HTMLAnchorElement).getAttribute('href') || '',
-    )
-    if (target) {
-      target.scrollIntoView({ behavior: 'smooth' })
-    }
-  }
+  // const handleAnchorClick = (e: Event) => {
+  //   e.preventDefault()
+  //   const target = document.querySelector(
+  //     (e.currentTarget as HTMLAnchorElement).getAttribute('href') || '',
+  //   )
+  //   if (target) {
+  //     target.scrollIntoView({ behavior: 'smooth' })
+  //   }
+  // }
 
-  anchorLinks.forEach((anchor) => {
-    anchor.addEventListener('click', handleAnchorClick)
-  })
+  // anchorLinks.forEach((anchor) => {
+  //   anchor.addEventListener('click', handleAnchorClick)
+  // })
 
-  // Add input focus effects
-  const formInputs = document.querySelectorAll<HTMLInputElement>('.form-input')
+  // // Add input focus effects
+  // const formInputs = document.querySelectorAll<HTMLInputElement>('.form-input')
 
-  const handleFocus = (e: Event) => {
-    ;(e.currentTarget as HTMLElement).parentElement?.classList.add('focused')
-  }
+  // const handleFocus = (e: Event) => {
+  //   ;(e.currentTarget as HTMLElement).parentElement?.classList.add('focused')
+  // }
 
-  const handleBlur = (e: Event) => {
-    ;(e.currentTarget as HTMLElement).parentElement?.classList.remove('focused')
-  }
+  // const handleBlur = (e: Event) => {
+  //   ;(e.currentTarget as HTMLElement).parentElement?.classList.remove('focused')
+  // }
 
-  formInputs.forEach((input) => {
-    input.addEventListener('focus', handleFocus)
-    input.addEventListener('blur', handleBlur)
-  })
+  // formInputs.forEach((input) => {
+  //   input.addEventListener('focus', handleFocus)
+  //   input.addEventListener('blur', handleBlur)
+  // })
 
-  // Cleanup event listeners on unmount
-  onBeforeUnmount(() => {
-    anchorLinks.forEach((anchor) => {
-      anchor.removeEventListener('click', handleAnchorClick)
-    })
-    formInputs.forEach((input) => {
-      input.removeEventListener('focus', handleFocus)
-      input.removeEventListener('blur', handleBlur)
-    })
-  })
+  // // Cleanup event listeners on unmount
+  // onBeforeUnmount(() => {
+  //   anchorLinks.forEach((anchor) => {
+  //     anchor.removeEventListener('click', handleAnchorClick)
+  //   })
+  //   formInputs.forEach((input) => {
+  //     input.removeEventListener('focus', handleFocus)
+  //     input.removeEventListener('blur', handleBlur)
+  //   })
+  // })
 })
+
+const handleMainBtnClick = (formType: string) => {
+  if (formType === 'login') {
+    loginForm.value.handleLoginFormSubmit()
+  } else if (formType === 'register') {
+    registerForm.value.handleRegisterFormSubmit()
+  } else if (formType === 'forgot-password') {
+    forgotPasswordForm.value.handleForgotPasswordFormSubmit()
+  }
+}
 </script>
 
 <template>
@@ -113,8 +132,17 @@ onMounted(() => {
             <h1 class="title">{{ contents.title }}</h1>
             <p class="subtitle">{{ contents.subtitle }}</p>
 
-            <form class="login-form" id="loginForm" ref="loginForm" @submit="handleLoginFormSubmit">
-              <FormComponent />
+            <form
+              class="login-form"
+              id="loginForm"
+              @submit.prevent="handleMainBtnClick(props.formType)"
+            >
+              <LoginForm v-if="props.formType === 'login'" ref="loginForm" />
+              <RegisterForm v-else-if="props.formType === 'register'" ref="registerForm" />
+              <ForgotPasswordForm
+                v-else="props.formType === 'forgot-password'"
+                ref="forgotPasswordForm"
+              />
 
               <button type="submit" class="login-btn" ref="loginBtn">
                 {{ contents.mainBtnText }}

@@ -1,46 +1,39 @@
 <script setup lang="ts">
-import { useTemplateRef } from 'vue'
+import { onMounted, ref, useTemplateRef } from 'vue'
 import PasswordToggleBtn from './PasswordToggleBtn.vue'
 import { handlePasswordToggle } from '@/utils/handlePasswordToggle'
 import './assets/formStyle.css'
 import { isValidEmail } from '@/utils/isValidEmail'
+import axios from 'axios'
 
-const password = useTemplateRef('password')
-const email = useTemplateRef('email')
+const BE_URL = 'http://localhost:8080/api/user/login'
 
-const handleLoginFormSubmit = (e: Event) => {
-  if (!email.value || !password.value) return
+const email = ref('')
+const password = ref('')
 
-  e.preventDefault()
-
-  const emailValue = email.value.value
-  const passwordValue = password.value.value
-
-  // Basic validation
-  if (!emailValue || !passwordValue) {
-    alert('Please fill in all fields')
-    return
-  }
-
-  if (!isValidEmail(emailValue)) {
+const handleLoginFormSubmit = () => {
+  if (!isValidEmail(email.value)) {
     alert('Please enter a valid email address')
     return
   }
 
-  // // Simulate login process
-  // const originalText = loginBtn.value.textContent
-
-  // loginBtn.value.textContent = 'LOGGING IN...'
-  // loginBtn.value.disabled = true
-
-  // setTimeout(() => {
-  //   if (!loginBtn.value) return
-
-  //   alert('Login functionality will be done here!')
-  //   loginBtn.value.textContent = originalText
-  //   loginBtn.value.disabled = false
-  // }, 1500)
+  axios
+    .post(BE_URL, {
+      email: email.value,
+      password: password.value,
+    })
+    .then((response) => {
+      alert('Login successful: ' + response.data)
+    })
+    .catch((error) => {
+      alert('Login failed: ' + error)
+    })
 }
+
+// EXPOSES
+defineExpose({
+  handleLoginFormSubmit,
+})
 </script>
 
 <template>
@@ -49,10 +42,10 @@ const handleLoginFormSubmit = (e: Event) => {
     <input
       type="email"
       id="email"
-      ref="email"
       name="email"
       class="form-input"
       placeholder="Example@gmail.com"
+      v-model="email"
       required
     />
   </div>
@@ -62,11 +55,11 @@ const handleLoginFormSubmit = (e: Event) => {
     <div style="position: relative">
       <input
         type="password"
-        ref="password"
         id="password"
         name="password"
         class="form-input"
         placeholder="••••"
+        v-model="password"
         required
       />
       <PasswordToggleBtn @click="handlePasswordToggle" />

@@ -1,24 +1,18 @@
 <script setup lang="ts">
 import { isValidEmail } from '@/utils/isValidEmail'
 import './assets/formStyle.css'
-import { useTemplateRef } from 'vue'
+import { ref } from 'vue'
 
-const email = useTemplateRef('email')
+const email = ref('')
 
-const handleLoginFormSubmit = (e: Event) => {
-  if (!email.value) return
-
-  e.preventDefault()
-
-  const emailValue = email.value.value
-
+const handleForgotPasswordFormSubmit = () => {
   // Basic validation
-  if (!emailValue) {
+  if (!email.value) {
     alert('Please fill in all fields')
     return
   }
 
-  if (!isValidEmail(emailValue)) {
+  if (!isValidEmail(email.value)) {
     alert('Please enter a valid email address')
     return
   }
@@ -29,14 +23,17 @@ const handleLoginFormSubmit = (e: Event) => {
   // loginBtn.value.textContent = 'LOGGING IN...'
   // loginBtn.value.disabled = true
 
-  // setTimeout(() => {
-  //   if (!loginBtn.value) return
-
-  //   alert('Login functionality will be done here!')
-  //   loginBtn.value.textContent = originalText
-  //   loginBtn.value.disabled = false
-  // }, 1500)
+  setTimeout(() => {
+    alert('Forgot password functionality will be done here!')
+    // loginBtn.value.textContent = originalText
+    // loginBtn.value.disabled = false
+  }, 500)
 }
+
+// EXPOSES
+defineExpose({
+  handleForgotPasswordFormSubmit,
+})
 </script>
 
 <template>
@@ -45,10 +42,10 @@ const handleLoginFormSubmit = (e: Event) => {
     <input
       type="email"
       id="email"
-      ref="email"
       name="email"
       class="form-input"
       placeholder="Example@gmail.com"
+      v-model="email"
       required
     />
   </div>
