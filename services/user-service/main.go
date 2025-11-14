@@ -8,6 +8,8 @@ import (
 	"user-service/repository"
 	"user-service/router"
 	"user-service/service"
+
+	"github.com/gin-contrib/cors"
 )
 
 func main() {
@@ -29,6 +31,8 @@ func main() {
 	r := router.SetupRouter(&router.AppRouter{
 		UserController: userController,
 	})
+
+	r.Use(cors.Default())
 
 	r.Run(":8080") // chạy server ở port 8080
 }
