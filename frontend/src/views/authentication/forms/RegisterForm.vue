@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import PasswordToggleBtn from './PasswordToggleBtn.vue'
+import PasswordToggleBtn from '../components/PasswordToggleBtn.vue'
 import { handlePasswordToggle } from '@/utils/handlePasswordToggle'
 import './assets/formStyle.css'
-import { onMounted, ref } from 'vue'
+import { ref } from 'vue'
 import axios from 'axios'
 import { ElLoading, ElNotification } from 'element-plus'
 

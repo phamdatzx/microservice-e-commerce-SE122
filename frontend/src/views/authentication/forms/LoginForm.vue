@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref, useTemplateRef } from 'vue'
-import PasswordToggleBtn from './PasswordToggleBtn.vue'
+import PasswordToggleBtn from '../components/PasswordToggleBtn.vue'
 import { handlePasswordToggle } from '@/utils/handlePasswordToggle'
 import './assets/formStyle.css'
 import axios from 'axios'

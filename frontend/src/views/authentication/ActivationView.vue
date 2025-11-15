@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import axios from 'axios'
-import { ElLoading } from 'element-plus'
 import { onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
@@ -8,9 +7,21 @@ const USER_API_URL = import.meta.env.VITE_USER_API_URL
 const route = useRoute()
 const token = route.query.token
 
+const count = ref(3)
+
 const activationStatus = ref('success')
 
 onMounted(() => {
+  setInterval(() => {
+    if (activationStatus.value === 'success') {
+      if (count.value > 0) {
+        count.value -= 1
+      } else {
+        window.location.href = '/login'
+      }
+    }
+  }, 1000)
+
   axios
     .post(`${USER_API_URL}/activate?token=${token}`)
     .then((response) => {
@@ -57,6 +68,12 @@ onMounted(() => {
       <h1 v-else>Error activating your account</h1>
       <p v-if="activationStatus === 'success'">You can safely close this page now.</p>
       <p v-else>Please contact support for further assistance.</p>
+      <p
+        v-if="activationStatus === 'success'"
+        style="margin-top: 20px; font-size: 14px; color: #374151"
+      >
+        Redirecting to login page in {{ count }} seconds...
+      </p>
     </div>
   </div>
 </template>

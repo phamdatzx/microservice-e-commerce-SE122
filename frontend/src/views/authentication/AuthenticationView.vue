@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import axios from 'axios'
-import { ref, onMounted, onBeforeUnmount, watch, reactive } from 'vue'
+import { ref, onMounted, watch, reactive } from 'vue'
 import { RouterLink } from 'vue-router'
-import LoginForm from './components/LoginForm.vue'
-import RegisterForm from './components/RegisterForm.vue'
-import ForgotPasswordForm from './components/ForgotPasswordForm.vue'
+import LoginForm from './forms/LoginForm.vue'
+import RegisterForm from './forms/RegisterForm.vue'
+import ForgotPasswordForm from './forms/ForgotPasswordForm.vue'
 import Header from '@/components/Header.vue'
-import ResetPasswordForm from './components/ResetPasswordForm.vue'
+import ResetPasswordForm from './forms/ResetPasswordForm.vue'
 
 const props = defineProps(['formType'])
 

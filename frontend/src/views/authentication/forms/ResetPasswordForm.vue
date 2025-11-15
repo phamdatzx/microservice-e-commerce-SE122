@@ -5,7 +5,7 @@ import axios from 'axios'
 import { ElLoading, ElNotification } from 'element-plus'
 import { useRoute } from 'vue-router'
 import { handlePasswordToggle } from '@/utils/handlePasswordToggle'
-import PasswordToggleBtn from './PasswordToggleBtn.vue'
+import PasswordToggleBtn from '../components/PasswordToggleBtn.vue'
 
 const USER_API_URL = import.meta.env.VITE_USER_API_URL
 
