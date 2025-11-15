@@ -6,9 +6,6 @@ import LoginForm from './components/LoginForm.vue'
 import RegisterForm from './components/RegisterForm.vue'
 import ForgotPasswordForm from './components/ForgotPasswordForm.vue'
 
-// const BE_API = import.meta.env.VITE_BE_API_URL
-const BE_API = 'http://localhost:8080/api/user'
-
 const props = defineProps(['formType'])
 
 const loginForm = ref()

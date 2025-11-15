@@ -4,8 +4,9 @@ import { handlePasswordToggle } from '@/utils/handlePasswordToggle'
 import './assets/formStyle.css'
 import { ref } from 'vue'
 import axios from 'axios'
+import { ElLoading } from 'element-plus'
 
-const BE_URL = 'http://localhost:8080/api/user/register'
+const USER_API_URL = import.meta.env.VITE_USER_API_URL
 
 const name = ref('')
 const username = ref('')
@@ -14,8 +15,14 @@ const password = ref('')
 const confirmPassword = ref('')
 
 const handleRegisterFormSubmit = () => {
+  const loading = ElLoading.service({
+    lock: true,
+    text: 'Registering',
+    background: 'rgba(0, 0, 0, 0.7)',
+  })
+
   axios
-    .post(BE_URL, {
+    .post(`${USER_API_URL}/register`, {
       name: name.value,
       username: username.value,
       email: email.value,
@@ -23,14 +30,18 @@ const handleRegisterFormSubmit = () => {
       role: 'customer',
     })
     .then((response) => {
+      console.log(response.data)
       if (response.data.status === 200) {
-        alert('Register successful: ' + response.data)
+        alert('Register successful!')
       } else {
-        alert('Register failed: ' + response.data)
+        alert('Register failed')
       }
     })
     .catch((error) => {
-      alert('Login failed: ' + error)
+      alert('Login failed: ' + error.response.data.message)
+    })
+    .finally(() => {
+      loading.close()
     })
 }
 

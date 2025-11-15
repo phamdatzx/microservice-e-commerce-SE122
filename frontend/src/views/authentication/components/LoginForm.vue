@@ -6,7 +6,7 @@ import './assets/formStyle.css'
 import axios from 'axios'
 import { ElLoading } from 'element-plus'
 
-const BE_URL = 'http://localhost:8090/api/user'
+const USER_API_URL = import.meta.env.VITE_USER_API_URL
 
 const username = ref('')
 const password = ref('')
@@ -19,7 +19,7 @@ const handleLoginFormSubmit = () => {
   })
 
   axios
-    .post(`${BE_URL}/login`, {
+    .post(`${USER_API_URL}/login`, {
       username: username.value,
       password: password.value,
     })
@@ -27,7 +27,7 @@ const handleLoginFormSubmit = () => {
       if (loginRes.data.status === 200) {
         // Activate account
         axios
-          .post(`${BE_URL}/activate?token=${loginRes.data.data.access_token}`)
+          .post(`${USER_API_URL}/activate?token=${loginRes.data.data.access_token}`)
           .then((activateRes) => {
             if (activateRes.data.status === 200) {
               localStorage.setItem('access_token', loginRes.data.data.access_token)
@@ -45,9 +45,7 @@ const handleLoginFormSubmit = () => {
       }
     })
     .catch((error) => {
-      if (error.status === 401) {
-        alert('Login failed: Incorrect username or password!')
-      }
+      alert('Login failed: ' + error.response.data.message)
     })
     .finally(() => {
       loading.close()
