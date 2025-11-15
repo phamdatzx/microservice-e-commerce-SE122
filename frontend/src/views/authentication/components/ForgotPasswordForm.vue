@@ -3,11 +3,13 @@ import './assets/formStyle.css'
 import { ref } from 'vue'
 import axios from 'axios'
 import { ElLoading, ElNotification } from 'element-plus'
-import Header from '@/components/Header.vue'
 
 const USER_API_URL = import.meta.env.VITE_USER_API_URL
 
 const username = ref('')
+const sendResetSuccess = ref(false)
+
+const emits = defineEmits(['send-reset-success'])
 
 const handleForgotPasswordFormSubmit = () => {
   const loading = ElLoading.service({
@@ -27,6 +29,8 @@ const handleForgotPasswordFormSubmit = () => {
           message: 'Please check your email to reset your password.',
           type: 'success',
         })
+        sendResetSuccess.value = true
+        emits('send-reset-success')
       } else {
         ElNotification({
           title: 'Request failed!',
@@ -55,7 +59,10 @@ defineExpose({
 </script>
 
 <template>
-  <div class="form-group">
+  <p v-if="sendResetSuccess" class="info-text" style="margin-bottom: 140px">
+    Please check your email to reset your password.
+  </p>
+  <div v-else class="form-group">
     <label class="form-label" for="username">Username</label>
     <input
       class="form-input"

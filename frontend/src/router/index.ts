@@ -34,6 +34,12 @@ const router = createRouter({
       name: 'activate',
       component: ActivationView,
     },
+    {
+      path: '/reset-password',
+      name: 'reset-password',
+      component: AuthenticationView,
+      props: { formType: 'reset-password' },
+    },
   ],
 })
 
