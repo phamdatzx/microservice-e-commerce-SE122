@@ -1,12 +1,11 @@
-version: '3.9'  # Phiên bản compose schema
+version: "3.9" # Phiên bản compose schema
 
-services:       # Nơi khai báo các container
-  user-service:          # Tên service (container)
-    build: ./services/user-service    # Build image từ Dockerfile trong thư mục hiện tại
+services: # Nơi khai báo các container
+  user-service: # Tên service (container)
+    build: ./services/user-service # Build image từ Dockerfile trong thư mục hiện tại
     ports:
-      - "8080:8080"
-    env_file:
-      ./services/user-service/.env
+      - "8090:8080"
+    env_file: ./services/user-service/.env
     networks:
       - app-network
 

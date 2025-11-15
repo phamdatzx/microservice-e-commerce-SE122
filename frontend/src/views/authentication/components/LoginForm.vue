@@ -25,21 +25,9 @@ const handleLoginFormSubmit = () => {
     })
     .then((loginRes) => {
       if (loginRes.data.status === 200) {
-        // Activate account
-        axios
-          .post(`${USER_API_URL}/activate?token=${loginRes.data.data.access_token}`)
-          .then((activateRes) => {
-            if (activateRes.data.status === 200) {
-              localStorage.setItem('access_token', loginRes.data.data.access_token)
-              alert('Login successful!')
-              // window.location.href = '/'
-            } else {
-              alert('Account activation failed: ' + activateRes.data.message)
-            }
-          })
-          .catch((error) => {
-            alert('Account activation failed: ' + error)
-          })
+        console.log('Login successful!')
+        localStorage.setItem('access_token', loginRes.data.data.access_token)
+        //       // window.location.href = '/'
       } else {
         console.log('Login failed: ' + loginRes.data)
       }
