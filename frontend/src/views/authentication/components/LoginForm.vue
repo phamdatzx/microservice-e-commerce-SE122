@@ -4,27 +4,53 @@ import PasswordToggleBtn from './PasswordToggleBtn.vue'
 import { handlePasswordToggle } from '@/utils/handlePasswordToggle'
 import './assets/formStyle.css'
 import axios from 'axios'
+import { ElLoading } from 'element-plus'
 
-const BE_URL = 'http://localhost:8080/api/user/login'
+const BE_URL = 'http://localhost:8090/api/user'
 
 const username = ref('')
 const password = ref('')
 
 const handleLoginFormSubmit = () => {
+  const loading = ElLoading.service({
+    lock: true,
+    text: 'Logging in',
+    background: 'rgba(0, 0, 0, 0.7)',
+  })
+
   axios
-    .post(BE_URL, {
+    .post(`${BE_URL}/login`, {
       username: username.value,
       password: password.value,
     })
-    .then((response) => {
-      if (response.data.status === 200) {
-        alert('Login successful: ' + response.data)
+    .then((loginRes) => {
+      if (loginRes.data.status === 200) {
+        // Activate account
+        axios
+          .post(`${BE_URL}/activate?token=${loginRes.data.data.access_token}`)
+          .then((activateRes) => {
+            if (activateRes.data.status === 200) {
+              localStorage.setItem('access_token', loginRes.data.data.access_token)
+              alert('Login successful!')
+              // window.location.href = '/'
+            } else {
+              alert('Account activation failed: ' + activateRes.data.message)
+            }
+          })
+          .catch((error) => {
+            alert('Account activation failed: ' + error)
+          })
       } else {
-        alert('Login failed: ' + response.data)
+        console.log('Login failed: ' + loginRes.data)
       }
     })
     .catch((error) => {
-      alert('Login failed: ' + error)
+      if (error.status === 401) {
+        alert('Login failed: Incorrect username or password!')
+      }
+    })
+    .finally(() => {
+      loading.close()
     })
 }
 
