@@ -1,8 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import AuthenticationView from '@/views/authentication/AuthenticationView.vue'
-import LoginForm from '../views/authentication/components/LoginForm.vue'
-import RegisterForm from '@/views/authentication/components/RegisterForm.vue'
-import ForgotPasswordForm from '@/views/authentication/components/ForgotPasswordForm.vue'
+import ActivationView from '@/views/authentication/ActivationView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -30,6 +28,11 @@ const router = createRouter({
       name: 'forgot-password',
       component: AuthenticationView,
       props: { formType: 'forgot-password' },
+    },
+    {
+      path: '/activate',
+      name: 'activate',
+      component: ActivationView,
     },
   ],
 })

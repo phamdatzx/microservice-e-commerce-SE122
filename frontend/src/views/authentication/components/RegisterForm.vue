@@ -4,7 +4,7 @@ import { handlePasswordToggle } from '@/utils/handlePasswordToggle'
 import './assets/formStyle.css'
 import { ref } from 'vue'
 import axios from 'axios'
-import { ElLoading } from 'element-plus'
+import { ElLoading, ElNotification } from 'element-plus'
 
 const USER_API_URL = import.meta.env.VITE_USER_API_URL
 
@@ -30,15 +30,26 @@ const handleRegisterFormSubmit = () => {
       role: 'customer',
     })
     .then((response) => {
-      console.log(response.data)
       if (response.data.status === 200) {
-        alert('Register successful!')
+        ElNotification({
+          title: 'Register successful!',
+          message: 'Please check your email to activate your account.',
+          type: 'success',
+        })
       } else {
-        alert('Register failed')
+        ElNotification({
+          title: 'Register failed!',
+          message: 'Unable to register your account.',
+          type: 'error',
+        })
       }
     })
     .catch((error) => {
-      alert('Login failed: ' + error.response.data.message)
+      ElNotification({
+        title: 'Register failed!',
+        message: 'Error: ' + error.response.data.message,
+        type: 'error',
+      })
     })
     .finally(() => {
       loading.close()

@@ -4,7 +4,7 @@ import PasswordToggleBtn from './PasswordToggleBtn.vue'
 import { handlePasswordToggle } from '@/utils/handlePasswordToggle'
 import './assets/formStyle.css'
 import axios from 'axios'
-import { ElLoading } from 'element-plus'
+import { ElLoading, ElNotification } from 'element-plus'
 
 const USER_API_URL = import.meta.env.VITE_USER_API_URL
 
@@ -25,15 +25,26 @@ const handleLoginFormSubmit = () => {
     })
     .then((loginRes) => {
       if (loginRes.data.status === 200) {
-        console.log('Login successful!')
+        ElNotification({
+          title: 'Login successful!',
+          type: 'success',
+        })
         localStorage.setItem('access_token', loginRes.data.data.access_token)
         //       // window.location.href = '/'
       } else {
-        console.log('Login failed: ' + loginRes.data)
+        ElNotification({
+          title: 'Login failed!',
+          message: 'Unable to login to your account.',
+          type: 'error',
+        })
       }
     })
     .catch((error) => {
-      alert('Login failed: ' + error.response.data.message)
+      ElNotification({
+        title: 'Login failed!',
+        message: 'Error: ' + error.response.data.message,
+        type: 'error',
+      })
     })
     .finally(() => {
       loading.close()

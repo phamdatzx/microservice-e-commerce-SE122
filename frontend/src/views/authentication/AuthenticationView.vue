@@ -5,6 +5,7 @@ import { RouterLink } from 'vue-router'
 import LoginForm from './components/LoginForm.vue'
 import RegisterForm from './components/RegisterForm.vue'
 import ForgotPasswordForm from './components/ForgotPasswordForm.vue'
+import Header from '@/components/Header.vue'
 
 const props = defineProps(['formType'])
 
@@ -111,6 +112,8 @@ const handleMainBtnClick = (formType: string) => {
 </script>
 
 <template>
+  <Header />
+
   <main class="main-content">
     <div class="container">
       <div class="auth-container">

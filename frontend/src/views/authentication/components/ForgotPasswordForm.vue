@@ -2,25 +2,49 @@
 import './assets/formStyle.css'
 import { ref } from 'vue'
 import axios from 'axios'
+import { ElLoading, ElNotification } from 'element-plus'
+import Header from '@/components/Header.vue'
 
-const BE_URL = 'http://localhost:8080/api/user/send-reset-password'
+const USER_API_URL = import.meta.env.VITE_USER_API_URL
 
 const username = ref('')
 
 const handleForgotPasswordFormSubmit = () => {
+  const loading = ElLoading.service({
+    lock: true,
+    text: 'Sending request',
+    background: 'rgba(0, 0, 0, 0.7)',
+  })
+
   axios
-    .post(BE_URL, {
+    .post(`${USER_API_URL}/send-reset-password`, {
       username: username.value,
     })
     .then((response) => {
       if (response.data.status === 200) {
-        alert('Login successful: ' + response.data)
+        ElNotification({
+          title: 'Request sended!',
+          message: 'Please check your email to reset your password.',
+          type: 'success',
+        })
       } else {
-        alert('Login failed: ' + response.data)
+        ElNotification({
+          title: 'Request failed!',
+          message: 'Unable to send your password reset request.',
+          type: 'error',
+        })
+        alert('Sending password request failed: ' + response.data)
       }
     })
     .catch((error) => {
-      alert('Login failed: ' + error)
+      ElNotification({
+        title: 'Request failed!',
+        message: 'Error: ' + error.response.data.message,
+        type: 'error',
+      })
+    })
+    .finally(() => {
+      loading.close()
     })
 }
 

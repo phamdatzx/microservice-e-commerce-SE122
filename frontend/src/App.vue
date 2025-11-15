@@ -5,6 +5,5 @@ import 'element-plus/dist/index.css'
 </script>
 
 <template>
-  <Header />
   <RouterView />
 </template>
