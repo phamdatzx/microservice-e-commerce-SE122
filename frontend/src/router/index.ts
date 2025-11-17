@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import AuthenticationView from '@/views/authentication/AuthenticationView.vue'
 import ActivationView from '@/views/authentication/ActivationView.vue'
+import HomeView from '@/views/seller/HomeView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -39,6 +40,15 @@ const router = createRouter({
       name: 'reset-password',
       component: AuthenticationView,
       props: { formType: 'reset-password' },
+    },
+    {
+      path: '/seller',
+      name: 'seller',
+      component: HomeView,
+      children: [
+      //   { path: '', name: 'home', component: Home },
+      // { path: 'profile', name: 'profile', component: Profile },
+      ]
     },
   ],
 })
