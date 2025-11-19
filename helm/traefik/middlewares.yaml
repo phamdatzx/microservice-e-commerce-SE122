@@ -1,9 +1,17 @@
-http:
-  middlewares:
-    auth-forward:
-      forwardAuth:
-        address: "http://auth-service.default.svc.cluster.local:8080/verify"
-        trustForwardHeader: true
-        authResponseHeaders:
-          - "X-User-ID"
-          - "X-User-Role"
+# infra/traefik/middleware-auth.yaml
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: forward-auth
+  namespace: default      # đặt namespace nơi bạn muốn expose middleware. thường là namespace app (ví dụ default)
+spec:
+  forwardAuth:
+    address: "http://auth-service.default.svc.cluster.local:8080/verify"
+    # phương thức dùng để forward (GET/POST); server auth của bạn phải hỗ trợ
+    trustForwardHeader: true
+    authResponseHeaders:
+      - "X-Auth-User"
+      - "X-Auth-Email"
+    # optional: timeout
+    # tls:
+    #   insecureSkipVerify: false
