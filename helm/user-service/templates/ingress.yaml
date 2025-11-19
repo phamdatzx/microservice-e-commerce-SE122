@@ -5,6 +5,8 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: traefik
     traefik.ingress.kubernetes.io/router.entrypoints: web
+    #middleware
+    traefik.ingress.kubernetes.io/router.middlewares: "default-forward-auth@kubernetescrd"
 spec:
   ingressClassName: traefik
   rules:

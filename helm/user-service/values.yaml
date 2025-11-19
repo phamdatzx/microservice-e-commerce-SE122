@@ -1,7 +1,9 @@
 appName: user-service
 replicas: 1
-image: megumikatou/user-service
-tag: latest
+image:
+  repository: megumikatou/user-service
+  tag: latest
+  pullPolicy: Always
 containerPort: 8080
 
 service:
