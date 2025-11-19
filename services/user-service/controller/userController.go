@@ -159,3 +159,7 @@ func (c *UserController) ResetPassword(ctx *gin.Context) {
 
 	utils.SuccessResponse(ctx, 200, "Reset account password successfully", nil)
 }
+
+func (c *UserController) TestPrivate(ctx *gin.Context) {
+	utils.SuccessResponse(ctx, 200, "Reached", nil)
+}

@@ -6,7 +6,7 @@ metadata:
   namespace: default      # đặt namespace nơi bạn muốn expose middleware. thường là namespace app (ví dụ default)
 spec:
   forwardAuth:
-    address: "http://user-service-service.default.svc.cluster.local:8080/api/user/verify"
+    address: "http://user-service-service.default.svc.cluster.local:8080/api/user/public/verify"
     # phương thức dùng để forward (GET/POST); server auth của bạn phải hỗ trợ
     trustForwardHeader: true
     authResponseHeaders:
