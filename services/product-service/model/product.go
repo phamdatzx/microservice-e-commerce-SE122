@@ -22,7 +22,9 @@ type Product struct {
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
 
 	// Relationships
-	Options []ProductOption `gorm:"foreignKey:ProductID" json:"options,omitempty"`
-	Images  []ProductImages `gorm:"foreignKey:ProductID" json:"images,omitempty"`
-	Reports []ProductReport `gorm:"foreignKey:ProductID" json:"reports,omitempty"`
+	Categories       []Category       `gorm:"many2many:product_categories;" json:"categories,omitempty"`
+	SellerCategories []SellerCategory `gorm:"many2many:product_seller_categories;" json:"seller_categories,omitempty"`
+	Options          []ProductOption  `gorm:"foreignKey:ProductID" json:"options,omitempty"`
+	Images           []ProductImages  `gorm:"foreignKey:ProductID" json:"images,omitempty"`
+	Reports          []ProductReport  `gorm:"foreignKey:ProductID" json:"reports,omitempty"`
 }

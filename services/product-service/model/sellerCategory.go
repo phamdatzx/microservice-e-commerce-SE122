@@ -13,4 +13,7 @@ type SellerCategory struct {
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+
+	// Relationships
+	Products []Product `gorm:"many2many:product_seller_categories;" json:"products,omitempty"`
 }
