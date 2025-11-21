@@ -14,15 +14,33 @@ import { reactive, ref, watch } from 'vue'
 
 const tableData = [
   {
-    image_url: 'https://placehold.co/40x40',
+    image_url: 'https://down-vn.img.susercontent.com/file/sg-11134201-825af-mgbp824qs1e5b0_tn.webp',
     name: 'Electronics',
     sold_count: 1,
     price: 140000,
     quantity: 21,
     status: 'AVAILABLE',
+    product_options: [
+      {
+        image_url:
+          'https://down-vn.img.susercontent.com/file/sg-11134201-825af-mgbp824qs1e5b0_tn.webp',
+        option1: 'Red',
+        option2: 'XL',
+        price: 200000,
+        stock: 24,
+      },
+      {
+        image_url:
+          'https://down-vn.img.susercontent.com/file/sg-11134201-825af-mgbp824qs1e5b0_tn.webp',
+        option1: 'Blue',
+        option2: 'XXL',
+        price: 220000,
+        stock: 24,
+      },
+    ],
   },
   {
-    image_url: 'https://placehold.co/80x80',
+    image_url: 'https://down-vn.img.susercontent.com/file/sg-11134201-821fy-mghfw9c1o1sb29_tn.webp',
     name: 'Clothing',
     sold_count: 2,
     price: 130000,
@@ -30,7 +48,7 @@ const tableData = [
     status: 'OUT_OF_STOCK',
   },
   {
-    image_url: 'https://placehold.co/120x40',
+    image_url: 'https://down-vn.img.susercontent.com/file/sg-11134201-821cz-mghfwcncl0y6e6_tn.webp',
     name: 'Home & Kitchen',
     sold_count: 3,
     price: 120000,
@@ -38,7 +56,7 @@ const tableData = [
     status: 'AVAILABLE',
   },
   {
-    image_url: 'https://placehold.co/40x120',
+    image_url: 'https://down-vn.img.susercontent.com/file/sg-11134201-821f4-mghdelyvkzka36_tn.webp',
     name: 'Books',
     sold_count: 4,
     price: 110000,
@@ -535,7 +553,50 @@ watch(
     >Add Product</el-button
   >
   <el-table :data="tableData" style="width: 100%">
-    <el-table-column prop="image_url" label="Product image" width="128px" align="center">
+    <el-table-column width="1">
+      <template #default="props">
+        <span :class="`quantity-${props.row.product_options?.length}`"></span>
+      </template>
+    </el-table-column>
+    <el-table-column type="expand" class-name="expand-column">
+      <template #default="props">
+        <el-table
+          :show-header="false"
+          :data="props.row.product_options"
+          v-if="props.row.product_options.length > 0"
+        >
+          <el-table-column width="48" />
+          <el-table-column prop="image_url" align="right" width="128">
+            <template #default="scope">
+              <el-image
+                style="width: 52px; height: 52px; position: relative; top: 3px"
+                :src="scope.row.image_url"
+                fit="contain"
+              />
+            </template>
+          </el-table-column>
+          <el-table-column>
+            <template #default="scope">
+              <p style="text-align: right; position: relative; right: -13px">
+                {{ scope.row.option1 }},
+              </p>
+            </template>
+          </el-table-column>
+          <el-table-column>
+            <template #default="scope">
+              <p style="text-align: left; position: relative; left: -8px">
+                {{ scope.row.option2 }}
+              </p>
+            </template>
+          </el-table-column>
+          <el-table-column prop="price" label="Price" />
+          <el-table-column prop="stock" label="Stock" />
+          <el-table-column width="120" />
+          <el-table-column width="140" />
+        </el-table>
+      </template>
+    </el-table-column>
+    <el-table-column prop="image_url" label="Product image" width="128" align="center">
       <template #default="scope">
         <el-image
           style="width: 56px; height: 56px; position: relative; top: 3px"
@@ -863,5 +924,13 @@ watch(
 .option-image-upload .el-upload-list__item {
   animation: none !important;
   transition: none !important;
+}
+
+.expand-column:has(.quantity-0) {
+  display: none;
+}
+
+.el-table__cell:has(.quantity-undefined) ~ .expand-column .el-table__expand-icon {
+  visibility: hidden;
 }
 </style>
