@@ -655,6 +655,14 @@ watch(
     </el-table-column>
   </el-table>
 
+  <el-pagination
+    background
+    layout="prev, pager, next"
+    :total="1000"
+    size="large"
+    style="display: flex; justify-content: center; margin-top: 20px"
+  />
+
   <!-- Add/Edit dialog -->
   <el-dialog
     v-model="addEditDialogVisible"
@@ -783,7 +791,12 @@ watch(
           clearable
         />
       </el-form-item>
-      <el-form-item prop="group2_options" label="Options" v-show="hasGroup2">
+      <el-form-item
+        prop="group2_options"
+        label="Options"
+        v-show="hasGroup2"
+        style="margin-bottom: 32px"
+      >
         <el-select-v2
           v-model="ruleForm.group2_options"
           :options="[]"
@@ -798,88 +811,88 @@ watch(
           :reserve-keyword="false"
         />
       </el-form-item>
+      <!-- HAS ONE GROUP -->
+      <el-form-item prop="" label="Option list" v-show="hasGroup1 && !hasGroup2">
+        <el-table :data="optionListData" border style="width: 100%">
+          <el-table-column
+            prop="option1"
+            :label="ruleForm.group1 === '' ? 'Group 1' : ruleForm.group1"
+            width="100"
+          />
+          <el-table-column prop="image" label="Image" align="center" style="width: 80px">
+            <template #default="{ row }">
+              <el-upload
+                class="option-image-upload"
+                v-model:file-list="row.image"
+                accept="image/png, image/jpeg, image/jpg"
+                :auto-upload="false"
+                list-type="picture-card"
+                :limit="1"
+                :on-preview="handlePictureCardPreview"
+                :on-remove="handleRemove"
+                :on-change="handleChange"
+              >
+                <el-icon><Plus /></el-icon>
+              </el-upload>
+            </template>
+          </el-table-column>
+          <el-table-column prop="price" label="Price">
+            <template #default="{ row }">
+              <el-input v-model="row.price" placeholder="Input price" />
+            </template>
+          </el-table-column>
+          <el-table-column prop="stock" label="Stock">
+            <template #default="{ row }">
+              <el-input v-model="row.stock" placeholder="Input stock" />
+            </template>
+          </el-table-column>
+        </el-table>
+      </el-form-item>
+
+      <!-- HAS BOTH GROUPS -->
+      <el-form-item prop="" label="Option list" v-show="hasGroup1 && hasGroup2">
+        <el-table :data="optionListData" border style="width: 100%">
+          <el-table-column
+            prop="option1"
+            :label="ruleForm.group1 === '' ? 'Group 1' : ruleForm.group1"
+            width="100"
+          />
+          <el-table-column
+            prop="option2"
+            :label="ruleForm.group2 === '' ? 'Group 2' : ruleForm.group2"
+            width="100"
+          />
+          <el-table-column prop="image" label="Image" align="center" style="width: 80px">
+            <template #default="{ row }">
+              <el-upload
+                class="option-image-upload"
+                v-model:file-list="row.image"
+                accept="image/png, image/jpeg, image/jpg"
+                :auto-upload="false"
+                list-type="picture-card"
+                :limit="1"
+                :on-preview="handlePictureCardPreview"
+                :on-remove="handleRemove"
+                :on-change="handleChange"
+              >
+                <el-icon><Plus /></el-icon>
+              </el-upload>
+            </template>
+          </el-table-column>
+          <el-table-column prop="price" label="Price">
+            <template #default="{ row }">
+              <el-input v-model="row.price" placeholder="Input price" />
+            </template>
+          </el-table-column>
+          <el-table-column prop="stock" label="Stock">
+            <template #default="{ row }">
+              <el-input v-model="row.stock" placeholder="Input stock" />
+            </template>
+          </el-table-column>
+        </el-table>
+      </el-form-item>
     </el-form>
 
-    <!-- HAS ONE GROUP -->
-    <el-form-item prop="" label="Option list" v-show="hasGroup1 && !hasGroup2">
-      <el-table :data="optionListData" border style="width: 100%">
-        <el-table-column
-          prop="option1"
-          :label="ruleForm.group1 === '' ? 'Group 1' : ruleForm.group1"
-          width="100"
-        />
-        <el-table-column prop="image" label="Image" align="center" style="width: 80px">
-          <template #default="{ row }">
-            <el-upload
-              class="option-image-upload"
-              v-model:file-list="row.image"
-              accept="image/png, image/jpeg, image/jpg"
-              :auto-upload="false"
-              list-type="picture-card"
-              :limit="1"
-              :on-preview="handlePictureCardPreview"
-              :on-remove="handleRemove"
-              :on-change="handleChange"
-            >
-              <el-icon><Plus /></el-icon>
-            </el-upload>
-          </template>
-        </el-table-column>
-        <el-table-column prop="price" label="Price">
-          <template #default="{ row }">
-            <el-input v-model="row.price" placeholder="Input price" />
-          </template>
-        </el-table-column>
-        <el-table-column prop="stock" label="Stock">
-          <template #default="{ row }">
-            <el-input v-model="row.stock" placeholder="Input stock" />
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-form-item>
-
-    <!-- HAS BOTH GROUPS -->
-    <el-form-item prop="" label="Option list" v-show="hasGroup1 && hasGroup2">
-      <el-table :data="optionListData" border style="width: 100%">
-        <el-table-column
-          prop="option1"
-          :label="ruleForm.group1 === '' ? 'Group 1' : ruleForm.group1"
-          width="100"
-        />
-        <el-table-column
-          prop="option2"
-          :label="ruleForm.group2 === '' ? 'Group 2' : ruleForm.group2"
-          width="100"
-        />
-        <el-table-column prop="image" label="Image" align="center" style="width: 80px">
-          <template #default="{ row }">
-            <el-upload
-              class="option-image-upload"
-              v-model:file-list="row.image"
-              accept="image/png, image/jpeg, image/jpg"
-              :auto-upload="false"
-              list-type="picture-card"
-              :limit="1"
-              :on-preview="handlePictureCardPreview"
-              :on-remove="handleRemove"
-              :on-change="handleChange"
-            >
-              <el-icon><Plus /></el-icon>
-            </el-upload>
-          </template>
-        </el-table-column>
-        <el-table-column prop="price" label="Price">
-          <template #default="{ row }">
-            <el-input v-model="row.price" placeholder="Input price" />
-          </template>
-        </el-table-column>
-        <el-table-column prop="stock" label="Stock">
-          <template #default="{ row }">
-            <el-input v-model="row.stock" placeholder="Input stock" />
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-form-item>
     <template #footer>
       <div class="dialog-footer">
         <el-button @click="addEditDialogVisible = false">Cancel</el-button>
