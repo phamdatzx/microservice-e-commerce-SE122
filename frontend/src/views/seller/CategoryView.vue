@@ -50,6 +50,11 @@ const openEditModal = (category: string) => {
   ruleForm.category = category
 }
 
+const openDeleteModal = (category: string) => {
+  deleteDialogVisible.value = true
+  deletingCategory.value = category
+}
+
 //---------- FORM ----------------
 interface RuleForm {
   category: string
@@ -75,11 +80,6 @@ const submitForm = async (formEl: FormInstance | undefined) => {
   })
 }
 // --------------------------------------------------------
-
-const openDeleteModal = (category: string) => {
-  deleteDialogVisible.value = true
-  deletingCategory.value = category
-}
 
 const handleAddEditCategory = (currentAction: string) => {
   if (currentAction === 'add') {
