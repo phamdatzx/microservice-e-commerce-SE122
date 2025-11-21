@@ -615,7 +615,19 @@ watch(
         <p v-else>{{ scope.row.price }}</p>
       </template>
     </el-table-column>
-    <el-table-column prop="quantity" label="Stock" />
+    <el-table-column prop="quantity" label="Stock">
+      <template #default="scope">
+        <p v-if="scope.row.product_options?.length > 0">
+          {{
+            scope.row.product_options.reduce(
+              (sum: number, item: ProductOption) => sum + item.stock!,
+              0,
+            )
+          }}
+        </p>
+        <p v-else>{{ scope.row.quantity }}</p>
+      </template>
+    </el-table-column>
     <el-table-column
       prop="status"
       label="Status"
