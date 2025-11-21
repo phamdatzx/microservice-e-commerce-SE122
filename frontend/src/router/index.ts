@@ -1,7 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import AuthenticationView from '@/views/authentication/AuthenticationView.vue'
 import ActivationView from '@/views/authentication/ActivationView.vue'
+import CategoryView from '@/views/seller/CategoryView.vue'
 import HomeView from '@/views/seller/HomeView.vue'
+import ProductView from '@/views/seller/ProductView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -46,8 +48,8 @@ const router = createRouter({
       name: 'seller',
       component: HomeView,
       children: [
-      //   { path: '', name: 'home', component: Home },
-      // { path: 'profile', name: 'profile', component: Profile },
+        { path: 'category', name: 'category', component: CategoryView },
+        { path: 'product', name: 'product', component: ProductView },
       ]
     },
   ],
