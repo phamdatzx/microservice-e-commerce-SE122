@@ -17,7 +17,6 @@ const tableData = [
     image_url: 'https://down-vn.img.susercontent.com/file/sg-11134201-825af-mgbp824qs1e5b0_tn.webp',
     name: 'Electronics',
     sold_count: 1,
-    price: 140000,
     quantity: 21,
     status: 'AVAILABLE',
     product_options: [
@@ -607,7 +606,15 @@ watch(
     </el-table-column>
     <el-table-column prop="name" label="Product name" />
     <el-table-column prop="sold_count" label="Sold count" />
-    <el-table-column prop="price" label="Price" />
+    <el-table-column prop="price" label="Price">
+      <template #default="scope">
+        <p v-if="scope.row.product_options?.length > 0">
+          {{ Math.min(...scope.row.product_options.map((x: ProductOption) => x.price)) }} ~
+          {{ Math.max(...scope.row.product_options.map((x: ProductOption) => x.price)) }}
+        </p>
+        <p v-else>{{ scope.row.price }}</p>
+      </template>
+    </el-table-column>
     <el-table-column prop="quantity" label="Stock" />
     <el-table-column
       prop="status"
