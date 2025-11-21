@@ -157,7 +157,7 @@ const handleMainBtnClick = (formType: string) => {
               id="loginForm"
               @submit.prevent="handleMainBtnClick(props.formType)"
             >
-              <!-- <LoginForm v-if="props.formType === 'login'" ref="loginForm" />
+              <LoginForm v-if="props.formType === 'login'" ref="loginForm" />
               <RegisterForm
                 v-else-if="props.formType === 'register'"
                 ref="registerForm"
@@ -172,7 +172,7 @@ const handleMainBtnClick = (formType: string) => {
                 v-else-if="props.formType === 'reset-password'"
                 ref="resetPasswordForm"
                 @reset-success="mainBtn.style.display = 'none'"
-              /> -->
+              />
 
               <RouterView />
 
