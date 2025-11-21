@@ -1,30 +1,53 @@
 <script setup lang="ts">
 import { onMounted, ref, useTemplateRef } from 'vue'
-import PasswordToggleBtn from './PasswordToggleBtn.vue'
+import PasswordToggleBtn from '../components/PasswordToggleBtn.vue'
 import { handlePasswordToggle } from '@/utils/handlePasswordToggle'
 import './assets/formStyle.css'
 import axios from 'axios'
+import { ElLoading, ElNotification } from 'element-plus'
 
-const BE_URL = 'http://localhost:8080/api/user/login'
+const USER_API_URL = import.meta.env.VITE_USER_API_URL
 
 const username = ref('')
 const password = ref('')
 
 const handleLoginFormSubmit = () => {
+  const loading = ElLoading.service({
+    lock: true,
+    text: 'Logging in',
+    background: 'rgba(0, 0, 0, 0.7)',
+  })
+
   axios
-    .post(BE_URL, {
+    .post(`${USER_API_URL}/login`, {
       username: username.value,
       password: password.value,
     })
-    .then((response) => {
-      if (response.data.status === 200) {
-        alert('Login successful: ' + response.data)
+    .then((loginRes) => {
+      if (loginRes.data.status === 200) {
+        ElNotification({
+          title: 'Login successful!',
+          type: 'success',
+        })
+        localStorage.setItem('access_token', loginRes.data.data.access_token)
+        //       // window.location.href = '/'
       } else {
-        alert('Login failed: ' + response.data)
+        ElNotification({
+          title: 'Login failed!',
+          message: 'Unable to login to your account.',
+          type: 'error',
+        })
       }
     })
     .catch((error) => {
-      alert('Login failed: ' + error)
+      ElNotification({
+        title: 'Login failed!',
+        message: 'Error: ' + error.response.data.message,
+        type: 'error',
+      })
+    })
+    .finally(() => {
+      loading.close()
     })
 }
 
