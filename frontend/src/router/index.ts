@@ -1,8 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import AuthenticationView from '@/views/authentication/AuthenticationView.vue'
-import LoginForm from '../views/authentication/components/LoginForm.vue'
-import RegisterForm from '@/views/authentication/components/RegisterForm.vue'
-import ForgotPasswordForm from '@/views/authentication/components/ForgotPasswordForm.vue'
+import ActivationView from '@/views/authentication/ActivationView.vue'
+import CategoryView from '@/views/seller/CategoryView.vue'
+import HomeView from '@/views/seller/HomeView.vue'
+import ProductView from '@/views/seller/ProductView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -30,6 +31,26 @@ const router = createRouter({
       name: 'forgot-password',
       component: AuthenticationView,
       props: { formType: 'forgot-password' },
+    },
+    {
+      path: '/activate',
+      name: 'activate',
+      component: ActivationView,
+    },
+    {
+      path: '/reset-password',
+      name: 'reset-password',
+      component: AuthenticationView,
+      props: { formType: 'reset-password' },
+    },
+    {
+      path: '/seller',
+      name: 'seller',
+      component: HomeView,
+      children: [
+        { path: 'category', name: 'category', component: CategoryView },
+        { path: 'product', name: 'product', component: ProductView },
+      ]
     },
   ],
 })
