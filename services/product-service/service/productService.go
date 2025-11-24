@@ -3,16 +3,14 @@ package service
 import (
 	"product-service/model"
 	"product-service/repository"
-
-	"github.com/google/uuid"
 )
 
 type ProductService interface {
 	CreateProduct(product *model.Product) error
-	GetProductByID(id uuid.UUID) (*model.Product, error)
+	GetProductByID(id string) (*model.Product, error)
 	GetAllProducts() ([]model.Product, error)
 	UpdateProduct(product *model.Product) error
-	DeleteProduct(id uuid.UUID) error
+	DeleteProduct(id string) error
 }
 
 type productService struct {
@@ -27,7 +25,7 @@ func (s *productService) CreateProduct(product *model.Product) error {
 	return s.repo.Create(product)
 }
 
-func (s *productService) GetProductByID(id uuid.UUID) (*model.Product, error) {
+func (s *productService) GetProductByID(id string) (*model.Product, error) {
 	return s.repo.FindByID(id)
 }
 
@@ -39,6 +37,6 @@ func (s *productService) UpdateProduct(product *model.Product) error {
 	return s.repo.Update(product)
 }
 
-func (s *productService) DeleteProduct(id uuid.UUID) error {
+func (s *productService) DeleteProduct(id string) error {
 	return s.repo.Delete(id)
 }

@@ -7,7 +7,6 @@ import (
 	"product-service/service"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 type ProductController struct {
@@ -34,12 +33,7 @@ func (c *ProductController) CreateProduct(ctx *gin.Context) {
 }
 
 func (c *ProductController) GetProductByID(ctx *gin.Context) {
-	idStr := ctx.Param("id")
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		ctx.Error(error.NewAppErrorWithErr(http.StatusBadRequest, "Invalid product ID", err))
-		return
-	}
+	id := ctx.Param("id")
 
 	product, err := c.service.GetProductByID(id)
 	if err != nil {
@@ -61,12 +55,7 @@ func (c *ProductController) GetAllProducts(ctx *gin.Context) {
 }
 
 func (c *ProductController) UpdateProduct(ctx *gin.Context) {
-	idStr := ctx.Param("id")
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		ctx.Error(error.NewAppErrorWithErr(http.StatusBadRequest, "Invalid product ID", err))
-		return
-	}
+	id := ctx.Param("id")
 
 	var product model.Product
 	if err := ctx.ShouldBindJSON(&product); err != nil {
@@ -84,12 +73,7 @@ func (c *ProductController) UpdateProduct(ctx *gin.Context) {
 }
 
 func (c *ProductController) DeleteProduct(ctx *gin.Context) {
-	idStr := ctx.Param("id")
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		ctx.Error(error.NewAppErrorWithErr(http.StatusBadRequest, "Invalid product ID", err))
-		return
-	}
+	id := ctx.Param("id")
 
 	if err := c.service.DeleteProduct(id); err != nil {
 		ctx.Error(error.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to delete product", err))

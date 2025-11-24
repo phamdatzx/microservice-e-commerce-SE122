@@ -5,6 +5,8 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: traefik
     traefik.ingress.kubernetes.io/router.entrypoints: web
+    # CORS middleware
+    traefik.ingress.kubernetes.io/router.middlewares: "default-cors-headers@kubernetescrd"
 spec:
   ingressClassName: traefik
   rules:

@@ -4,16 +4,23 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type SellerCategory struct {
-	ID        uuid.UUID      `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
-	Name      string         `gorm:"not null" json:"name"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+	ID        string    `bson:"_id" json:"id"`
+	Name      string    `bson:"name" json:"name"`
+	CreatedAt time.Time `bson:"created_at" json:"created_at"`
+	UpdatedAt time.Time `bson:"updated_at" json:"updated_at"`
+}
 
-	// Relationships
-	Products []Product `gorm:"many2many:product_seller_categories;" json:"products,omitempty"`
+func (s *SellerCategory) BeforeCreate() {
+	if s.ID == "" {
+		s.ID = uuid.New().String()
+	}
+	if s.CreatedAt.IsZero() {
+		s.CreatedAt = time.Now()
+	}
+	if s.UpdatedAt.IsZero() {
+		s.UpdatedAt = time.Now()
+	}
 }

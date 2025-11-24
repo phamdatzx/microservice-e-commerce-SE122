@@ -1,55 +1,96 @@
 package repository
 
 import (
+	"context"
 	"product-service/model"
+	"time"
 
-	"github.com/google/uuid"
-	"gorm.io/gorm"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type RatingImageRepository interface {
 	Create(ratingImage *model.RatingImage) error
-	FindByID(id uuid.UUID) (*model.RatingImage, error)
-	FindByRatingID(ratingID uuid.UUID) ([]model.RatingImage, error)
+	FindByID(id string) (*model.RatingImage, error)
+	FindByRatingID(ratingID string) ([]model.RatingImage, error)
 	FindAll() ([]model.RatingImage, error)
 	Update(ratingImage *model.RatingImage) error
-	Delete(id uuid.UUID) error
+	Delete(id string) error
 }
 
 type ratingImageRepository struct {
-	db *gorm.DB
+	db         *mongo.Database
+	collection *mongo.Collection
 }
 
-func NewRatingImageRepository(db *gorm.DB) RatingImageRepository {
-	return &ratingImageRepository{db: db}
+func NewRatingImageRepository(db *mongo.Database) RatingImageRepository {
+	return &ratingImageRepository{
+		db:         db,
+		collection: db.Collection("rating_images"),
+	}
 }
 
 func (r *ratingImageRepository) Create(ratingImage *model.RatingImage) error {
-	return r.db.Create(ratingImage).Error
+	ratingImage.BeforeCreate()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_, err := r.collection.InsertOne(ctx, ratingImage)
+	return err
 }
 
-func (r *ratingImageRepository) FindByID(id uuid.UUID) (*model.RatingImage, error) {
+func (r *ratingImageRepository) FindByID(id string) (*model.RatingImage, error) {
 	var ratingImage model.RatingImage
-	err := r.db.First(&ratingImage, "id = ?", id).Error
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	err := r.collection.FindOne(ctx, bson.M{"_id": id}).Decode(&ratingImage)
 	return &ratingImage, err
 }
 
-func (r *ratingImageRepository) FindByRatingID(ratingID uuid.UUID) ([]model.RatingImage, error) {
+func (r *ratingImageRepository) FindByRatingID(ratingID string) ([]model.RatingImage, error) {
 	var ratingImages []model.RatingImage
-	err := r.db.Where("rating_id = ?", ratingID).Find(&ratingImages).Error
-	return ratingImages, err
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	cursor, err := r.collection.Find(ctx, bson.M{"rating_id": ratingID})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+	if err = cursor.All(ctx, &ratingImages); err != nil {
+		return nil, err
+	}
+	return ratingImages, nil
 }
 
 func (r *ratingImageRepository) FindAll() ([]model.RatingImage, error) {
 	var ratingImages []model.RatingImage
-	err := r.db.Find(&ratingImages).Error
-	return ratingImages, err
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	cursor, err := r.collection.Find(ctx, bson.M{})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+	if err = cursor.All(ctx, &ratingImages); err != nil {
+		return nil, err
+	}
+	return ratingImages, nil
 }
 
 func (r *ratingImageRepository) Update(ratingImage *model.RatingImage) error {
-	return r.db.Save(ratingImage).Error
+	ratingImage.UpdatedAt = time.Now()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_, err := r.collection.UpdateOne(
+		ctx,
+		bson.M{"_id": ratingImage.ID},
+		bson.M{"$set": ratingImage},
+	)
+	return err
 }
 
-func (r *ratingImageRepository) Delete(id uuid.UUID) error {
-	return r.db.Delete(&model.RatingImage{}, "id = ?", id).Error
+func (r *ratingImageRepository) Delete(id string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_, err := r.collection.DeleteOne(ctx, bson.M{"_id": id})
+	return err
 }

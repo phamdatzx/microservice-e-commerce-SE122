@@ -4,17 +4,24 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type RatingImage struct {
-	ID        uuid.UUID      `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
-	RatingID  uuid.UUID      `gorm:"type:uuid;not null;index" json:"rating_id"`
-	Image     string         `gorm:"not null" json:"image"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+	ID        string    `bson:"_id" json:"id"`
+	RatingID  string    `bson:"rating_id" json:"rating_id"`
+	Image     string    `bson:"image" json:"image"`
+	CreatedAt time.Time `bson:"created_at" json:"created_at"`
+	UpdatedAt time.Time `bson:"updated_at" json:"updated_at"`
+}
 
-	// Relationship
-	Rating Rating `gorm:"foreignKey:RatingID" json:"rating,omitempty"`
+func (r *RatingImage) BeforeCreate() {
+	if r.ID == "" {
+		r.ID = uuid.New().String()
+	}
+	if r.CreatedAt.IsZero() {
+		r.CreatedAt = time.Now()
+	}
+	if r.UpdatedAt.IsZero() {
+		r.UpdatedAt = time.Now()
+	}
 }

@@ -4,21 +4,28 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type ProductReport struct {
-	ID        uuid.UUID      `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
-	ProductID uuid.UUID      `gorm:"type:uuid;not null;index" json:"product_id"`
-	UserID    uuid.UUID      `gorm:"type:uuid;not null" json:"user_id"`
-	Type      string         `gorm:"not null" json:"type"`
-	Content   string         `json:"content"`
-	Status    string         `json:"status"`
-	IsDeleted bool           `gorm:"default:false" json:"is_deleted"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+	ID        string    `bson:"_id" json:"id"`
+	ProductID string    `bson:"product_id" json:"product_id"`
+	UserID    string    `bson:"user_id" json:"user_id"`
+	Type      string    `bson:"type" json:"type"`
+	Content   string    `bson:"content" json:"content"`
+	Status    string    `bson:"status" json:"status"`
+	IsDeleted bool      `bson:"is_deleted" json:"is_deleted"`
+	CreatedAt time.Time `bson:"created_at" json:"created_at"`
+	UpdatedAt time.Time `bson:"updated_at" json:"updated_at"`
+}
 
-	// Relationship
-	Product Product `gorm:"foreignKey:ProductID" json:"product,omitempty"`
+func (p *ProductReport) BeforeCreate() {
+	if p.ID == "" {
+		p.ID = uuid.New().String()
+	}
+	if p.CreatedAt.IsZero() {
+		p.CreatedAt = time.Now()
+	}
+	if p.UpdatedAt.IsZero() {
+		p.UpdatedAt = time.Now()
+	}
 }

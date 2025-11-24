@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"product-service/config"
 	"product-service/controller"
-	"product-service/model"
 	"product-service/repository"
 	"product-service/router"
 	"product-service/service"
@@ -21,17 +20,8 @@ func main() {
 	// Initialize S3
 	config.InitS3()
 
-	// Auto migrate
-	config.DB.AutoMigrate(
-		&model.Product{},
-		&model.ProductOption{},
-		&model.ProductImages{},
-		&model.ProductReport{},
-		&model.Category{},
-		&model.SellerCategory{},
-		&model.Rating{},
-		&model.RatingImage{},
-	)
+	// MongoDB doesn't require AutoMigrate like GORM
+	// Collections will be created automatically when first document is inserted
 
 	//wiring dependencies
 	productRepo := repository.NewProductRepository(config.DB)

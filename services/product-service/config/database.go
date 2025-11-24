@@ -1,40 +1,44 @@
 package config
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
+	"time"
 
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-var DB *gorm.DB
+var DB *mongo.Database
 
 func ConnectDatabase() {
-	host := os.Getenv("DB_HOST")
-	port := os.Getenv("DB_PORT")
-	user := os.Getenv("DB_USER")
-	password := os.Getenv("DB_PASSWORD")
+	mongoURI := os.Getenv("MONGO_URI")
 	dbname := os.Getenv("DB_NAME")
 
 	// Kiểm tra nếu thiếu thông tin nào đó
-	if host == "" || port == "" || user == "" || password == "" || dbname == "" {
-		fmt.Println("Missing environment database information (DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME)")
+	if mongoURI == "" || dbname == "" {
+		fmt.Println("Missing environment database information (MONGO_URI, DB_NAME)")
 		return
 	}
 
-	// DSN cho PostgreSQL
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
-		host, user, password, dbname, port)
-	database, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		PrepareStmt: false,
-	})
+	// Tạo context với timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
+	// Kết nối đến MongoDB
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoURI))
 	if err != nil {
 		log.Fatal("Failed to connect to database: ", err)
 	}
 
-	DB = database
+	// Ping database để kiểm tra kết nối
+	err = client.Ping(ctx, nil)
+	if err != nil {
+		log.Fatal("Failed to ping database: ", err)
+	}
+
+	DB = client.Database(dbname)
 	fmt.Println("✅ Database connected")
 }
