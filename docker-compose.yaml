@@ -46,17 +46,27 @@ services:
     labels:
       - "traefik.enable=true"
 
-      # Public routes - no authentication required
+      # CORS Middleware - matches Kubernetes configuration
+      - "traefik.http.middlewares.cors-headers.headers.accesscontrolallowmethods=GET,POST,PUT,DELETE,PATCH,OPTIONS"
+      - "traefik.http.middlewares.cors-headers.headers.accesscontrolallowheaders=Content-Type,Authorization,X-Requested-With,Accept,Origin,X-User-Id,X-User-Role,X-Username"
+      - "traefik.http.middlewares.cors-headers.headers.accesscontrolalloworiginlist=http://localhost:3000,http://localhost:8080,http://localhost:5173"
+      - "traefik.http.middlewares.cors-headers.headers.accesscontrolallowcredentials=true"
+      - "traefik.http.middlewares.cors-headers.headers.accesscontrolexposeheaders=X-User-Id,X-User-Role,X-Username"
+      - "traefik.http.middlewares.cors-headers.headers.accesscontrolmaxage=3600"
+      - "traefik.http.middlewares.cors-headers.headers.addvaryheader=true"
+
+      # Public routes - CORS only
       - "traefik.http.routers.user-service-public.rule=Host(`k8stestdomain.com`) && PathPrefix(`/api/user/public`)"
       - "traefik.http.routers.user-service-public.entrypoints=web"
       - "traefik.http.routers.user-service-public.service=user-service"
+      - "traefik.http.routers.user-service-public.middlewares=cors-headers"
       - "traefik.http.routers.user-service-public.priority=100"
 
-      # Private routes - requires authentication via forward auth
+      # Private routes - CORS + Authentication (CORS first, then auth)
       - "traefik.http.routers.user-service-private.rule=Host(`k8stestdomain.com`) && PathPrefix(`/api/user`)"
       - "traefik.http.routers.user-service-private.entrypoints=web"
       - "traefik.http.routers.user-service-private.service=user-service"
-      - "traefik.http.routers.user-service-private.middlewares=forward-auth"
+      - "traefik.http.routers.user-service-private.middlewares=cors-headers,forward-auth"
       - "traefik.http.routers.user-service-private.priority=90"
 
       # Forward Auth Middleware
