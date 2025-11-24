@@ -9,7 +9,6 @@ import (
 	"user-service/router"
 	"user-service/service"
 
-	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -29,7 +28,7 @@ func main() {
 	userController := controller.NewUserController(userService)
 
 	r := gin.Default()
-	r.Use(cors.Default())
+	//r.Use(cors.Default())
 
 	// Setup routes
 	router.SetupRouter(r, &router.AppRouter{
