@@ -15,9 +15,9 @@ const token = route.query.token
 const newPassword = ref('')
 const resetSuccess = ref(false)
 
-const emits = defineEmits(['reset-success'])
+const emits = defineEmits(['success'])
 
-const handleResetPasswordFormSubmit = () => {
+const handleFormSent = () => {
   const loading = ElLoading.service({
     lock: true,
     text: 'Resetting your password',
@@ -36,7 +36,7 @@ const handleResetPasswordFormSubmit = () => {
           type: 'success',
         })
         resetSuccess.value = true
-        emits('reset-success')
+        emits('success')
       } else {
         ElNotification({
           title: 'Reset failed!',
@@ -57,9 +57,8 @@ const handleResetPasswordFormSubmit = () => {
     })
 }
 
-// EXPOSES
 defineExpose({
-  handleResetPasswordFormSubmit,
+  handleFormSent,
 })
 </script>
 
