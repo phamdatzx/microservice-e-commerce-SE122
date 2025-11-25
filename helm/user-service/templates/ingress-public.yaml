@@ -10,8 +10,7 @@ metadata:
 spec:
   ingressClassName: traefik
   rules:
-    - host: k8stestdomain.com
-      http:
+    - http:
         paths:
           - path: /api/user/public
             pathType: Prefix
