@@ -19,7 +19,7 @@ services:
       - "--log.level=INFO"
       - "--accesslog=true"
     ports:
-      - "80:80" # HTTP
+      - "81:80" # HTTP
       - "443:443" # HTTPS
       - "8081:8080" # Traefik Dashboard
     volumes:
@@ -30,7 +30,6 @@ services:
     labels:
       - "traefik.enable=true"
       # Dashboard routing
-      - "traefik.http.routers.dashboard.rule=Host(`traefik.local`)"
       - "traefik.http.routers.dashboard.entrypoints=web"
       - "traefik.http.routers.dashboard.service=api@internal"
     restart: unless-stopped
@@ -56,14 +55,14 @@ services:
       - "traefik.http.middlewares.cors-headers.headers.addvaryheader=true"
 
       # Public routes - CORS only
-      - "traefik.http.routers.user-service-public.rule=Host(`k8stestdomain.com`) && PathPrefix(`/api/user/public`)"
+      - "traefik.http.routers.user-service-public.rule=PathPrefix(`/api/user/public`)"
       - "traefik.http.routers.user-service-public.entrypoints=web"
       - "traefik.http.routers.user-service-public.service=user-service"
       - "traefik.http.routers.user-service-public.middlewares=cors-headers"
       - "traefik.http.routers.user-service-public.priority=100"
 
       # Private routes - CORS + Authentication (CORS first, then auth)
-      - "traefik.http.routers.user-service-private.rule=Host(`k8stestdomain.com`) && PathPrefix(`/api/user`)"
+      - "traefik.http.routers.user-service-private.rule=PathPrefix(`/api/user`)"
       - "traefik.http.routers.user-service-private.entrypoints=web"
       - "traefik.http.routers.user-service-private.service=user-service"
       - "traefik.http.routers.user-service-private.middlewares=cors-headers,forward-auth"
