@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import AuthenticationView from '@/views/authentication/AuthenticationView.vue'
 import ActivationView from '@/views/authentication/ActivationView.vue'
 import CategoryView from '@/views/seller/CategoryView.vue'
-import HomeView from '@/views/seller/HomeView.vue'
+import { default as SellerHomeView } from '@/views/seller/HomeView.vue'
 import ProductView from '@/views/seller/ProductView.vue'
 import LoginForm from '@/views/authentication/forms/LoginForm.vue'
 import RegisterForm from '@/views/authentication/forms/RegisterForm.vue'
@@ -88,10 +88,11 @@ const router = createRouter({
     {
       path: '/seller',
       name: 'seller',
-      component: HomeView,
+      component: SellerHomeView,
       children: [
         { path: '/category', name: 'category', component: CategoryView },
         { path: 'product', name: 'product', component: ProductView },
+      ],
       ],
     },
   ],
