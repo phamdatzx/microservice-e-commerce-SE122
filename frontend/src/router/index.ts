@@ -3,6 +3,7 @@ import AuthenticationView from '@/views/authentication/AuthenticationView.vue'
 import ActivationView from '@/views/authentication/ActivationView.vue'
 import CategoryView from '@/views/seller/CategoryView.vue'
 import { default as SellerHomeView } from '@/views/seller/HomeView.vue'
+import { default as CustomerHomeView } from '@/views/customer/HomeView.vue'
 import ProductView from '@/views/seller/ProductView.vue'
 import LoginForm from '@/views/authentication/forms/LoginForm.vue'
 import RegisterForm from '@/views/authentication/forms/RegisterForm.vue'
@@ -45,6 +46,10 @@ const resetFormProps = {
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
+    {
+      path: '/',
+      component: CustomerHomeView,
+    },
     {
       path: '/',
       component: AuthenticationView,
@@ -92,7 +97,6 @@ const router = createRouter({
       children: [
         { path: '/category', name: 'category', component: CategoryView },
         { path: 'product', name: 'product', component: ProductView },
-      ],
       ],
     },
   ],
