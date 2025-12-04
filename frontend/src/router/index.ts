@@ -9,6 +9,7 @@ import LoginForm from '@/views/authentication/forms/LoginForm.vue'
 import RegisterForm from '@/views/authentication/forms/RegisterForm.vue'
 import ForgotPasswordForm from '@/views/authentication/forms/ForgotPasswordForm.vue'
 import ResetPasswordForm from '@/views/authentication/forms/ResetPasswordForm.vue'
+import ProductDetailView from '@/views/customer/ProductDetailView.vue'
 
 const loginFormProps = {
   title: 'Welcome Back',
@@ -49,6 +50,10 @@ const router = createRouter({
     {
       path: '/',
       component: CustomerHomeView,
+    },
+    {
+      path: '/product-detail',
+      component: ProductDetailView,
     },
     {
       path: '/',
