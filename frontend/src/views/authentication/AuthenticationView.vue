@@ -1,134 +1,21 @@
 <script setup lang="ts">
-import axios from 'axios'
-import { ref, onMounted, watch, reactive } from 'vue'
-import { RouterLink } from 'vue-router'
-import LoginForm from './forms/LoginForm.vue'
-import RegisterForm from './forms/RegisterForm.vue'
-import ForgotPasswordForm from './forms/ForgotPasswordForm.vue'
 import Header from '@/components/Header.vue'
-import ResetPasswordForm from './forms/ResetPasswordForm.vue'
+import { computed, ref, watch } from 'vue'
+import { RouterLink, useRoute } from 'vue-router'
 
-const props = defineProps(['formType'])
+const route = useRoute()
+const propsData = computed(() => route.meta)
 
-const loginForm = ref()
-const registerForm = ref()
-const forgotPasswordForm = ref()
-const resetPasswordForm = ref()
+const formComponent = ref()
 const mainBtn = ref()
-const switchWrapper = ref()
 
-const contents = reactive({
-  title: '',
-  subtitle: '',
-  mainBtnText: '',
-  switchText: '',
-  switchLinkUrl: '',
-  switchLinkText: '',
-})
-const setContents = (formType: string) => {
-  if (formType === 'login') {
-    contents.title = 'Welcome Back'
-    contents.subtitle = 'LOGIN TO CONTINUE'
-    contents.mainBtnText = 'LOG IN'
-    contents.switchText = 'NEW USER ?'
-    contents.switchLinkUrl = '/register'
-    contents.switchLinkText = 'SIGN UP'
-  } else if (formType === 'register') {
-    contents.title = 'Register'
-    contents.subtitle = 'JOIN TO US'
-    contents.mainBtnText = 'REGISTER'
-    contents.switchText = 'ALREADY USER ?'
-    contents.switchLinkUrl = '/login'
-    contents.switchLinkText = 'LOG IN'
-  } else if (formType === 'forgot-password') {
-    contents.title = 'Forgot Password'
-    contents.subtitle = 'RESET YOUR PASSWORD'
-    contents.mainBtnText = 'RESET PASSWORD'
-    contents.switchText = 'REMEMBERED YOUR PASSWORD ?'
-    contents.switchLinkUrl = '/login'
-    contents.switchLinkText = 'LOG IN'
-  } else if (formType === 'reset-password') {
-    contents.title = 'Reset Password'
-    contents.subtitle = 'SET A NEW PASSWORD'
-    contents.mainBtnText = 'SET NEW PASSWORD'
-    contents.switchText = 'REMEMBERED YOUR PASSWORD ?'
-    contents.switchLinkUrl = '/login'
-    contents.switchLinkText = 'LOG IN'
-  }
-}
+// Fix: Main btn still hidden when back to other Forms
 watch(
-  () => props.formType,
-  (newVal) => {
-    setContents(newVal)
-  },
-)
-
-watch(
-  () => props.formType,
+  () => route.meta,
   (newVal) => {
     mainBtn.value.style.display = 'block'
   },
 )
-
-onMounted(() => {
-  setContents(props.formType)
-
-  // // Add smooth scrolling for anchor links
-  // const anchorLinks = document.querySelectorAll<HTMLAnchorElement>('a[href^="#"]')
-
-  // const handleAnchorClick = (e: Event) => {
-  //   e.preventDefault()
-  //   const target = document.querySelector(
-  //     (e.currentTarget as HTMLAnchorElement).getAttribute('href') || '',
-  //   )
-  //   if (target) {
-  //     target.scrollIntoView({ behavior: 'smooth' })
-  //   }
-  // }
-
-  // anchorLinks.forEach((anchor) => {
-  //   anchor.addEventListener('click', handleAnchorClick)
-  // })
-
-  // // Add input focus effects
-  // const formInputs = document.querySelectorAll<HTMLInputElement>('.form-input')
-
-  // const handleFocus = (e: Event) => {
-  //   ;(e.currentTarget as HTMLElement).parentElement?.classList.add('focused')
-  // }
-
-  // const handleBlur = (e: Event) => {
-  //   ;(e.currentTarget as HTMLElement).parentElement?.classList.remove('focused')
-  // }
-
-  // formInputs.forEach((input) => {
-  //   input.addEventListener('focus', handleFocus)
-  //   input.addEventListener('blur', handleBlur)
-  // })
-
-  // // Cleanup event listeners on unmount
-  // onBeforeUnmount(() => {
-  //   anchorLinks.forEach((anchor) => {
-  //     anchor.removeEventListener('click', handleAnchorClick)
-  //   })
-  //   formInputs.forEach((input) => {
-  //     input.removeEventListener('focus', handleFocus)
-  //     input.removeEventListener('blur', handleBlur)
-  //   })
-  // })
-})
-
-const handleMainBtnClick = (formType: string) => {
-  if (formType === 'login') {
-    loginForm.value.handleLoginFormSubmit()
-  } else if (formType === 'register') {
-    registerForm.value.handleRegisterFormSubmit()
-  } else if (formType === 'forgot-password') {
-    forgotPasswordForm.value.handleForgotPasswordFormSubmit()
-  } else if (formType === 'reset-password') {
-    resetPasswordForm.value.handleResetPasswordFormSubmit()
-  }
-}
 </script>
 
 <template>
@@ -140,8 +27,8 @@ const handleMainBtnClick = (formType: string) => {
         <div class="illustration">
           <img
             style="max-width: 100%; height: auto; border-radius: 12px"
-            src="./assets/authentication-illustration-image.svg"
-            alt="Login Security Illustration"
+            src="../../assets/authentication-illustration-image.svg"
+            alt="Authenticate Security Illustration"
             width="930"
             height="650"
           />
@@ -149,41 +36,30 @@ const handleMainBtnClick = (formType: string) => {
 
         <div class="form-section">
           <div style="width: 100%; max-width: 400px">
-            <h1 class="title">{{ contents.title }}</h1>
-            <p class="subtitle">{{ contents.subtitle }}</p>
+            <h1 class="title">{{ propsData.title }}</h1>
+            <p class="subtitle">{{ propsData.subtitle }}</p>
 
             <form
               class="login-form"
               id="loginForm"
-              @submit.prevent="handleMainBtnClick(props.formType)"
+              @submit.prevent="formComponent.handleFormSent()"
             >
-              <LoginForm v-if="props.formType === 'login'" ref="loginForm" />
-              <RegisterForm
-                v-else-if="props.formType === 'register'"
-                ref="registerForm"
-                @register-success="mainBtn.style.display = 'none'"
-              />
-              <ForgotPasswordForm
-                v-else-if="props.formType === 'forgot-password'"
-                ref="forgotPasswordForm"
-                @send-reset-success="mainBtn.style.display = 'none'"
-              />
-              <ResetPasswordForm
-                v-else-if="props.formType === 'reset-password'"
-                ref="resetPasswordForm"
-                @reset-success="mainBtn.style.display = 'none'"
-              />
-
-              <RouterView />
+              <RouterView v-slot="{ Component }">
+                <component
+                  :is="Component"
+                  ref="formComponent"
+                  @success="mainBtn.style.display = 'none'"
+                />
+              </RouterView>
 
               <button type="submit" class="main-btn" ref="mainBtn">
-                {{ contents.mainBtnText }}
+                {{ propsData.mainBtnText }}
               </button>
 
-              <div style="text-align: center; font-size: 14px" ref="switchWrapper">
-                <span style="color: #9ca3af; margin-right: 8px">{{ contents.switchText }}</span>
-                <RouterLink :to="contents.switchLinkUrl" class="switch-link">{{
-                  contents.switchLinkText
+              <div style="text-align: center; font-size: 14px">
+                <span style="color: #9ca3af; margin-right: 8px">{{ propsData.switchText }}</span>
+                <RouterLink :to="propsData.switchLinkUrl ?? ''" class="switch-link">{{
+                  propsData.switchLinkText
                 }}</RouterLink>
               </div>
             </form>

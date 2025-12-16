@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import PasswordToggleBtn from '../components/PasswordToggleBtn.vue'
 import { handlePasswordToggle } from '@/utils/handlePasswordToggle'
-import './assets/formStyle.css'
-import { ref } from 'vue'
 import axios from 'axios'
 import { ElLoading, ElNotification } from 'element-plus'
+import { ref } from 'vue'
+import PasswordToggleBtn from '../components/PasswordToggleBtn.vue'
+import './assets/formStyle.css'
 
 const USER_API_URL = import.meta.env.VITE_USER_API_URL
 
@@ -15,9 +15,9 @@ const password = ref('')
 const confirmPassword = ref('')
 const registerSuccess = ref(false)
 
-const emits = defineEmits(['register-success'])
+const emits = defineEmits(['success'])
 
-const handleRegisterFormSubmit = () => {
+const handleFormSent = () => {
   const loading = ElLoading.service({
     lock: true,
     text: 'Registering',
@@ -40,7 +40,7 @@ const handleRegisterFormSubmit = () => {
           type: 'success',
         })
         registerSuccess.value = true
-        emits('register-success')
+        emits('success')
       } else {
         ElNotification({
           title: 'Register failed!',
@@ -61,9 +61,8 @@ const handleRegisterFormSubmit = () => {
     })
 }
 
-// EXPOSES
 defineExpose({
-  handleRegisterFormSubmit,
+  handleFormSent,
 })
 </script>
 

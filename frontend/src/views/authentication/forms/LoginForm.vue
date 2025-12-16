@@ -1,17 +1,19 @@
 <script setup lang="ts">
-import { onMounted, ref, useTemplateRef } from 'vue'
-import PasswordToggleBtn from '../components/PasswordToggleBtn.vue'
 import { handlePasswordToggle } from '@/utils/handlePasswordToggle'
-import './assets/formStyle.css'
 import axios from 'axios'
 import { ElLoading, ElNotification } from 'element-plus'
+import { ref } from 'vue'
+import PasswordToggleBtn from '../components/PasswordToggleBtn.vue'
+import './assets/formStyle.css'
 
 const USER_API_URL = import.meta.env.VITE_USER_API_URL
 
 const username = ref('')
 const password = ref('')
 
-const handleLoginFormSubmit = () => {
+const emits = defineEmits(['success'])
+
+const handleFormSent = () => {
   const loading = ElLoading.service({
     lock: true,
     text: 'Logging in',
@@ -30,7 +32,7 @@ const handleLoginFormSubmit = () => {
           type: 'success',
         })
         localStorage.setItem('access_token', loginRes.data.data.access_token)
-        //       // window.location.href = '/'
+        // window.location.href = '/'
       } else {
         ElNotification({
           title: 'Login failed!',
@@ -51,9 +53,8 @@ const handleLoginFormSubmit = () => {
     })
 }
 
-// EXPOSES
 defineExpose({
-  handleLoginFormSubmit,
+  handleFormSent,
 })
 </script>
 

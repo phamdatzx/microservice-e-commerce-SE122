@@ -1,17 +1,18 @@
 <script setup lang="ts">
 import axios from 'axios'
-import { onMounted, ref, watch } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 
 const USER_API_URL = import.meta.env.VITE_USER_API_URL
+
 const route = useRoute()
 const token = route.query.token
 
 const count = ref(3)
-
 const activationStatus = ref('success')
 
 onMounted(() => {
+  // Auto route back to login page after x seconds
   setInterval(() => {
     if (activationStatus.value === 'success') {
       if (count.value > 0) {

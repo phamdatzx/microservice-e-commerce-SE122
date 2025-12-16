@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import './assets/formStyle.css'
-import { ref } from 'vue'
 import axios from 'axios'
 import { ElLoading, ElNotification } from 'element-plus'
+import { ref } from 'vue'
+import './assets/formStyle.css'
 
 const USER_API_URL = import.meta.env.VITE_USER_API_URL
 
 const username = ref('')
 const sendResetSuccess = ref(false)
 
-const emits = defineEmits(['send-reset-success'])
+const emits = defineEmits(['success'])
 
-const handleForgotPasswordFormSubmit = () => {
+const handleFormSent = () => {
   const loading = ElLoading.service({
     lock: true,
     text: 'Sending request',
@@ -30,7 +30,7 @@ const handleForgotPasswordFormSubmit = () => {
           type: 'success',
         })
         sendResetSuccess.value = true
-        emits('send-reset-success')
+        emits('success')
       } else {
         ElNotification({
           title: 'Request failed!',
@@ -52,9 +52,8 @@ const handleForgotPasswordFormSubmit = () => {
     })
 }
 
-// EXPOSES
 defineExpose({
-  handleForgotPasswordFormSubmit,
+  handleFormSent,
 })
 </script>
 
