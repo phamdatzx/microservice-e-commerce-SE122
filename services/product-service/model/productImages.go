@@ -5,7 +5,7 @@ import (
 )
 
 type ProductImages struct {
-	ID        string    `bson:"id" json:"id"`
+	ID        string    `bson:"_id" json:"id"`
 	URL       string    `bson:"url" json:"url"`
 	Order     int       `bson:"order" json:"order"`
 }

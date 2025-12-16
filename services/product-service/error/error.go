@@ -29,3 +29,9 @@ func NewAppErrorWithErr(code int, message string, err error) *AppError {
 		Err:     err,
 	}
 }
+
+func IsAppError(err error) bool {
+	_, ok := err.(*AppError)
+	return ok
+}
+

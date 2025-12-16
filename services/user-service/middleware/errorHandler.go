@@ -23,7 +23,7 @@ func ErrorHandler() gin.HandlerFunc {
 			if errors.As(err, &appErr) {
 				// Log internal errors
 				if appErr.Err != nil {
-					log.Printf("Error [%s]: %v", appErr.Code, appErr.Err)
+					log.Printf("Error [%d]: %v", appErr.Code, appErr.Err)
 				}
 
 				c.JSON(appErr.Code, gin.H{

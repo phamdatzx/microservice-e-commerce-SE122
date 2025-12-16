@@ -2,6 +2,7 @@ package router
 
 import (
 	"product-service/controller"
+	"product-service/middleware"
 
 	"github.com/gin-gonic/gin"
 )
@@ -9,10 +10,13 @@ import (
 func RegisterProductRoutes(rg *gin.RouterGroup, c controller.ProductController) {
 	product := rg.Group("")
 	{
-		product.POST("/", c.CreateProduct)
-		product.GET("/:id", c.GetProductByID)
-		product.GET("/", c.GetAllProducts)
-		product.PUT("/:id", c.UpdateProduct)
-		product.DELETE("/:id", c.DeleteProduct)
+		// Public routes - no authentication required
+		product.GET("/public/:id", c.GetProductByID)
+		product.GET("/public", c.GetAllProducts)
+
+		// Protected routes - require seller role
+		product.POST("/", middleware.RequireSeller(), c.CreateProduct)
+		product.PUT("/:id", middleware.RequireSeller(), c.UpdateProduct)
+		product.DELETE("/:id", middleware.RequireSeller(), c.DeleteProduct)
 	}
 }

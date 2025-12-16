@@ -9,7 +9,9 @@ import (
 
 // AppRouter holds all controllers for dependency injection
 type AppRouter struct {
-	ProductController *controller.ProductController
+	ProductController        *controller.ProductController
+	CategoryController       *controller.CategoryController
+	SellerCategoryController *controller.SellerCategoryController
 }
 
 // SetupRouter builds the main Gin router and registers all module routes
@@ -20,10 +22,17 @@ func SetupRouter(engine *gin.Engine, appRouter *AppRouter) *gin.Engine {
 		middleware.ErrorHandler(),
 	)
 
-	api := engine.Group("/api/product")
+	api := engine.Group("/api")
 	{
-		// Each controller registers its own routes
-		RegisterProductRoutes(api, *appRouter.ProductController)
+		// Product routes
+		productGroup := api.Group("/product")
+		RegisterProductRoutes(productGroup, *appRouter.ProductController)
+
+		// Category routes
+		RegisterCategoryRoutes(productGroup, *appRouter.CategoryController)
+
+		// Seller Category routes
+		RegisterSellerCategoryRoutes(productGroup, *appRouter.SellerCategoryController)
 	}
 
 	return engine

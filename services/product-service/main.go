@@ -23,17 +23,29 @@ func main() {
 	// MongoDB doesn't require AutoMigrate like GORM
 	// Collections will be created automatically when first document is inserted
 
-	//wiring dependencies
+	// Wiring dependencies - Product
 	productRepo := repository.NewProductRepository(config.DB)
 	productService := service.NewProductService(productRepo)
 	productController := controller.NewProductController(productService)
+
+	// Wiring dependencies - Category
+	categoryRepo := repository.NewCategoryRepository(config.DB)
+	categoryService := service.NewCategoryService(categoryRepo)
+	categoryController := controller.NewCategoryController(categoryService)
+
+	// Wiring dependencies - SellerCategory
+	sellerCategoryRepo := repository.NewSellerCategoryRepository(config.DB)
+	sellerCategoryService := service.NewSellerCategoryService(sellerCategoryRepo)
+	sellerCategoryController := controller.NewSellerCategoryController(sellerCategoryService)
 
 	r := gin.Default()
 	r.Use(cors.Default())
 
 	// Setup routes
 	router.SetupRouter(r, &router.AppRouter{
-		ProductController: productController,
+		ProductController:        productController,
+		CategoryController:       categoryController,
+		SellerCategoryController: sellerCategoryController,
 	})
 
 	r.Run(":8081") // chạy server ở port 8081 để tránh conflict với user-service
