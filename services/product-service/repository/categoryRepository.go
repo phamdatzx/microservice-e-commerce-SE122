@@ -61,7 +61,6 @@ func (r *categoryRepository) FindAll() ([]model.Category, error) {
 }
 
 func (r *categoryRepository) Update(category *model.Category) error {
-	category.UpdatedAt = time.Now()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	_, err := r.collection.UpdateOne(

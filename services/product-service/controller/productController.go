@@ -19,8 +19,15 @@ func NewProductController(service service.ProductService) *ProductController {
 
 func (c *ProductController) CreateProduct(ctx *gin.Context) {
 	var product model.Product
+	product.SellerID = ctx.GetHeader("X-User-Id")
 	if err := ctx.ShouldBindJSON(&product); err != nil {
 		ctx.Error(error.NewAppErrorWithErr(http.StatusBadRequest, "Invalid request body", err))
+		return
+	}
+
+	// Validate product data
+	if err := product.Validate(); err != nil {
+		ctx.Error(error.NewAppErrorWithErr(http.StatusBadRequest, "Validation failed", err))
 		return
 	}
 
@@ -63,6 +70,12 @@ func (c *ProductController) UpdateProduct(ctx *gin.Context) {
 		return
 	}
 	product.ID = id
+
+	// Validate product data
+	if err := product.Validate(); err != nil {
+		ctx.Error(error.NewAppErrorWithErr(http.StatusBadRequest, "Validation failed", err))
+		return
+	}
 
 	if err := c.service.UpdateProduct(&product); err != nil {
 		ctx.Error(error.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to update product", err))

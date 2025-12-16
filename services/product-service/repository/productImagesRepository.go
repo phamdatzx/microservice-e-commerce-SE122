@@ -77,7 +77,6 @@ func (r *productImagesRepository) FindAll() ([]model.ProductImages, error) {
 }
 
 func (r *productImagesRepository) Update(productImages *model.ProductImages) error {
-	productImages.UpdatedAt = time.Now()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	_, err := r.collection.UpdateOne(

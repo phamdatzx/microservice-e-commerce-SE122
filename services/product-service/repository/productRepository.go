@@ -61,7 +61,7 @@ func (r *productRepository) FindAll() ([]model.Product, error) {
 }
 
 func (r *productRepository) Update(product *model.Product) error {
-	product.UpdatedAt = time.Now()
+	product.BeforeUpdate()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	_, err := r.collection.UpdateOne(
