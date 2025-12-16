@@ -34,7 +34,6 @@ services:
       - "traefik.http.routers.dashboard.service=api@internal"
     restart: unless-stopped
 
-  # User service
   user-service:
     build: ./services/user-service
     container_name: user-service
@@ -75,6 +74,35 @@ services:
 
       # Service definition
       - "traefik.http.services.user-service.loadbalancer.server.port=8080"
+    restart: unless-stopped
+
+  # Product service
+  product-service:
+    build: ./services/product-service
+    container_name: product-service
+    env_file:
+      - ./services/product-service/.env
+    networks:
+      - app-network
+    labels:
+      - "traefik.enable=true"
+
+      # Public routes - CORS only (higher priority)
+      - "traefik.http.routers.product-service-public.rule=PathPrefix(`/api/product/public`)"
+      - "traefik.http.routers.product-service-public.entrypoints=web"
+      - "traefik.http.routers.product-service-public.service=product-service"
+      - "traefik.http.routers.product-service-public.middlewares=cors-headers"
+      - "traefik.http.routers.product-service-public.priority=100"
+
+      # Protected routes - CORS + Authentication
+      - "traefik.http.routers.product-service-private.rule=PathPrefix(`/api/product`)"
+      - "traefik.http.routers.product-service-private.entrypoints=web"
+      - "traefik.http.routers.product-service-private.service=product-service"
+      - "traefik.http.routers.product-service-private.middlewares=cors-headers,forward-auth"
+      - "traefik.http.routers.product-service-private.priority=90"
+
+      # Service definition
+      - "traefik.http.services.product-service.loadbalancer.server.port=8081"
     restart: unless-stopped
 
 networks:

@@ -18,5 +18,6 @@ func RegisterProductRoutes(rg *gin.RouterGroup, c controller.ProductController) 
 		product.POST("/", middleware.RequireSeller(), c.CreateProduct)
 		product.PUT("/:id", middleware.RequireSeller(), c.UpdateProduct)
 		product.DELETE("/:id", middleware.RequireSeller(), c.DeleteProduct)
+		product.POST("/:id/images", middleware.RequireSeller(), c.UploadProductImages)
 	}
 }

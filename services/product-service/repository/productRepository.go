@@ -15,6 +15,7 @@ type ProductRepository interface {
 	FindAll() ([]model.Product, error)
 	Update(product *model.Product) error
 	Delete(id string) error
+	AddImagesToProduct(productID string, images []model.ProductImages) error
 }
 
 type productRepository struct {
@@ -76,5 +77,24 @@ func (r *productRepository) Delete(id string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	_, err := r.collection.DeleteOne(ctx, bson.M{"_id": id})
+	return err
+}
+
+func (r *productRepository) AddImagesToProduct(productID string, images []model.ProductImages) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	
+	_, err := r.collection.UpdateOne(
+		ctx,
+		bson.M{"_id": productID},
+		bson.M{
+			"$push": bson.M{
+				"images": bson.M{"$each": images},
+			},
+			"$set": bson.M{
+				"updated_at": time.Now(),
+			},
+		},
+	)
 	return err
 }

@@ -36,7 +36,6 @@ func UploadImageToS3(file multipart.File, fileHeader *multipart.FileHeader, fold
 		Key:         aws.String(filename),
 		Body:        bytes.NewReader(buffer),
 		ContentType: aws.String(fileHeader.Header.Get("Content-Type")),
-		ACL:         aws.String("public-read"), // Make the file publicly accessible
 	})
 
 	if err != nil {
@@ -94,7 +93,6 @@ func extractKeyFromURL(url string) string {
 	
 	// Find the position after ".amazonaws.com/"
 	const suffix = ".amazonaws.com/"
-	idx := len(url)
 	for i := 0; i < len(url)-len(suffix); i++ {
 		if url[i:i+len(suffix)] == suffix {
 			return url[i+len(suffix):]

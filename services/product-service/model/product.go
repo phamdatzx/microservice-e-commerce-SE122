@@ -21,8 +21,8 @@ type Product struct {
 	CreatedAt   time.Time `bson:"created_at" json:"created_at"`
 	UpdatedAt   time.Time `bson:"updated_at" json:"updated_at"`
 
-	OptionGroups []OptionGroup      `bson:"option_groups"`
-	Variants     []Variant          `bson:"variants"`
+	OptionGroups []OptionGroup      `bson:"option_groups" json:"option_groups"` 
+	Variants     []Variant          `bson:"variants" json:"variants"`
 
 	// Many-to-many relationships stored as arrays of IDs
 	CategoryIDs       []string `bson:"category_ids" json:"category_ids,omitempty"`
@@ -35,6 +35,7 @@ type OptionGroup struct {
 }
 
 type Variant struct {
+	ID string `bson:"_id" json:"id"`
 	SKU     string            `bson:"sku"`
 	Options map[string]string `bson:"options"`
 	Price   int               `bson:"price"`
@@ -130,6 +131,11 @@ func (p *Product) BeforeCreate() {
 	}
 	if p.Variants == nil {
 		p.Variants = []Variant{}
+	}
+
+	//Initialize variant ID
+	for i := range p.Variants {
+		p.Variants[i].ID = uuid.New().String()
 	}
 }
 
