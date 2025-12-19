@@ -148,7 +148,7 @@ func (c *ProductController) UploadProductImages(ctx *gin.Context) {
 			Order: nextOrder,
 		}
 		productImage.BeforeCreate()
-		
+
 		productImages = append(productImages, productImage)
 		nextOrder++
 	}
@@ -162,5 +162,88 @@ func (c *ProductController) UploadProductImages(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{
 		"message": "Images uploaded successfully",
 		"images":  productImages,
+	})
+}
+
+func (c *ProductController) UploadVariantImages(ctx *gin.Context) {
+	productID := ctx.Param("id")
+
+	// Check if product exists
+	product, err := c.service.GetProductByID(productID)
+	if err != nil {
+		ctx.Error(error.NewAppErrorWithErr(http.StatusNotFound, "Product not found", err))
+		return
+	}
+
+	// Parse multipart form
+	form, err := ctx.MultipartForm()
+	if err != nil {
+		ctx.Error(error.NewAppErrorWithErr(http.StatusBadRequest, "Failed to parse form", err))
+		return
+	}
+
+	// Map to store variant ID -> image URL
+	variantUpdates := make(map[string]string)
+	uploadedVariants := make(map[string]string) // For response
+
+	// Process each form field matching pattern "variant_{variant_id}"
+	for fieldName, files := range form.File {
+		// Check if field name starts with "variant_"
+		if len(fieldName) > 0 {
+			variantID := fieldName
+
+			// Verify variant exists in product
+			variantExists := false
+			for _, v := range product.Variants {
+				if v.ID == variantID {
+					variantExists = true
+					break
+				}
+			}
+
+			if !variantExists {
+				ctx.Error(error.NewAppError(http.StatusBadRequest, "Variant "+variantID+" not found in product"))
+				return
+			}
+
+			// Get the first file (should only be one per variant)
+			if len(files) == 0 {
+				continue
+			}
+			fileHeader := files[0]
+
+			file, err := fileHeader.Open()
+			if err != nil {
+				ctx.Error(error.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to open file for variant "+variantID, err))
+				return
+			}
+			defer file.Close()
+
+			// Upload to S3
+			imageURL, err := utils.UploadImageToS3(file, fileHeader, "products/variants")
+			if err != nil {
+				ctx.Error(error.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to upload image to S3 for variant "+variantID, err))
+				return
+			}
+
+			variantUpdates[variantID] = imageURL
+			uploadedVariants[variantID] = imageURL
+		}
+	}
+
+	if len(variantUpdates) == 0 {
+		ctx.Error(error.NewAppError(http.StatusBadRequest, "No variant images provided"))
+		return
+	}
+
+	// Update variant images in database
+	if err := c.service.UploadVariantImages(productID, variantUpdates); err != nil {
+		ctx.Error(error.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to update variant images", err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"message":  "Variant images uploaded successfully",
+		"variants": uploadedVariants,
 	})
 }

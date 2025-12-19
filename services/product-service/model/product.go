@@ -35,11 +35,12 @@ type OptionGroup struct {
 }
 
 type Variant struct {
-	ID string `bson:"_id" json:"id"`
-	SKU     string            `bson:"sku"`
-	Options map[string]string `bson:"options"`
-	Price   int               `bson:"price"`
-	Stock   int               `bson:"stock"`
+	ID      string            `bson:"_id" json:"id"`
+	SKU     string            `bson:"sku" json:"sku"`
+	Options map[string]string `bson:"options" json:"options"`
+	Price   int               `bson:"price" json:"price"`
+	Stock   int               `bson:"stock" json:"stock"`
+	Image   string            `bson:"image" json:"image"`
 }
 
 // Validate checks if the product has all required fields and valid data

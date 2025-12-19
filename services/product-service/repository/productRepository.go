@@ -16,6 +16,7 @@ type ProductRepository interface {
 	Update(product *model.Product) error
 	Delete(id string) error
 	AddImagesToProduct(productID string, images []model.ProductImages) error
+	UpdateVariantImages(productID string, variantUpdates map[string]string) error
 }
 
 type productRepository struct {
@@ -93,6 +94,40 @@ func (r *productRepository) AddImagesToProduct(productID string, images []model.
 			},
 			"$set": bson.M{
 				"updated_at": time.Now(),
+			},
+		},
+	)
+	return err
+}
+
+func (r *productRepository) UpdateVariantImages(productID string, variantUpdates map[string]string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Fetch the product first
+	var product model.Product
+	err := r.collection.FindOne(ctx, bson.M{"_id": productID}).Decode(&product)
+	if err != nil {
+		return err
+	}
+
+	// Update variant images in memory
+	for i := range product.Variants {
+		if imageURL, exists := variantUpdates[product.Variants[i].ID]; exists {
+			product.Variants[i].Image = imageURL
+		}
+	}
+
+	// Update the entire variants array and updated_at
+	product.UpdatedAt = time.Now()
+	
+	_, err = r.collection.UpdateOne(
+		ctx,
+		bson.M{"_id": productID},
+		bson.M{
+			"$set": bson.M{
+				"variants":   product.Variants,
+				"updated_at": product.UpdatedAt,
 			},
 		},
 	)
