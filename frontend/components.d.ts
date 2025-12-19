@@ -20,7 +20,6 @@ declare module 'vue' {
     ElCarouselItem: typeof import('element-plus/es')['ElCarouselItem']
     ElCascader: typeof import('element-plus/es')['ElCascader']
     ElCol: typeof import('element-plus/es')['ElCol']
-    ElConfigProvider: typeof import('element-plus/es')['ElConfigProvider']
     ElContainer: typeof import('element-plus/es')['ElContainer']
     ElDialog: typeof import('element-plus/es')['ElDialog']
     ElDivider: typeof import('element-plus/es')['ElDivider']
@@ -29,7 +28,6 @@ declare module 'vue' {
     ElHeader: typeof import('element-plus/es')['ElHeader']
     ElIcon: typeof import('element-plus/es')['ElIcon']
     ElImage: typeof import('element-plus/es')['ElImage']
-    ElImg: typeof import('element-plus/es')['ElImg']
     ElInput: typeof import('element-plus/es')['ElInput']
     ElInputNumber: typeof import('element-plus/es')['ElInputNumber']
     ElMain: typeof import('element-plus/es')['ElMain']
@@ -37,7 +35,6 @@ declare module 'vue' {
     ElMenuItem: typeof import('element-plus/es')['ElMenuItem']
     ElMenuItemGroup: typeof import('element-plus/es')['ElMenuItemGroup']
     ElPagination: typeof import('element-plus/es')['ElPagination']
-    ElPopover: typeof import('element-plus/es')['ElPopover']
     ElRate: typeof import('element-plus/es')['ElRate']
     ElRow: typeof import('element-plus/es')['ElRow']
     ElSelectV2: typeof import('element-plus/es')['ElSelectV2']
@@ -47,7 +44,6 @@ declare module 'vue' {
     ElTabPane: typeof import('element-plus/es')['ElTabPane']
     ElTabs: typeof import('element-plus/es')['ElTabs']
     ElTag: typeof import('element-plus/es')['ElTag']
-    ElTreeSelect: typeof import('element-plus/es')['ElTreeSelect']
     ElUpload: typeof import('element-plus/es')['ElUpload']
     FacebookIcon: typeof import('./src/components/icons/FacebookIcon.vue')['default']
     Header: typeof import('./src/components/Header.vue')['default']
@@ -63,5 +59,6 @@ declare module 'vue' {
     ShippingIcon: typeof import('./src/components/icons/ShippingIcon.vue')['default']
     StarIcon: typeof import('./src/components/icons/StarIcon.vue')['default']
     TwitterXIcon: typeof import('./src/components/icons/TwitterXIcon.vue')['default']
+    UserComment: typeof import('./src/components/UserComment.vue')['default']
   }
 }

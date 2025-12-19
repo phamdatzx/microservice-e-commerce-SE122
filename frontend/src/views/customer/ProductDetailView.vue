@@ -12,6 +12,7 @@ import { Check, Goods, ShoppingCart } from '@element-plus/icons-vue'
 import HeartIcon from '@/components/icons/HeartIcon.vue'
 import HeartFilledIcon from '@/components/icons/HeartFilledIcon.vue'
 import ShippingIcon from '@/components/icons/ShippingIcon.vue'
+import UserComment from '../../components/UserComment.vue'
 
 const productList = [
   {
@@ -470,59 +471,29 @@ onMounted(() => {
               </el-col>
             </el-row>
           </div>
+          <UserComment
+            rating="4"
+            :image-urls="imageUrls"
+            seller-response="Thank you for sharing a review of your recent experience. Our team at Lovito is committed
+          to providing high-quality products at affordable prices, and we are delighted to know that
+          we made a positive impression on you. We hope you will visit us again soon."
+          />
+          <UserComment
+            rating="5"
+            seller-response="Thank you for sharing a review of your recent experience. Our team at Lovito is committed
+          to providing high-quality products at affordable prices, and we are delighted to know that
+          we made a positive impression on you. We hope you will visit us again soon."
+          />
+          <UserComment rating="3" :image-urls="imageUrls" />
 
-          <div style="display: flex; padding: 16px 0">
-            <img
-              src="/src/assets/avatar.jpg"
-              style="
-                padding: 0 10px 0 20px;
-                border-radius: 50%;
-                width: 40px;
-                height: 40px;
-                box-sizing: content-box;
-              "
+          <div style="display: flex">
+            <el-pagination
+              background
+              layout="prev, pager, next"
+              :total="1000"
+              size="large"
+              style="margin: 28px auto 8px"
             />
-            <div>
-              <p>ntduc24</p>
-              <el-rate
-                v-model="rating"
-                disabled
-                style="--el-rate-fill-color: var(--main-color); --el-rate-icon-margin: 2px"
-                size="small"
-              />
-              <p style="color: #9c9c9c; font-size: 13px">2024-12-30 22:08 | Option: Gray, S</p>
-              <p style="margin-top: 8px">
-                The product is really beautiful, everyone. You should buy it quickly while you can
-                because it’s super pretty. Hurry while there’s still a subsidy/discount available
-              </p>
-              <div>
-                <el-image
-                  v-for="(imageUrl, index) in imageUrls"
-                  :initial-index="index"
-                  :src="imageUrl"
-                  style="
-                    width: 100px;
-                    height: 100px;
-                    border-radius: 2px;
-                    margin-right: 12px;
-                    margin-top: 12px;
-                    margin-bottom: 12px;
-                  "
-                  show-progress
-                  :preview-src-list="imageUrls"
-                  fit="contain"
-                />
-                <div style="padding: 20px; background-color: #d6f2d7; border: 1px solid #c2f0c2">
-                  <h4 style="font-weight: 500; font-size: 16px">Seller's Response</h4>
-                  <p style="margin-top: 4px">
-                    Thank you for sharing a review of your recent experience. Our team at Lovito is
-                    committed to providing high-quality products at affordable prices, and we are
-                    delighted to know that we made a positive impression on you. We hope you will
-                    visit us again soon.
-                  </p>
-                </div>
-              </div>
-            </div>
           </div>
         </el-tab-pane>
       </el-tabs>
@@ -659,5 +630,19 @@ onMounted(() => {
 .rating-filter-btn.active {
   border-color: #22c55e;
   color: #22c55e;
+}
+</style>
+
+<style>
+.el-pagination.is-background .btn-next.is-active,
+.el-pagination.is-background .btn-prev.is-active,
+.el-pagination.is-background .el-pager li.is-active {
+  background-color: var(--main-color);
+  color: var(--el-color-white);
+}
+
+.el-pager li:hover {
+  color: var(--main-color);
+  transition: color 0.2s;
 }
 </style>
