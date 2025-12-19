@@ -13,6 +13,7 @@ type CategoryRepository interface {
 	Create(category *model.Category) error
 	FindByID(id string) (*model.Category, error)
 	FindAll() ([]model.Category, error)
+	FindByName(name string) ([]model.Category, error)
 	Update(category *model.Category) error
 	Delete(id string) error
 }
@@ -50,6 +51,30 @@ func (r *categoryRepository) FindAll() ([]model.Category, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	cursor, err := r.collection.Find(ctx, bson.M{})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+	if err = cursor.All(ctx, &categories); err != nil {
+		return nil, err
+	}
+	return categories, nil
+}
+
+func (r *categoryRepository) FindByName(name string) ([]model.Category, error) {
+	var categories []model.Category
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	
+	// Case-insensitive regex search for partial matches
+	filter := bson.M{
+		"name": bson.M{
+			"$regex":   name,
+			"$options": "i", // case-insensitive
+		},
+	}
+	
+	cursor, err := r.collection.Find(ctx, filter)
 	if err != nil {
 		return nil, err
 	}

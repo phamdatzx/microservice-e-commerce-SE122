@@ -1,8 +1,9 @@
 package controller
 
 import (
+	"mime/multipart"
 	"net/http"
-	"product-service/error"
+	appError "product-service/error"
 	"product-service/model"
 	"product-service/service"
 
@@ -18,20 +19,24 @@ func NewCategoryController(service service.CategoryService) *CategoryController 
 }
 
 func (c *CategoryController) CreateCategory(ctx *gin.Context) {
-	var category model.Category
-	if err := ctx.ShouldBindJSON(&category); err != nil {
-		ctx.Error(error.NewAppErrorWithErr(http.StatusBadRequest, "Invalid request body", err))
+	// Parse form data
+	name := ctx.PostForm("name")
+	if name == "" {
+		ctx.Error(appError.NewAppError(http.StatusBadRequest, "Category name is required"))
 		return
 	}
 
-	// Validate category data
-	if err := category.Validate(); err != nil {
-		ctx.Error(error.NewAppErrorWithErr(http.StatusBadRequest, "Validation failed", err))
-		return
+	// Get image file (optional)
+	var imageFile *multipart.FileHeader
+	file, err := ctx.FormFile("image")
+	if err == nil {
+		imageFile = file
 	}
 
-	if err := c.service.CreateCategory(&category); err != nil {
-		ctx.Error(error.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to create category", err))
+	// Process in service layer
+	category, err := c.service.ProcessCategoryCreate(name, imageFile)
+	if err != nil {
+		ctx.Error(appError.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to create category", err))
 		return
 	}
 
@@ -43,7 +48,7 @@ func (c *CategoryController) GetCategoryByID(ctx *gin.Context) {
 
 	category, err := c.service.GetCategoryByID(id)
 	if err != nil {
-		ctx.Error(error.NewAppErrorWithErr(http.StatusNotFound, "Category not found", err))
+		ctx.Error(appError.NewAppErrorWithErr(http.StatusNotFound, "Category not found", err))
 		return
 	}
 
@@ -51,9 +56,22 @@ func (c *CategoryController) GetCategoryByID(ctx *gin.Context) {
 }
 
 func (c *CategoryController) GetAllCategories(ctx *gin.Context) {
-	categories, err := c.service.GetAllCategories()
+	// Get optional search query parameter
+	searchName := ctx.Query("name")
+	
+	var categories []model.Category
+	var err error
+	
+	if searchName != "" {
+		// Search by name
+		categories, err = c.service.SearchCategories(searchName)
+	} else {
+		// Get all categories
+		categories, err = c.service.GetAllCategories()
+	}
+	
 	if err != nil {
-		ctx.Error(error.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to fetch categories", err))
+		ctx.Error(appError.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to fetch categories", err))
 		return
 	}
 
@@ -63,21 +81,20 @@ func (c *CategoryController) GetAllCategories(ctx *gin.Context) {
 func (c *CategoryController) UpdateCategory(ctx *gin.Context) {
 	id := ctx.Param("id")
 
-	var category model.Category
-	if err := ctx.ShouldBindJSON(&category); err != nil {
-		ctx.Error(error.NewAppErrorWithErr(http.StatusBadRequest, "Invalid request body", err))
-		return
-	}
-	category.ID = id
+	// Parse form data
+	name := ctx.PostForm("name")
 
-	// Validate category data
-	if err := category.Validate(); err != nil {
-		ctx.Error(error.NewAppErrorWithErr(http.StatusBadRequest, "Validation failed", err))
-		return
+	// Get image file (optional)
+	var imageFile *multipart.FileHeader
+	file, err := ctx.FormFile("image")
+	if err == nil {
+		imageFile = file
 	}
 
-	if err := c.service.UpdateCategory(&category); err != nil {
-		ctx.Error(error.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to update category", err))
+	// Process in service layer
+	category, err := c.service.ProcessCategoryUpdate(id, name, imageFile)
+	if err != nil {
+		ctx.Error(appError.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to update category", err))
 		return
 	}
 
@@ -88,7 +105,7 @@ func (c *CategoryController) DeleteCategory(ctx *gin.Context) {
 	id := ctx.Param("id")
 
 	if err := c.service.DeleteCategory(id); err != nil {
-		ctx.Error(error.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to delete category", err))
+		ctx.Error(appError.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to delete category", err))
 		return
 	}
 
