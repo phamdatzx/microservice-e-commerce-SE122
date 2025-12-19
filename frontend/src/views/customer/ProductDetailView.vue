@@ -421,12 +421,110 @@ onMounted(() => {
             </el-col>
           </el-row>
 
-          <el-button plain color="#22c55e" size="large" style="margin: 20px auto 0">
-            Show More</el-button
-          >
+          <div style="display: flex; align-items: center">
+            <el-button plain color="#22c55e" size="large" style="margin: 28px auto 16px">
+              Show More
+            </el-button>
+          </div>
         </el-tab-pane>
 
-        <el-tab-pane :label="`REVIEWS (${totalReviews})`" name="reviews">Config</el-tab-pane>
+        <el-tab-pane :label="`REVIEWS (${totalReviews})`" name="reviews">
+          <div
+            style="
+              padding: 20px;
+              background-color: #e2f0c4;
+              border: 1px solid #84f084;
+              margin-bottom: 16px;
+            "
+          >
+            <el-row style="align-items: center">
+              <el-col
+                :span="6"
+                style="
+                  color: var(--main-color);
+                  display: flex;
+                  flex-direction: column;
+                  align-items: center;
+                "
+                ;
+              >
+                <span style="font-size: 28px; font-weight: 600"
+                  >4.6<span style="font-size: 24px"> out of 5</span></span
+                >
+                <el-rate
+                  v-model="rating"
+                  disabled
+                  style="--el-rate-fill-color: var(--main-color); --el-rate-icon-size: 28px"
+                  size="large"
+                />
+              </el-col>
+              <el-col :span="18">
+                <button class="rating-filter-btn active">All</button>
+                <button class="rating-filter-btn">5 Stars (24)</button>
+                <button class="rating-filter-btn">4 Stars (24)</button>
+                <button class="rating-filter-btn">3 Stars (24)</button>
+                <button class="rating-filter-btn">2 Stars (24)</button>
+                <button class="rating-filter-btn">1 Star (24)</button>
+                <button class="rating-filter-btn">Has Comment (24)</button>
+                <button class="rating-filter-btn">Has Pictures (24)</button>
+              </el-col>
+            </el-row>
+          </div>
+
+          <div style="display: flex; padding: 16px 0">
+            <img
+              src="/src/assets/avatar.jpg"
+              style="
+                padding: 0 10px 0 20px;
+                border-radius: 50%;
+                width: 40px;
+                height: 40px;
+                box-sizing: content-box;
+              "
+            />
+            <div>
+              <p>ntduc24</p>
+              <el-rate
+                v-model="rating"
+                disabled
+                style="--el-rate-fill-color: var(--main-color); --el-rate-icon-margin: 2px"
+                size="small"
+              />
+              <p style="color: #9c9c9c; font-size: 13px">2024-12-30 22:08 | Option: Gray, S</p>
+              <p style="margin-top: 8px">
+                The product is really beautiful, everyone. You should buy it quickly while you can
+                because it’s super pretty. Hurry while there’s still a subsidy/discount available
+              </p>
+              <div>
+                <el-image
+                  v-for="(imageUrl, index) in imageUrls"
+                  :initial-index="index"
+                  :src="imageUrl"
+                  style="
+                    width: 100px;
+                    height: 100px;
+                    border-radius: 2px;
+                    margin-right: 12px;
+                    margin-top: 12px;
+                    margin-bottom: 12px;
+                  "
+                  show-progress
+                  :preview-src-list="imageUrls"
+                  fit="contain"
+                />
+                <div style="padding: 20px; background-color: #d6f2d7; border: 1px solid #c2f0c2">
+                  <h4 style="font-weight: 500; font-size: 16px">Seller's Response</h4>
+                  <p style="margin-top: 4px">
+                    Thank you for sharing a review of your recent experience. Our team at Lovito is
+                    committed to providing high-quality products at affordable prices, and we are
+                    delighted to know that we made a positive impression on you. We hope you will
+                    visit us again soon.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </el-tab-pane>
       </el-tabs>
     </div>
 
@@ -536,5 +634,30 @@ onMounted(() => {
     color: #666;
     font-size: 12px;
   }
+}
+
+.rating-filter-btn {
+  margin-right: 12px;
+  margin-bottom: 6px;
+  margin-top: 6px;
+  font-size: 16px;
+  padding: 8px 16px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  min-width: 80px;
+  transition:
+    color 0.3s,
+    border-color 0.3s;
+
+  &:hover {
+    color: #22c55e;
+    border-color: currentColor;
+  }
+}
+
+.rating-filter-btn.active {
+  border-color: #22c55e;
+  color: #22c55e;
 }
 </style>

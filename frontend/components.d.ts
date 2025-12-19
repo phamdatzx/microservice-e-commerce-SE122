@@ -13,6 +13,7 @@ declare module 'vue' {
   export interface GlobalComponents {
     CarouselItem: typeof import('./src/components/CarouselItem.vue')['default']
     CategoryItem: typeof import('./src/components/CategoryItem.vue')['default']
+    CustomerComment: typeof import('./src/components/CustomerComment.vue')['default']
     ElAside: typeof import('element-plus/es')['ElAside']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElCarousel: typeof import('element-plus/es')['ElCarousel']
@@ -36,6 +37,7 @@ declare module 'vue' {
     ElMenuItem: typeof import('element-plus/es')['ElMenuItem']
     ElMenuItemGroup: typeof import('element-plus/es')['ElMenuItemGroup']
     ElPagination: typeof import('element-plus/es')['ElPagination']
+    ElPopover: typeof import('element-plus/es')['ElPopover']
     ElRate: typeof import('element-plus/es')['ElRate']
     ElRow: typeof import('element-plus/es')['ElRow']
     ElSelectV2: typeof import('element-plus/es')['ElSelectV2']
