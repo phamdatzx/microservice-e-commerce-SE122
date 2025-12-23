@@ -15,6 +15,7 @@ const props = withDefaults(defineProps<Props>(), {
     price: 0,
     quantity: 0,
     isSoldOut: false,
+    sellerName: '',
   }),
 })
 
@@ -53,7 +54,7 @@ const quantity = defineModel<number>()
       />
     </span>
     <span style="width: 114px; text-align: center"
-      >{{ props.product.price * (quantity ?? 0) }}$</span
+      >{{ props.product.price * (props.product.quantity ?? 0) }}$</span
     >
     <span style="width: 139px; text-align: center">
       <el-button type="danger" plain :icon="Delete" />

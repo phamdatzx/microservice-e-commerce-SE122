@@ -8,7 +8,6 @@ import CartProduct from './CartProduct.vue'
 interface Props {
   seller: CartSeller
 }
-
 const props = withDefaults(defineProps<Props>(), {
   seller: () => ({
     sellerName: '',
@@ -16,8 +15,14 @@ const props = withDefaults(defineProps<Props>(), {
   }),
 })
 
+const emits = defineEmits(['checkedProductsChange'])
+
 const checkAll = ref(false)
 const checkedProducts = ref<Product[]>([])
+
+watch([checkedProducts], () => {
+  emits('checkedProductsChange', checkedProducts.value, props.seller.sellerName)
+})
 
 const handleCheckAllChange = (val: CheckboxValueType) => {
   checkedProducts.value = val ? props.seller.products : []
@@ -28,16 +33,24 @@ const handleCheckedProductsChange = (value: CheckboxValueType[]) => {
   checkAll.value = checkedCount === props.seller.products.length
 }
 
-watch([checkAll], () => {})
+const handleCheckAll = () => {
+  checkAll.value = true
+  checkedProducts.value = props.seller.products
+}
+
+const handleUncheckAll = () => {
+  checkAll.value = false
+  checkedProducts.value = []
+}
+
+defineExpose({ checkedProducts, handleCheckAll, handleUncheckAll })
 </script>
 
 <template>
-  <div class="box-shadow border-radius" style="margin: 20px 0">
+  <div class="cart-box-shadow border-radius" style="margin: 24px 0; background-color: #fff">
     <div style="padding: 0 20px; display: flex; align-items: center; height: 64px">
       <el-checkbox
-        ref="checkbox"
-        :id="props.seller.sellerName"
-        :value="props.seller"
+        v-model="checkAll"
         @change="handleCheckAllChange"
         size="large"
         class="cartCheckbox"
