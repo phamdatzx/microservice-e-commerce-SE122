@@ -9,6 +9,7 @@ import (
 
 // AppRouter holds all controllers for dependency injection
 type AppRouter struct {
+	CartController  *controller.CartController
 	OrderController *controller.OrderController
 }
 
@@ -23,6 +24,7 @@ func SetupRouter(engine *gin.Engine, appRouter *AppRouter) *gin.Engine {
 	api := engine.Group("/api/order")
 	{
 		// Each controller registers its own routes
+		RegisterCartRoutes(api, *appRouter.CartController)
 		RegisterOrderRoutes(api, *appRouter.OrderController)
 	}
 

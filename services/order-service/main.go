@@ -22,6 +22,12 @@ func main() {
 	//config.DB.AutoMigrate(&model.User{})
 
 	//wiring dependencies
+	// Cart dependencies
+	cartRepo := repository.NewCartRepository(config.DB)
+	cartService := service.NewCartService(cartRepo)
+	cartController := controller.NewCartController(cartService)
+
+	// Order dependencies
 	orderRepo := repository.NewOrderRepository(config.DB)
 	orderService := service.NewOrderService(orderRepo)
 	orderController := controller.NewOrderController(orderService)
@@ -31,6 +37,7 @@ func main() {
 
 	// Setup routes
 	router.SetupRouter(r, &router.AppRouter{
+		CartController:  cartController,
 		OrderController: orderController,
 	})
 
