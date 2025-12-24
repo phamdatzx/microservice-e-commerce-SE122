@@ -2,6 +2,7 @@ package controller
 
 import (
 	"net/http"
+	"product-service/dto"
 	"product-service/error"
 	"product-service/model"
 	"product-service/service"
@@ -153,3 +154,32 @@ func (c *ProductController) UploadVariantImages(ctx *gin.Context) {
 		"variants": uploadedVariants,
 	})
 }
+
+func (c *ProductController) GetProductsBySeller(ctx *gin.Context) {
+	// Get seller ID from header
+	sellerID := ctx.Param("sellerId")
+	if sellerID == "" {
+		ctx.Error(error.NewAppError(http.StatusUnauthorized, "Seller ID not found"))
+		return
+	}
+
+	// Parse query parameters
+	var params dto.GetProductsQueryParams
+	if err := ctx.ShouldBindQuery(&params); err != nil {
+		ctx.Error(error.NewAppErrorWithErr(http.StatusBadRequest, "Invalid query parameters", err))
+		return
+	}
+
+	// Set default values
+	params.SetDefaults()
+
+	// Get products from service
+	response, err := c.service.GetProductsBySeller(sellerID, params)
+	if err != nil {
+		ctx.Error(error.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to fetch products", err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, response)
+}
+

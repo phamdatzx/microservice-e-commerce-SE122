@@ -13,6 +13,8 @@ func RegisterProductRoutes(rg *gin.RouterGroup, c controller.ProductController) 
 		// Public routes - no authentication required
 		product.GET("/public/:id", c.GetProductByID)
 		product.GET("/public", c.GetAllProducts)
+		product.GET("/public/products/seller/:sellerId", c.GetProductsBySeller)
+
 
 		// Protected routes - require seller role
 		product.POST("/", middleware.RequireSeller(), c.CreateProduct)

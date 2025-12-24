@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"mime/multipart"
+	"product-service/dto"
 	"product-service/model"
 	"product-service/repository"
 	"product-service/utils"
@@ -16,6 +17,7 @@ type ProductService interface {
 	DeleteProduct(id string) error
 	ProcessProductImageUpload(productID string, files []*multipart.FileHeader) ([]model.ProductImages, error)
 	ProcessVariantImageUpload(productID string, fileMap map[string][]*multipart.FileHeader) (map[string]string, error)
+	GetProductsBySeller(sellerID string, params dto.GetProductsQueryParams) (*dto.PaginatedProductsResponse, error)
 }
 
 type productService struct {
@@ -145,3 +147,49 @@ func (s *productService) ProcessVariantImageUpload(productID string, fileMap map
 
 	return variantUpdates, nil
 }
+
+func (s *productService) GetProductsBySeller(sellerID string, params dto.GetProductsQueryParams) (*dto.PaginatedProductsResponse, error) {
+	// Import bson for building filters
+	filter := make(map[string]interface{})
+
+	// Add category filter if provided
+	if params.Category != "" {
+		filter["category_ids"] = params.Category
+	}
+
+	// Add seller category filter if provided
+	if params.SellerCategory != "" {
+		filter["seller_category_ids"] = params.SellerCategory
+	}
+
+	// Add status filter if provided
+	if params.Status != "" {
+		filter["status"] = params.Status
+	}
+
+	// Add search filter if provided (case-insensitive regex search on name)
+	if params.Search != "" {
+		filter["name"] = map[string]interface{}{
+			"$regex":   params.Search,
+			"$options": "i",
+		}
+	}
+
+	// Determine sort field and direction
+	sortField := params.SortBy
+	sortDirection := 1 // ascending
+	if params.SortDirection == "desc" {
+		sortDirection = -1
+	}
+
+	// Call repository method
+	products, total, err := s.repo.FindBySeller(sellerID, filter, params.GetSkip(), params.Limit, sortField, sortDirection)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build paginated response
+	response := dto.NewPaginatedProductsResponse(products, total, params.Page, params.Limit)
+	return response, nil
+}
+

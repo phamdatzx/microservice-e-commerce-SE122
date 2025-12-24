@@ -17,6 +17,7 @@ type ProductRepository interface {
 	Delete(id string) error
 	AddImagesToProduct(productID string, images []model.ProductImages) error
 	UpdateVariantImages(productID string, variantUpdates map[string]string) error
+	FindBySeller(sellerID string, filter bson.M, skip, limit int, sortField string, sortDirection int) ([]model.Product, int64, error)
 }
 
 type productRepository struct {
@@ -133,3 +134,47 @@ func (r *productRepository) UpdateVariantImages(productID string, variantUpdates
 	)
 	return err
 }
+
+func (r *productRepository) FindBySeller(sellerID string, filter bson.M, skip, limit int, sortField string, sortDirection int) ([]model.Product, int64, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Add seller_id to filter
+	filter["seller_id"] = sellerID
+
+	// Count total documents matching the filter
+	total, err := r.collection.CountDocuments(ctx, filter)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Build find options with pagination and sorting
+	opts := make([]interface{}, 0)
+	
+	// Add match stage
+	opts = append(opts, bson.M{"$match": filter})
+	
+	// Add sort stage if sortField is provided
+	if sortField != "" {
+		opts = append(opts, bson.M{"$sort": bson.M{sortField: sortDirection}})
+	}
+	
+	// Add skip and limit stages
+	opts = append(opts, bson.M{"$skip": skip})
+	opts = append(opts, bson.M{"$limit": limit})
+
+	// Execute aggregation
+	cursor, err := r.collection.Aggregate(ctx, opts)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer cursor.Close(ctx)
+
+	var products []model.Product
+	if err = cursor.All(ctx, &products); err != nil {
+		return nil, 0, err
+	}
+
+	return products, total, nil
+}
+
