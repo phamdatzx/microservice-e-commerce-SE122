@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"order-service/dto"
 	"order-service/model"
 	"order-service/repository"
@@ -8,6 +9,7 @@ import (
 
 type OrderService interface {
 	AddCartItem(userID string, request dto.AddCartItemRequest) (*dto.CartItemResponse, error)
+	DeleteCartItem(userID, cartItemID string) error
 }
 
 type orderService struct {
@@ -60,3 +62,25 @@ func (s *orderService) AddCartItem(userID string, request dto.AddCartItemRequest
 
 	return dto.ToCartItemResponse(newItem), nil
 }
+
+func (s *orderService) DeleteCartItem(userID, cartItemID string) error {
+	// Find the cart item by ID
+	cartItem, err := s.repo.FindCartItemByID(cartItemID)
+	if err != nil {
+		return err
+	}
+
+	// Check if cart item exists
+	if cartItem == nil {
+		return fmt.Errorf("cart item not found")
+	}
+
+	// Verify that the cart item belongs to the user
+	if cartItem.UserID != userID {
+		return fmt.Errorf("unauthorized: you can only delete your own cart items")
+	}
+
+	// Delete the cart item
+	return s.repo.DeleteCartItem(cartItemID)
+}
+

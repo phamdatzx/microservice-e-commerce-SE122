@@ -8,9 +8,10 @@ import (
 )
 
 func RegisterOrderRoutes(rg *gin.RouterGroup, c controller.OrderController) {
-	cart := rg.Group("/cart")
+	cart := rg.Group("")
 	{
 		// Protected route - require customer authentication
-		cart.POST("", middleware.RequireCustomer(), c.AddCartItem)
+		cart.POST("/public/cart", middleware.RequireCustomer(), c.AddCartItem)
+		cart.DELETE("/public/cart/:id", middleware.RequireCustomer(), c.DeleteCartItem)
 	}
 }

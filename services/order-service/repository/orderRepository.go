@@ -13,6 +13,8 @@ type OrderRepository interface {
 	FindCartItemByUserAndVariant(userID, variantID string) (*model.CartItem, error)
 	CreateCartItem(item *model.CartItem) error
 	UpdateCartItemQuantity(id string, quantity int) error
+	FindCartItemByID(id string) (*model.CartItem, error)
+	DeleteCartItem(id string) error
 }
 
 type orderRepository struct {
@@ -70,5 +72,32 @@ func (r *orderRepository) UpdateCartItemQuantity(id string, quantity int) error 
 	}
 
 	_, err := r.collection.UpdateOne(ctx, filter, update)
+	return err
+}
+
+func (r *orderRepository) FindCartItemByID(id string) (*model.CartItem, error) {
+	var cartItem model.CartItem
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	filter := bson.M{"_id": id}
+
+	err := r.collection.FindOne(ctx, filter).Decode(&cartItem)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, nil // Cart item not found
+		}
+		return nil, err
+	}
+
+	return &cartItem, nil
+}
+
+func (r *orderRepository) DeleteCartItem(id string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	filter := bson.M{"_id": id}
+	_, err := r.collection.DeleteOne(ctx, filter)
 	return err
 }

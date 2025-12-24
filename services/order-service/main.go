@@ -34,5 +34,5 @@ func main() {
 		OrderController: orderController,
 	})
 
-	r.Run(":8080") // chạy server ở port 8080
+	r.Run(":8082") // chạy server ở port 8082
 }
