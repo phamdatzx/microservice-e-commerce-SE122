@@ -13,6 +13,11 @@ type AddCartItemRequest struct {
 	Quantity  int    `json:"quantity" binding:"required,min=1"`
 }
 
+// UpdateCartItemQuantityRequest represents the request body for updating cart item quantity
+type UpdateCartItemQuantityRequest struct {
+	Quantity int `json:"quantity" binding:"required,min=1"`
+}
+
 // CartItemResponse represents the response format for a cart item
 type CartItemResponse struct {
 	ID        string    `json:"id"`

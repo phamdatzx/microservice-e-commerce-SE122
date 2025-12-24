@@ -85,3 +85,73 @@ func (c *CartController) DeleteCartItem(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"message": "Cart item deleted successfully"})
 }
 
+func (c *CartController) UpdateCartItemQuantity(ctx *gin.Context) {
+	// Get user ID from header
+	userID := ctx.GetHeader("X-User-Id")
+	if userID == "" {
+		ctx.Error(appError.NewAppError(http.StatusUnauthorized, "User ID not found"))
+		return
+	}
+
+	// Get cart item ID from URL parameter
+	cartItemID := ctx.Param("id")
+	if cartItemID == "" {
+		ctx.Error(appError.NewAppError(http.StatusBadRequest, "Cart item ID is required"))
+		return
+	}
+
+	// Parse request body
+	var request dto.UpdateCartItemQuantityRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.Error(appError.NewAppErrorWithErr(http.StatusBadRequest, "Invalid request body", err))
+		return
+	}
+
+	// Validate request
+	if err := validate.Struct(request); err != nil {
+		ctx.Error(appError.NewAppErrorWithErr(http.StatusBadRequest, "Validation failed", err))
+		return
+	}
+
+	// Update cart item quantity
+	response, err := c.service.UpdateCartItemQuantity(userID, cartItemID, request.Quantity)
+	if err != nil {
+		// Check if it's an authorization error
+		if err.Error() == "unauthorized: you can only update your own cart items" {
+			ctx.Error(appError.NewAppErrorWithErr(http.StatusForbidden, "Unauthorized", err))
+			return
+		}
+		if err.Error() == "cart item not found" {
+			ctx.Error(appError.NewAppErrorWithErr(http.StatusNotFound, "Cart item not found", err))
+			return
+		}
+		ctx.Error(appError.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to update cart item quantity", err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, response)
+}
+
+func (c *CartController) GetCartItems(ctx *gin.Context) {
+	// Get user ID from header
+	userID := ctx.GetHeader("X-User-Id")
+	if userID == "" {
+		ctx.Error(appError.NewAppError(http.StatusUnauthorized, "User ID not found"))
+		return
+	}
+
+	// Get cart items from service
+	cartItems, err := c.service.GetCartItems(userID)
+	if err != nil {
+		ctx.Error(appError.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to fetch cart items", err))
+		return
+	}
+
+	// Build response
+	response := dto.GetCartItemsResponse{
+		CartItems: cartItems,
+	}
+
+	ctx.JSON(http.StatusOK, response)
+}
+

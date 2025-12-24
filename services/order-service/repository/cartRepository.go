@@ -15,6 +15,7 @@ type CartRepository interface {
 	UpdateCartItemQuantity(id string, quantity int) error
 	FindCartItemByID(id string) (*model.CartItem, error)
 	DeleteCartItem(id string) error
+	FindCartItemsByUser(userID string) ([]model.CartItem, error)
 }
 
 type cartRepository struct {
@@ -100,4 +101,23 @@ func (r *cartRepository) DeleteCartItem(id string) error {
 	filter := bson.M{"_id": id}
 	_, err := r.collection.DeleteOne(ctx, filter)
 	return err
+}
+func (r *cartRepository) FindCartItemsByUser(userID string) ([]model.CartItem, error) {
+	var cartItems []model.CartItem
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	filter := bson.M{"user_id": userID}
+
+	cursor, err := r.collection.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	if err = cursor.All(ctx, &cartItems); err != nil {
+		return nil, err
+	}
+
+	return cartItems, nil
 }

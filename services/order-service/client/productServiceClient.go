@@ -1,0 +1,89 @@
+package client
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"order-service/dto"
+	"os"
+	"time"
+)
+
+// ProductServiceClient handles communication with product-service
+type ProductServiceClient struct {
+	baseURL    string
+	httpClient *http.Client
+}
+
+// NewProductServiceClient creates a new product service client
+func NewProductServiceClient() *ProductServiceClient {
+	baseURL := os.Getenv("PRODUCT_SERVICE_URL")
+	if baseURL == "" {
+		baseURL = "http://localhost:8081" // Default for local development
+	}
+
+	return &ProductServiceClient{
+		baseURL: baseURL,
+		httpClient: &http.Client{
+			Timeout: 10 * time.Second,
+		},
+	}
+}
+
+// GetVariantsByIdsRequest represents the request to product-service
+type GetVariantsByIdsRequest struct {
+	VariantIDs []string `json:"variant_ids"`
+}
+
+// GetVariantsByIdsResponse represents the response from product-service
+type GetVariantsByIdsResponse struct {
+	Variants []dto.ProductVariantDto `json:"variants"`
+}
+
+// GetVariantsByIds calls product-service to get variant details
+func (c *ProductServiceClient) GetVariantsByIds(variantIDs []string) ([]dto.ProductVariantDto, error) {
+	if len(variantIDs) == 0 {
+		return []dto.ProductVariantDto{}, nil
+	}
+
+	// Prepare request
+	requestBody := GetVariantsByIdsRequest{
+		VariantIDs: variantIDs,
+	}
+
+	jsonData, err := json.Marshal(requestBody)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	// Make HTTP request
+	url := fmt.Sprintf("%s/api/product/public/variants/batch", c.baseURL)
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to call product-service: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Check response status
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("product-service returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	// Parse response
+	var response GetVariantsByIdsResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return response.Variants, nil
+}
