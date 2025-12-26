@@ -56,13 +56,14 @@ const fetchCategories = () => {
 const openModal = (mode: DialogMode, category?: string, id?: string) => {
   dialogMode.value = mode
   dialogVisible.value = true
+
   if (mode === 'add') {
     dialogContent.value = {
       title: 'Add category',
       placeholder: 'Please enter a category',
       mainBtnText: 'Add',
     }
-    ruleForm.category = ''
+    clearRuleForm()
   } else if (mode === 'edit') {
     dialogContent.value = {
       title: 'Edit category',
@@ -161,8 +162,7 @@ const handleEditCategory = () => {
     .finally(() => {
       loading.close()
       dialogVisible.value = false
-      ruleForm.category = ''
-      ruleForm.id = ''
+      clearRuleForm()
     })
 }
 
@@ -260,6 +260,10 @@ const handleFormSubmit = () => {
   } else if (dialogMode.value === 'edit') {
     handleEditCategory()
   }
+}
+
+const clearRuleForm = () => {
+  ruleFormRef.value?.resetFields()
 }
 // #endregion
 </script>

@@ -1,7 +1,22 @@
 <script setup lang="ts">
-import { Delete, Edit, Plus } from '@element-plus/icons-vue'
+import {
+  Delete,
+  Edit,
+  Plus,
+  ZoomIn,
+  ZoomOut,
+  Back,
+  DArrowRight,
+  Download,
+  Refresh,
+  RefreshLeft,
+  RefreshRight,
+  Right,
+} from '@element-plus/icons-vue'
+import axios from 'axios'
 import {
   ElMessage,
+  ElMessageBox,
   type CascaderNode,
   type FormInstance,
   type FormRules,
@@ -10,59 +25,84 @@ import {
   type UploadProps,
   type UploadUserFile,
 } from 'element-plus'
-import { reactive, ref, watch } from 'vue'
+import { onMounted, reactive, ref, watch } from 'vue'
 
-const tableData = [
-  {
-    image_url: 'https://down-vn.img.susercontent.com/file/sg-11134201-825af-mgbp824qs1e5b0_tn.webp',
-    name: 'Electronics',
-    sold_count: 1,
-    quantity: 21,
-    status: 'AVAILABLE',
-    product_options: [
-      {
-        image_url:
-          'https://down-vn.img.susercontent.com/file/sg-11134201-825af-mgbp824qs1e5b0_tn.webp',
-        option1: 'Red',
-        option2: 'XL',
-        price: 200000,
-        stock: 24,
-      },
-      {
-        image_url:
-          'https://down-vn.img.susercontent.com/file/sg-11134201-825af-mgbp824qs1e5b0_tn.webp',
-        option1: 'Blue',
-        option2: 'XXL',
-        price: 220000,
-        stock: 24,
-      },
-    ],
-  },
-  {
-    image_url: 'https://down-vn.img.susercontent.com/file/sg-11134201-821fy-mghfw9c1o1sb29_tn.webp',
-    name: 'Clothing',
-    sold_count: 2,
-    price: 130000,
-    quantity: 23,
-    status: 'OUT_OF_STOCK',
-  },
-  {
-    image_url: 'https://down-vn.img.susercontent.com/file/sg-11134201-821cz-mghfwcncl0y6e6_tn.webp',
-    name: 'Home & Kitchen',
-    sold_count: 3,
-    price: 120000,
-    quantity: 22,
-    status: 'AVAILABLE',
-  },
-  {
-    image_url: 'https://down-vn.img.susercontent.com/file/sg-11134201-821f4-mghdelyvkzka36_tn.webp',
-    name: 'Books',
-    sold_count: 4,
-    price: 110000,
-    quantity: 24,
-    status: 'HIDDEN',
-  },
-]
+interface ProductImage {
+  id: string
+  url: string
+  order: number
+}
+
+interface OptionGroup {
+  Key: string
+  Values: string[]
+}
+
+interface ProductVariant {
+  id: string
+  sku: string
+  options: Record<string, string>
+  price: number
+  stock: number
+  image: string
+}
+
+interface Product {
+  id: string
+  name: string
+  description: string
+  images: ProductImage[]
+  status: string
+  seller_id: string
+  rating: number
+  rate_count: number
+  sold_count: number
+  is_active: boolean
+  created_at: Date
+  updated_at: Date
+  option_groups: OptionGroup[]
+  variants: ProductVariant[]
+  category_ids: string[]
+  seller_category_ids: string[]
+}
+
+type DialogMode = 'add' | 'edit'
+
+const userId = ref('7d27d61d-8cb3-4ef9-a9ff-0a92f217855b')
+// const token = localStorage.getItem('access_token')
+const token =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjY4Mjc1MDYsImlhdCI6MTc2Njc0MTEwNiwicm9sZSI6InNlbGxlciIsInVzZXJJZCI6IjdkMjdkNjFkLThjYjMtNGVmOS1hOWZmLTBhOTJmMjE3ODU1YiIsInVzZXJuYW1lIjoidGVzdDEifQ.cCs5gwsDkDVZZrnHHmeTFGmuleu9RR2Ieke8pYaRH_s'
+
+const productData = ref<Product[]>([])
+const isLoading = ref(false)
+const currentPage = ref(1)
+const pageSize = ref(20)
+const totalPages = ref(10)
+
+onMounted(() => {
+  fetchProducts()
+})
+
+const fetchProducts = () => {
+  isLoading.value = true
+  axios
+    .get(
+      import.meta.env.VITE_GET_SELLER_PRODUCT_API_URL +
+        '/' +
+        'seller-1' +
+        `?sort_by=name&sort_direction=asc&page=${currentPage.value}&limit=${pageSize.value}`,
+    )
+    .then((response) => {
+      productData.value = response.data.products
+      totalPages.value = response.data.pagination.total_pages
+    })
+    .catch((error) => {
+      console.error(error)
+    })
+    .finally(() => {
+      isLoading.value = false
+    })
+}
 
 const categoryOptions = [
   {
@@ -335,16 +375,17 @@ const categoryOptions = [
 
 const optionListData = ref<ProductOption[]>([])
 
-const addEditDialogVisible = ref(false)
-const deleteDialogVisible = ref(false)
+const dialogVisible = ref(false)
+const dialogMode = ref<DialogMode>('add')
+const dialogContent = ref({
+  title: 'Add product',
+  mainBtnText: 'Add',
+})
+
 const previewImageDialogVisible = ref(false)
 const previewImageUrl = ref('')
-const title = ref('Add product')
-const mainBtnText = ref('Add')
-const currentAction = ref('add')
 const hasGroup1 = ref(false)
 const hasGroup2 = ref(false)
-const deletingName = ref('')
 
 //#region FORM
 type ProductOption = {
@@ -392,11 +433,23 @@ const submitForm = async (formEl: FormInstance | undefined) => {
   if (!formEl) return
   await formEl.validate((valid, fields) => {
     if (valid) {
-      // handleAddEditCategory(currentAction.value)
+      handleFormSubmit()
     } else {
       console.log('error submit!', fields)
     }
   })
+}
+
+const handleFormSubmit = () => {
+  if (dialogMode.value === 'add') {
+    handleAddProduct()
+  } else if (dialogMode.value === 'edit') {
+    handleEditProduct()
+  }
+}
+
+const clearRuleForm = () => {
+  ruleFormRef.value?.resetFields()
 }
 //#endregion
 
@@ -435,6 +488,15 @@ const handlePictureCardPreview: UploadProps['onPreview'] = (uploadFile) => {
 }
 //#endregion
 
+//#region CATEGORY CASCADER
+const categoryFilterMethod = (node: CascaderNode, keyword: string) => {
+  return node.label.toLowerCase().includes(keyword.toLowerCase())
+}
+//#endregion
+
+const handleAddProduct = () => {}
+const handleEditProduct = () => {}
+
 const getStatusTagContent = (status: string) => {
   if (status === 'AVAILABLE') return 'Available'
   else if (status === 'OUT_OF_STOCK') return 'Out of stock'
@@ -442,40 +504,47 @@ const getStatusTagContent = (status: string) => {
 }
 
 const getStatusTagType = (status: string) => {
-  if (status === 'AVAILABLE') return 'success'
-  else if (status === 'OUT_OF_STOCK') return 'danger'
-  else if (status === 'HIDDEN') return 'info'
+  // if (status === 'AVAILABLE') return 'success'
+  // else if (status === 'OUT_OF_STOCK') return 'danger'
+  // else if (status === 'HIDDEN') return 'info'
+  return ''
+}
+
+const filterTag = (value: string, row: any) => {
+  return row.status === value
 }
 
 //#region MODAL
-
-//#region CATEGORY CASCADER
-const categoryFilterMethod = (node: CascaderNode, keyword: string) => {
-  return node.label.toLowerCase().includes(keyword.toLowerCase())
-}
-//#endregion
-const openAddModal = () => {
-  addEditDialogVisible.value = true
-
-  title.value = 'Add product'
-  mainBtnText.value = 'Add'
-  currentAction.value = 'add'
-  // ruleForm.category = ''
-}
-
-const openEditModal = (category: string) => {
-  addEditDialogVisible.value = true
-
-  title.value = 'Edit category'
-  mainBtnText.value = 'Save'
-  currentAction.value = 'edit'
-  // ruleForm.category = category
+const openModal = (mode: DialogMode) => {
+  dialogMode.value = mode
+  dialogVisible.value = true
+  if (mode === 'add') {
+    dialogContent.value = {
+      title: 'Add product',
+      mainBtnText: 'Add',
+    }
+    clearRuleForm()
+  } else if (mode === 'edit') {
+    dialogContent.value = {
+      title: 'Edit product',
+      mainBtnText: 'Save',
+    }
+    // TODO: set ruleForm values here!!!
+    // ruleForm.category = category ?? ''
+    // ruleForm.id = id ?? ''
+  }
 }
 
-const openDeleteModal = (name: string) => {
-  deleteDialogVisible.value = true
-  deletingName.value = name
+const handleDeleteBtnClick = (id: string, name: string) => {
+  ElMessageBox.confirm(`Delete product name:  "${name}"?`, 'Confirm delete', {
+    type: 'warning',
+    confirmButtonText: 'Delete',
+    cancelButtonText: 'Cancel',
+  }).then(async () => {
+    handleDeleteProduct(id, name)
+  })
 }
+const handleDeleteProduct = (id: string, name: string) => {}
 //#endregion
 
 watch(
@@ -540,6 +609,26 @@ watch(
     }
   },
 )
+
+const download = (images: ProductImage[], index: number) => {
+  if (!images[index]) return
+  const url = images[index].url
+  const suffix = url.slice(url.lastIndexOf('.'))
+  const filename = Date.now() + suffix
+
+  fetch(url)
+    .then((response) => response.blob())
+    .then((blob) => {
+      const blobUrl = URL.createObjectURL(new Blob([blob]))
+      const link = document.createElement('a')
+      link.href = blobUrl
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      URL.revokeObjectURL(blobUrl)
+      link.remove()
+    })
+}
 </script>
 
 <template>
@@ -548,84 +637,114 @@ watch(
     size="large"
     style="margin-bottom: 12px"
     color="#1aae51"
-    @click="openAddModal()"
+    @click="openModal('add')"
     >Add Product</el-button
   >
-  <el-table :data="tableData" style="width: 100%">
+  <el-table :data="productData" style="width: 100%">
     <el-table-column width="1">
       <template #default="props">
-        <span :class="`quantity-${props.row.product_options?.length}`"></span>
+        <span :class="`quantity-${props.row.variants?.length}`"></span>
       </template>
     </el-table-column>
     <el-table-column type="expand" class-name="expand-column">
       <template #default="props">
         <el-table
           :show-header="false"
-          :data="props.row.product_options"
-          v-if="props.row.product_options.length > 0"
+          :data="props.row.variants"
+          v-if="props.row.variants.length > 1"
         >
           <el-table-column width="48" />
-          <el-table-column prop="image_url" align="right" width="128">
+
+          <el-table-column align="right" width="128">
             <template #default="scope">
               <el-image
                 style="width: 52px; height: 52px; position: relative; top: 3px"
-                :src="scope.row.image_url"
+                :src="scope.row.image ?? 'https://placehold.co/52x52'"
                 fit="contain"
               />
             </template>
           </el-table-column>
+
           <el-table-column>
             <template #default="scope">
-              <p style="text-align: right; position: relative; right: -13px">
-                {{ scope.row.option1 }},
+              <p>
+                {{
+                  Object.entries(scope.row.options)
+                    .map(([key, value]) => {
+                      return `${key}: ${value}`
+                    })
+                    .join(', ')
+                }}
               </p>
             </template>
           </el-table-column>
-          <el-table-column>
-            <template #default="scope">
-              <p style="text-align: left; position: relative; left: -8px">
-                {{ scope.row.option2 }}
-              </p>
-            </template>
+
+          <el-table-column />
+
+          <el-table-column label="Price" width="180">
+            <template #default="scope"> {{ scope.row.price }}$ </template>
           </el-table-column>
-          <el-table-column prop="price" label="Price" />
-          <el-table-column prop="stock" label="Stock" />
+
+          <el-table-column prop="stock" label="Stock" width="80" />
+
           <el-table-column width="120" />
+
           <el-table-column width="140" />
         </el-table>
       </template>
     </el-table-column>
-    <el-table-column prop="image_url" label="Product image" width="128" align="center">
+    <el-table-column label="Product image" width="128" align="center">
       <template #default="scope">
         <el-image
           style="width: 56px; height: 56px; position: relative; top: 3px"
-          :src="scope.row.image_url"
+          :src="scope.row.images[0]?.url ?? 'https://placehold.co/56x56'"
           fit="contain"
-        />
+          show-progress
+          preview-teleported
+          :preview-src-list="scope.row.images.map((image: ProductImage) => image.url)"
+        >
+          <template #toolbar="{ actions, prev, next, reset, activeIndex, setActiveItem }">
+            <el-icon @click="prev"><Back /></el-icon>
+            <el-icon @click="next"><Right /></el-icon>
+            <el-icon @click="setActiveItem(scope.row.images.length - 1)">
+              <DArrowRight />
+            </el-icon>
+            <el-icon @click="actions('zoomOut')"><ZoomOut /></el-icon>
+            <el-icon @click="actions('zoomIn', { enableTransition: false, zoomRate: 2 })">
+              <ZoomIn />
+            </el-icon>
+            <el-icon @click="actions('clockwise', { rotateDeg: 180, enableTransition: false })">
+              <RefreshRight />
+            </el-icon>
+            <el-icon @click="actions('anticlockwise')"><RefreshLeft /></el-icon>
+            <el-icon @click="reset"><Refresh /></el-icon>
+            <el-icon @click="download(scope.row.images, activeIndex)"><Download /></el-icon>
+          </template>
+        </el-image>
       </template>
     </el-table-column>
     <el-table-column prop="name" label="Product name" />
-    <el-table-column prop="sold_count" label="Sold count" />
-    <el-table-column prop="price" label="Price">
+    <el-table-column prop="sold_count" label="Sold count" width="100" />
+    <el-table-column prop="price" label="Price" width="180">
       <template #default="scope">
-        <p v-if="scope.row.product_options?.length > 0">
-          {{ Math.min(...scope.row.product_options.map((x: ProductOption) => x.price)) }} ~
-          {{ Math.max(...scope.row.product_options.map((x: ProductOption) => x.price)) }}
+        <p v-if="scope.row.variants?.length > 1">
+          {{
+            Math.min(...scope.row.variants.map((x: ProductVariant) => x.price)) +
+            '$ ~ ' +
+            Math.max(...scope.row.variants.map((x: ProductVariant) => x.price))
+          }}$
         </p>
-        <p v-else>{{ scope.row.price }}</p>
+        <p v-else>{{ scope.row.variants[0].price }}$</p>
       </template>
     </el-table-column>
-    <el-table-column prop="quantity" label="Stock">
+    <el-table-column prop="quantity" label="Stock" width="80">
       <template #default="scope">
-        <p v-if="scope.row.product_options?.length > 0">
+        <p v-if="scope.row.variants?.length > 1">
           {{
-            scope.row.product_options.reduce(
-              (sum: number, item: ProductOption) => sum + item.stock!,
-              0,
-            )
+            scope.row.variants.reduce((sum: number, item: ProductVariant) => sum + item.stock!, 0)
           }}
         </p>
-        <p v-else>{{ scope.row.quantity }}</p>
+        <p v-else>{{ scope.row.variants[0].stock }}</p>
       </template>
     </el-table-column>
     <el-table-column
@@ -643,14 +762,14 @@ watch(
     >
       <template #default="scope">
         <el-tag :type="getStatusTagType(scope.row.status)" disable-transitions>{{
-          getStatusTagContent(scope.row.status)
+          scope.row.status
         }}</el-tag>
       </template>
     </el-table-column>
     <el-table-column align="center" label="Operations" width="140">
       <template #default="{ row }">
-        <el-button type="primary" :icon="Edit" @click="openEditModal(row.category)" />
-        <el-button type="danger" :icon="Delete" @click="openDeleteModal(row.name)" />
+        <el-button type="primary" :icon="Edit" @click="openModal('edit')" />
+        <el-button type="danger" :icon="Delete" @click="handleDeleteBtnClick(row.id, row.name)" />
       </template>
     </el-table-column>
   </el-table>
@@ -658,15 +777,25 @@ watch(
   <el-pagination
     background
     layout="prev, pager, next"
-    :total="1000"
+    :total="totalPages"
+    v-model:page-size="pageSize"
+    v-model:current-page="currentPage"
+    :page-sizes="[10, 20, 30, 40]"
+    @size-change="fetchProducts"
+    @current-change="fetchProducts"
     size="large"
-    style="display: flex; justify-content: center; margin-top: 20px"
+    style="
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+      --el-pagination-button-bg-color: #fff;
+    "
   />
 
   <!-- Add/Edit dialog -->
   <el-dialog
-    v-model="addEditDialogVisible"
-    :title="title"
+    v-model="dialogVisible"
+    :title="dialogContent.title"
     width="800"
     align-center
     style="height: 90%; overflow-y: auto"
@@ -895,21 +1024,10 @@ watch(
 
     <template #footer>
       <div class="dialog-footer">
-        <el-button @click="addEditDialogVisible = false">Cancel</el-button>
+        <el-button @click="dialogVisible = false">Cancel</el-button>
         <el-button type="primary" @click="submitForm(ruleFormRef)">
-          {{ mainBtnText }}
+          {{ dialogContent.mainBtnText }}
         </el-button>
-      </div>
-    </template>
-  </el-dialog>
-
-  <!-- Delete dialog -->
-  <el-dialog v-model="deleteDialogVisible" title="Delete category" width="500" align-center>
-    <span>Are you sure you want to delete product name: "{{ deletingName }}"?</span>
-    <template #footer>
-      <div class="dialog-footer">
-        <el-button @click="deleteDialogVisible = false">Cancel</el-button>
-        <el-button type="danger" @click="handleDeleteCategory()"> Delete </el-button>
       </div>
     </template>
   </el-dialog>
@@ -958,11 +1076,15 @@ watch(
   transition: none !important;
 }
 
-.expand-column:has(.quantity-0) {
+.expand-column:has(.quantity-1) {
   display: none;
 }
 
-.el-table__cell:has(.quantity-undefined) ~ .expand-column .el-table__expand-icon {
+.el-table__cell:has(.quantity-1) ~ .expand-column .el-table__expand-icon {
   visibility: hidden;
+}
+
+.el-table__expand-icon svg {
+  scale: 1.5;
 }
 </style>
