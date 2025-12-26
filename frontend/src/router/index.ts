@@ -105,7 +105,7 @@ const router = createRouter({
       name: 'seller',
       component: SellerHomeView,
       children: [
-        { path: '/category', name: 'category', component: CategoryView },
+        { path: 'category', name: 'category', component: CategoryView },
         { path: 'product', name: 'product', component: ProductView },
       ],
     },
