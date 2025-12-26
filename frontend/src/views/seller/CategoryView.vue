@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { Delete, Edit } from '@element-plus/icons-vue'
 import axios from 'axios'
-import { ElMessageBox, ElNotification, type FormInstance, type FormRules } from 'element-plus'
+import {
+  ElLoading,
+  ElMessageBox,
+  ElNotification,
+  type FormInstance,
+  type FormRules,
+} from 'element-plus'
 import { onMounted, reactive, ref } from 'vue'
 
 interface SellerCategory {
@@ -25,12 +31,14 @@ const dialogContent = ref({
   placeholder: 'Please enter a category',
   mainBtnText: 'Add',
 })
+const isLoading = ref(false)
 
 onMounted(() => {
   fetchCategories()
 })
 
 const fetchCategories = () => {
+  isLoading.value = true
   axios
     .get(import.meta.env.VITE_GET_SELLER_CATEGORY_API_URL + '/' + userId.value + '/category')
     .then((response) => {
@@ -39,6 +47,9 @@ const fetchCategories = () => {
     })
     .catch((error) => {
       console.error(error)
+    })
+    .finally(() => {
+      isLoading.value = false
     })
 }
 
@@ -64,6 +75,11 @@ const openModal = (mode: DialogMode, category?: string, id?: string) => {
 }
 
 const handleAddCategory = () => {
+  const loading = ElLoading.service({
+    lock: true,
+    text: 'Loading',
+    background: 'rgba(0, 0, 0, 0.7)',
+  })
   if (ruleForm.category.trim() === '') {
     ElNotification({
       title: 'Error!',
@@ -101,6 +117,7 @@ const handleAddCategory = () => {
         })
       })
       .finally(() => {
+        loading.close()
         dialogVisible.value = false
         ruleForm.category = ''
       })
@@ -108,6 +125,11 @@ const handleAddCategory = () => {
 }
 
 const handleEditCategory = () => {
+  const loading = ElLoading.service({
+    lock: true,
+    text: 'Loading',
+    background: 'rgba(0, 0, 0, 0.7)',
+  })
   axios
     .put(
       import.meta.env.VITE_MANAGE_SELLER_CATEGORY_API_URL + '/' + ruleForm.id,
@@ -137,23 +159,15 @@ const handleEditCategory = () => {
       })
     })
     .finally(() => {
+      loading.close()
       dialogVisible.value = false
       ruleForm.category = ''
       ruleForm.id = ''
     })
-
-  // ElNotification({
-  //   title: 'Success!',
-  //   message: `Category was updated to "${ruleForm.category}" successfully.`,
-  //   type: 'success',
-  // })
-
-  // dialogVisible.value = false
-  // ruleForm.category = ''
 }
 
 const handleDeleteBtnClick = (categoryId: string, categoryName: string) => {
-  ElMessageBox.confirm(`Delete categoryName "${categoryName}"?`, 'Confirm delete', {
+  ElMessageBox.confirm(`Delete category name: "${categoryName}"?`, 'Confirm delete', {
     type: 'warning',
     confirmButtonText: 'Delete',
     cancelButtonText: 'Cancel',
@@ -162,6 +176,12 @@ const handleDeleteBtnClick = (categoryId: string, categoryName: string) => {
   })
 }
 const handleDeleteCategory = (categoryId: string, categoryName: string) => {
+  const loading = ElLoading.service({
+    lock: true,
+    text: 'Loading',
+    background: 'rgba(0, 0, 0, 0.7)',
+  })
+
   axios
     .delete(import.meta.env.VITE_MANAGE_SELLER_CATEGORY_API_URL + '/' + categoryId, {
       headers: {
@@ -203,6 +223,9 @@ const handleDeleteCategory = (categoryId: string, categoryName: string) => {
         message: error.message,
         type: 'error',
       })
+    })
+    .finally(() => {
+      loading.close()
     })
 }
 
@@ -251,7 +274,7 @@ const handleFormSubmit = () => {
   >
     Add category
   </el-button>
-  <el-table :data="categoryData" border style="width: 100%">
+  <el-table v-loading="isLoading" :data="categoryData" border style="width: 100%">
     <el-table-column type="index" label="Index" width="100" />
     <el-table-column prop="name" label="Category" />
     <el-table-column align="center" label="Operations" width="140">

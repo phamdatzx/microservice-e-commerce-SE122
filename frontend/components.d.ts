@@ -64,4 +64,7 @@ declare module 'vue' {
     TwitterXIcon: typeof import('./src/components/icons/TwitterXIcon.vue')['default']
     UserComment: typeof import('./src/components/UserComment.vue')['default']
   }
+  export interface GlobalDirectives {
+    vLoading: typeof import('element-plus/es')['ElLoadingDirective']
+  }
 }
