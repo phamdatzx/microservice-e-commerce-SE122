@@ -163,3 +163,21 @@ func (c *UserController) ResetPassword(ctx *gin.Context) {
 func (c *UserController) TestPrivate(ctx *gin.Context) {
 	utils.SuccessResponse(ctx, 200, "Reached", nil)
 }
+
+func (c *UserController) GetMyInfo(ctx *gin.Context) {
+	userId := ctx.GetHeader("X-User-Id")
+	if userId == "" {
+		ctx.Error(appError.NewAppError(401, "User ID not found in header"))
+		ctx.Abort()
+		return
+	}
+
+	response, err := c.service.GetMyInfo(userId)
+	if err != nil {
+		_ = ctx.Error(err)
+		ctx.Abort()
+		return
+	}
+
+	utils.SuccessResponse(ctx, 200, "Get my info successfully", response)
+}
