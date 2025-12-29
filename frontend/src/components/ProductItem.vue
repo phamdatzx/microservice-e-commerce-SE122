@@ -78,7 +78,7 @@ const props = defineProps(['imageUrl', 'name', 'price', 'rating', 'location', 'd
 
 .product-price {
   font-size: 18px;
-  color: #ee4d2d;
+  color: var(--main-color);
   margin: 5px;
 }
 </style>

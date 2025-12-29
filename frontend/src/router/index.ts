@@ -9,6 +9,8 @@ import LoginForm from '@/views/authentication/forms/LoginForm.vue'
 import RegisterForm from '@/views/authentication/forms/RegisterForm.vue'
 import ForgotPasswordForm from '@/views/authentication/forms/ForgotPasswordForm.vue'
 import ResetPasswordForm from '@/views/authentication/forms/ResetPasswordForm.vue'
+import ProductDetailView from '@/views/customer/ProductDetailView.vue'
+import CartView from '@/views/customer/CartView/CartView.vue'
 
 const loginFormProps = {
   title: 'Welcome Back',
@@ -49,6 +51,14 @@ const router = createRouter({
     {
       path: '/',
       component: CustomerHomeView,
+    },
+    {
+      path: '/product-detail',
+      component: ProductDetailView,
+    },
+    {
+      path: '/cart',
+      component: CartView,
     },
     {
       path: '/',
@@ -95,7 +105,7 @@ const router = createRouter({
       name: 'seller',
       component: SellerHomeView,
       children: [
-        { path: '/category', name: 'category', component: CategoryView },
+        { path: 'category', name: 'category', component: CategoryView },
         { path: 'product', name: 'product', component: ProductView },
       ],
     },

@@ -353,17 +353,4 @@ const activeTab = ref('best-seller')
     color: #999;
   }
 }
-
-.box-shadow {
-  box-shadow: rgba(149, 157, 165, 0.2) 0px 8px 24px;
-}
-
-.border-radius {
-  border-radius: 8px;
-}
-
-.el-col-4-8 {
-  flex: 0 0 20% !important;
-  max-width: 20% !important;
-}
 </style>
