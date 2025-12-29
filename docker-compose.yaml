@@ -105,6 +105,35 @@ services:
       - "traefik.http.services.product-service.loadbalancer.server.port=8081"
     restart: unless-stopped
 
+  # Order service
+  order-service:
+    build: ./services/order-service
+    container_name: order-service
+    env_file:
+      - ./services/order-service/.env
+    networks:
+      - app-network
+    labels:
+      - "traefik.enable=true"
+
+      # Public routes - CORS only (higher priority)
+      - "traefik.http.routers.order-service-public.rule=PathPrefix(`/api/order/public`)"
+      - "traefik.http.routers.order-service-public.entrypoints=web"
+      - "traefik.http.routers.order-service-public.service=order-service"
+      - "traefik.http.routers.order-service-public.middlewares=cors-headers"
+      - "traefik.http.routers.order-service-public.priority=100"
+
+      # Protected routes - CORS + Authentication
+      - "traefik.http.routers.order-service-private.rule=PathPrefix(`/api/order`)"
+      - "traefik.http.routers.order-service-private.entrypoints=web"
+      - "traefik.http.routers.order-service-private.service=order-service"
+      - "traefik.http.routers.order-service-private.middlewares=cors-headers,forward-auth"
+      - "traefik.http.routers.order-service-private.priority=90"
+
+      # Service definition
+      - "traefik.http.services.order-service.loadbalancer.server.port=8082"
+    restart: unless-stopped
+
 networks:
   app-network:
     driver: bridge

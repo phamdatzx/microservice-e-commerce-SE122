@@ -18,6 +18,7 @@ type ProductRepository interface {
 	AddImagesToProduct(productID string, images []model.ProductImages) error
 	UpdateVariantImages(productID string, variantUpdates map[string]string) error
 	FindBySeller(sellerID string, filter bson.M, skip, limit int, sortField string, sortDirection int) ([]model.Product, int64, error)
+	FindVariantsByIds(variantIDs []string) (map[string]*model.Product, error)
 }
 
 type productRepository struct {
@@ -176,5 +177,43 @@ func (r *productRepository) FindBySeller(sellerID string, filter bson.M, skip, l
 	}
 
 	return products, total, nil
+}
+
+func (r *productRepository) FindVariantsByIds(variantIDs []string) (map[string]*model.Product, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Query products that contain any of the variant IDs
+	filter := bson.M{
+		"variants._id": bson.M{"$in": variantIDs},
+	}
+
+	cursor, err := r.collection.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var products []model.Product
+	if err = cursor.All(ctx, &products); err != nil {
+		return nil, err
+	}
+
+	// Create a map of variant_id -> product for quick lookup
+	variantToProduct := make(map[string]*model.Product)
+	for i := range products {
+		for j := range products[i].Variants {
+			variantID := products[i].Variants[j].ID
+			// Check if this variant is in the requested list
+			for _, requestedID := range variantIDs {
+				if variantID == requestedID {
+					variantToProduct[variantID] = &products[i]
+					break
+				}
+			}
+		}
+	}
+
+	return variantToProduct, nil
 }
 
