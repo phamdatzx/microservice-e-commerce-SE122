@@ -276,7 +276,7 @@ const activeTab = ref('best-seller')
     >
       <el-tabs v-model="activeTab">
         <el-tab-pane label="BEST SELLER" name="best-seller">
-          <el-row :gutter="20" style="padding-bottom: 20px">
+          <el-row :gutter="20">
             <el-col
               :span="4.8"
               class="el-col-4-8"
@@ -337,8 +337,6 @@ const activeTab = ref('best-seller')
       </Splide>
     </div>
   </main>
-
-  <div style="height: 1000px"></div>
 </template>
 
 <style lang="css" scoped>
