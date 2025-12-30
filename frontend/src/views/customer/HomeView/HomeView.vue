@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import CarouselItem from '@/components/CarouselItem.vue'
-import CategoryItem from '@/components/CategoryItem.vue'
 import Header from '@/components/Header.vue'
 import ProductItem from '@/components/ProductItem.vue'
 
 import { Splide, SplideSlide } from '@splidejs/vue-splide'
 import '@splidejs/vue-splide/css'
 import { ref } from 'vue'
+import CategoryItem from './components/CategoryItem.vue'
 
 const categories = [
   'Laptops',
@@ -241,7 +240,7 @@ const activeTab = ref('best-seller')
 
     <div
       class="box-shadow border-radius top-categories"
-      style="background-color: #fff; padding: 20px 20px 32px; margin-bottom: 20px"
+      style="background-color: #fff; padding: 20px 20px 40px; margin-bottom: 20px"
     >
       <div style="display: flex; margin-bottom: 12px">
         <h3 style="font-weight: bold">TOP CATEGORIES</h3>
@@ -358,7 +357,7 @@ const activeTab = ref('best-seller')
 <style>
 .top-categories .splide__pagination__page {
   position: relative !important;
-  top: 30px;
+  top: 34px;
 }
 
 .recently-viewed .splide__pagination__page {
