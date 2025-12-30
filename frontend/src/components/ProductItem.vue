@@ -3,11 +3,11 @@ import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
 import LocationIcon from './icons/LocationIcon.vue'
 import StarIcon from './icons/StarIcon.vue'
 
-const props = defineProps(['imageUrl', 'name', 'price', 'rating', 'location', 'discount'])
+const props = defineProps(['imageUrl', 'name', 'price', 'rating', 'location', 'discount', 'id'])
 </script>
 
 <template>
-  <div class="wrapper">
+  <RouterLink :to="`/product`" class="wrapper">
     <div
       :style="{
         background: `url(${props.imageUrl}) no-repeat center`,
@@ -45,7 +45,7 @@ const props = defineProps(['imageUrl', 'name', 'price', 'rating', 'location', 'd
         </div>
       </div>
     </div>
-  </div>
+  </RouterLink>
 </template>
 
 <style lang="css" scoped>
