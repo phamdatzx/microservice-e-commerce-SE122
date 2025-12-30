@@ -240,7 +240,7 @@ const activeTab = ref('best-seller')
     </el-row>
 
     <div
-      class="box-shadow border-radius"
+      class="box-shadow border-radius top-categories"
       style="background-color: #fff; padding: 20px 20px 32px; margin-bottom: 20px"
     >
       <div style="display: flex; margin-bottom: 12px">
@@ -301,7 +301,7 @@ const activeTab = ref('best-seller')
     </div>
 
     <div
-      class="box-shadow border-radius"
+      class="box-shadow border-radius recently-viewed"
       style="background-color: #fff; padding: 20px; margin-bottom: 20px"
     >
       <div style="display: flex; margin-bottom: 12px">
@@ -352,5 +352,22 @@ const activeTab = ref('best-seller')
   &:hover {
     color: #999;
   }
+}
+</style>
+
+<style>
+.top-categories .splide__pagination__page {
+  position: relative !important;
+  top: 30px;
+}
+
+.recently-viewed .splide__pagination__page {
+  position: relative !important;
+  top: 16px;
+}
+
+.splide__pagination__page.is-active {
+  background-color: var(--main-color);
+  transform: scale(1.2);
 }
 </style>
