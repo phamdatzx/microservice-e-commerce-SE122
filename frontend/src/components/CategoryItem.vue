@@ -11,3 +11,15 @@ const props = defineProps(['imageUrl', 'name'])
     <p style="text-align: center; margin-top: 4px">{{ props.name }}</p>
   </RouterLink>
 </template>
+
+<style>
+.splide__pagination__page {
+  position: relative !important;
+  top: 30px;
+}
+
+.splide__pagination__page.is-active {
+  background-color: var(--main-color);
+  transform: scale(1.2);
+}
+</style>

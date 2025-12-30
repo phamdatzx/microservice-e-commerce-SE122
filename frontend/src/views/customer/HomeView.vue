@@ -241,7 +241,7 @@ const activeTab = ref('best-seller')
 
     <div
       class="box-shadow border-radius"
-      style="background-color: #fff; padding: 20px; margin-bottom: 20px"
+      style="background-color: #fff; padding: 20px 20px 32px; margin-bottom: 20px"
     >
       <div style="display: flex; margin-bottom: 12px">
         <h3 style="font-weight: bold">TOP CATEGORIES</h3>
