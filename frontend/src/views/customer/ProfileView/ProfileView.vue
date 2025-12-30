@@ -25,14 +25,6 @@ const menuItems = [
   <Header />
 
   <div class="main-container">
-    <div class="breadcrumb-container">
-      <RouterLink to="/">Home</RouterLink>
-      <span class="separator">/</span>
-      <RouterLink to="/">pages</RouterLink>
-      <span class="separator">/</span>
-      <span class="current">profile</span>
-    </div>
-
     <el-row :gutter="28">
       <!-- Sidebar -->
       <el-col :span="6">
@@ -90,32 +82,6 @@ const menuItems = [
 </template>
 
 <style scoped>
-.breadcrumb-container {
-  padding: 24px 0;
-  font-size: 14px;
-  color: #666;
-}
-
-.breadcrumb-container a {
-  color: #666;
-  text-decoration: none;
-  transition: color 0.2s;
-}
-
-.breadcrumb-container a:hover {
-  color: var(--main-color);
-}
-
-.breadcrumb-container .separator {
-  margin: 0 8px;
-  color: #ccc;
-}
-
-.breadcrumb-container .current {
-  color: #000;
-  font-weight: 600;
-}
-
 .sidebar {
   background-color: #fff;
   padding-bottom: 20px;
