@@ -10,6 +10,7 @@ import RegisterForm from '@/views/authentication/forms/RegisterForm.vue'
 import ForgotPasswordForm from '@/views/authentication/forms/ForgotPasswordForm.vue'
 import ResetPasswordForm from '@/views/authentication/forms/ResetPasswordForm.vue'
 import ProductDetailView from '@/views/customer/ProductDetailView.vue'
+import ProfileView from '@/views/customer/ProfileView/ProfileView.vue'
 import CartView from '@/views/customer/CartView/CartView.vue'
 
 const loginFormProps = {
@@ -66,6 +67,10 @@ const router = createRouter({
     {
       path: '/cart',
       component: CartView,
+    },
+    {
+      path: '/profile',
+      component: ProfileView,
     },
     {
       path: '/',

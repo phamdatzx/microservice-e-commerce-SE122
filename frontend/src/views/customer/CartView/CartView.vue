@@ -305,7 +305,7 @@ const handleCheckedProductsChange = (checkedSellerProducts: Product[], sellerNam
     </div>
 
     <div
-      class="box-shadow border-radius"
+      class="box-shadow border-radius recently-viewed"
       style="background-color: #fff; padding: 20px; margin-bottom: 20px; margin-top: 28px"
     >
       <div style="display: flex; margin-bottom: 12px">
