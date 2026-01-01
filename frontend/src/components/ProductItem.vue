@@ -15,7 +15,7 @@ const props = defineProps(['imageUrl', 'name', 'price', 'rating', 'location', 'd
       style="width: 100%; padding-bottom: 100%; background-size: cover"
     />
     <div style="padding: 8px">
-      <p class="product-name">{{ props.name }}</p>
+      <p class="product-name two-line-ellipsis">{{ props.name }}</p>
       <div style="display: flex; align-items: center">
         <p class="product-price">{{ formatNumberWithDots(props.price) }}₫</p>
         <span
@@ -52,7 +52,7 @@ const props = defineProps(['imageUrl', 'name', 'price', 'rating', 'location', 'd
 .wrapper {
   box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px;
   border-radius: 2px;
-  margin: 20px 0;
+  margin: 10px 0;
   transition: box-shadow 0.2s;
   &:hover {
     cursor: pointer;
@@ -61,19 +61,9 @@ const props = defineProps(['imageUrl', 'name', 'price', 'rating', 'location', 'd
 }
 
 .product-name {
-  --line-height: 20px;
-  height: calc(var(--line-height) * 2);
-  line-height: var(--line-height);
-
+  color: #000000cc;
   font-size: 16px;
   font-weight: 500;
-  color: #000000cc;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  line-clamp: 2;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .product-price {

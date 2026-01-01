@@ -37,6 +37,32 @@ button {
   margin: 0 auto;
 }
 
+.two-line-ellipsis {
+  --line-height: 20px;
+  height: calc(var(--line-height) * 2);
+  line-height: var(--line-height);
+
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.one-line-ellipsis {
+  --line-height: 20px;
+  height: calc(var(--line-height) * 1);
+  line-height: var(--line-height);
+
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  line-clamp: 1;
+  -webkit-line-clamp: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .box-shadow {
   box-shadow: rgba(149, 157, 165, 0.2) 0px 8px 24px;
 }
