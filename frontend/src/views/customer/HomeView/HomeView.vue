@@ -216,7 +216,9 @@ const activeTab = ref('best-seller')
           class="box-shadow border-radius"
           style="width: 100%; height: 100%; background-color: #fff; padding: 20px 40px"
         >
-          <h4 style="color: red; font-weight: bold; margin-bottom: 4px">SALE 40% OFF</h4>
+          <h4 style="color: var(--main-color); font-weight: bold; margin-bottom: 4px">
+            SALE 40% OFF
+          </h4>
           <ul>
             <li v-for="category in categories" :key="category">
               <RouterLink class="category-item" to="/">{{ category }}</RouterLink>

@@ -13,6 +13,7 @@ declare module 'vue' {
   export interface GlobalComponents {
     CarouselItem: typeof import('./src/components/CarouselItem.vue')['default']
     CategoryItem: typeof import('./src/components/CategoryItem.vue')['default']
+    CustomerChat: typeof import('./src/components/CustomerChat.vue')['default']
     CustomerComment: typeof import('./src/components/CustomerComment.vue')['default']
     ElAside: typeof import('element-plus/es')['ElAside']
     ElButton: typeof import('element-plus/es')['ElButton']
@@ -62,6 +63,7 @@ declare module 'vue' {
     HeartIcon: typeof import('./src/components/icons/HeartIcon.vue')['default']
     LocationIcon: typeof import('./src/components/icons/LocationIcon.vue')['default']
     MessengerIcon: typeof import('./src/components/icons/MessengerIcon.vue')['default']
+    PinIcon: typeof import('./src/components/icons/PinIcon.vue')['default']
     PinterestIcon: typeof import('./src/components/icons/PinterestIcon.vue')['default']
     ProductItem: typeof import('./src/components/ProductItem.vue')['default']
     ProductList: typeof import('./src/components/ProductList.vue')['default']
@@ -71,6 +73,7 @@ declare module 'vue' {
     ShippingIcon: typeof import('./src/components/icons/ShippingIcon.vue')['default']
     StarIcon: typeof import('./src/components/icons/StarIcon.vue')['default']
     TwitterXIcon: typeof import('./src/components/icons/TwitterXIcon.vue')['default']
+    UnpinIcon: typeof import('./src/components/icons/UnpinIcon.vue')['default']
     UserComment: typeof import('./src/components/UserComment.vue')['default']
   }
   export interface GlobalDirectives {

@@ -77,9 +77,10 @@ button {
 }
 
 .el-dropdown-menu__item {
-  padding: 12px 16px !important;
+  --padding: 12px 16px !important;
   --el-dropdown-menuItem-hover-color: var(--main-color);
   --el-dropdown-menuItem-hover-fill: #f5f5f5;
+  padding: var(--padding);
 }
 
 .el-pagination.is-background .btn-next,

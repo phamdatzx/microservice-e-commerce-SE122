@@ -25,10 +25,10 @@ const props = defineProps(['imageUrl', 'name', 'price', 'rating', 'location', 'd
             height: var(--line-height);
 
             display: block;
-            background-color: #feeeea;
+            background-color: #f0fdf4;
             margin-left: 4px;
             padding: 0 2px;
-            color: #ee4d2d;
+            color: var(--main-color);
             font-size: 10px;
           "
           >-{{ props.discount }}%</span

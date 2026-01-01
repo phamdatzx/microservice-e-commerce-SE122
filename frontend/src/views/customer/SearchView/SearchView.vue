@@ -381,7 +381,7 @@ const clearAll = () => {
 }
 
 .more-btn:hover {
-  color: var(--main-color, #ee4d2d);
+  color: var(--main-color);
 }
 
 .price-inputs {
@@ -413,7 +413,7 @@ const clearAll = () => {
 .apply-btn {
   width: 100%;
   padding: 8px;
-  background-color: var(--main-color, #ee4d2d);
+  background-color: var(--main-color);
   color: white;
   border: none;
   border-radius: 2px;
@@ -450,7 +450,7 @@ const clearAll = () => {
 .clear-all-btn {
   width: 100%;
   padding: 10px;
-  background-color: var(--main-color, #ee4d2d);
+  background-color: var(--main-color);
   color: white;
   border: none;
   border-radius: 2px;
@@ -469,7 +469,7 @@ const clearAll = () => {
 }
 
 .keyword {
-  color: var(--main-color, #ee4d2d);
+  color: var(--main-color);
   text-transform: uppercase;
   font-weight: 600;
 }

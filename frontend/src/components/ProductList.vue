@@ -209,7 +209,7 @@ defineEmits(['sort-change', 'page-change'])
 }
 
 .sort-btn.active {
-  background-color: var(--main-color, #ee4d2d);
+  background-color: var(--main-color);
   color: white;
 }
 
@@ -288,6 +288,6 @@ defineEmits(['sort-change', 'page-change'])
 }
 
 :deep(.custom-pagination .el-pager li.is-active) {
-  background-color: var(--main-color, #ee4d2d) !important;
+  background-color: var(--main-color) !important;
 }
 </style>
