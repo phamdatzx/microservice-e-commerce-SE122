@@ -16,6 +16,8 @@ import {
   Delete,
   Notification,
   Finished,
+  Picture,
+  VideoCamera,
 } from '@element-plus/icons-vue'
 import PinIcon from './icons/PinIcon.vue'
 import UnpinIcon from './icons/UnpinIcon.vue'
@@ -24,6 +26,8 @@ const isChatVisible = ref(false)
 const searchQuery = ref('')
 const filters = ['All', 'Unread', 'Pinned']
 const activeFilter = ref('All')
+const imageInputRef = ref<HTMLInputElement | null>(null)
+const videoInputRef = ref<HTMLInputElement | null>(null)
 const isContentHidden = ref(false)
 
 const toggleChat = () => {
@@ -131,7 +135,7 @@ const filteredContacts = computed(() => {
   })
 })
 
-const activeContact = ref(contacts.value[0])
+const activeContact = ref<(typeof contacts.value)[0] | null | undefined>(contacts.value[0])
 
 const selectContact = (contact: any) => {
   activeContact.value = contact
@@ -186,6 +190,32 @@ const deleteConversation = async () => {
     }
   } catch {
     // User cancelled
+  }
+}
+
+const handleImageUpload = () => {
+  imageInputRef.value?.click()
+}
+
+const handleVideoUpload = () => {
+  videoInputRef.value?.click()
+}
+
+const onImageSelected = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (file) {
+    // Handle image file upload logic here
+    console.log('Image selected:', file.name)
+  }
+}
+
+const onVideoSelected = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (file) {
+    // Handle video file upload logic here
+    console.log('Video selected:', file.name)
   }
 }
 </script>
@@ -359,7 +389,28 @@ const deleteConversation = async () => {
               </div>
             </div>
             <div class="input-area">
+              <input
+                ref="imageInputRef"
+                type="file"
+                accept="image/*"
+                style="display: none"
+                @change="onImageSelected"
+              />
+              <input
+                ref="videoInputRef"
+                type="file"
+                accept="video/*"
+                style="display: none"
+                @change="onVideoSelected"
+              />
               <input type="text" placeholder="Type a message..." class="msg-input" />
+
+              <button class="upload-btn" @click="handleImageUpload" title="Upload Image">
+                <el-icon><Picture /></el-icon>
+              </button>
+              <button class="upload-btn" @click="handleVideoUpload" title="Upload Video">
+                <el-icon><VideoCamera /></el-icon>
+              </button>
               <button class="send-btn">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
                   <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
@@ -824,6 +875,28 @@ const deleteConversation = async () => {
   display: flex;
   gap: 10px;
   align-items: center;
+}
+
+.upload-btn {
+  color: #666;
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-radius: 4px;
+}
+
+.upload-btn:hover {
+  color: var(--main-color);
+  background-color: #f0fdf4;
+}
+
+.upload-btn .el-icon {
+  font-size: 18px;
 }
 
 .msg-input {
