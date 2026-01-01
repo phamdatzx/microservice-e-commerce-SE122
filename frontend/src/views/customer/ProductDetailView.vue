@@ -505,7 +505,7 @@ onMounted(() => {
     >
       <h3 style="font-weight: bold">RELATED PRODUCTS</h3>
 
-      <el-row :gutter="20" style="padding-bottom: 20px">
+      <el-row :gutter="20">
         <el-col
           :span="4.8"
           class="el-col-4-8"
@@ -524,7 +524,10 @@ onMounted(() => {
       </el-row>
     </div>
 
-    <div class="box-shadow border-radius" style="background-color: #fff; padding: 20px">
+    <div
+      class="box-shadow border-radius recently-viewed"
+      style="background-color: #fff; padding: 20px 20px 28px; margin-bottom: 20px"
+    >
       <div style="display: flex; margin-bottom: 12px">
         <h3 style="font-weight: bold">YOU RECENTLY VIEWED</h3>
         <RouterLink
@@ -559,8 +562,6 @@ onMounted(() => {
       </Splide>
     </div>
   </div>
-
-  <div style="height: 300px"></div>
 </template>
 
 <style lang="css" scoped>

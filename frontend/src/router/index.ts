@@ -3,13 +3,14 @@ import AuthenticationView from '@/views/authentication/AuthenticationView.vue'
 import ActivationView from '@/views/authentication/ActivationView.vue'
 import CategoryView from '@/views/seller/CategoryView.vue'
 import { default as SellerHomeView } from '@/views/seller/HomeView.vue'
-import { default as CustomerHomeView } from '@/views/customer/HomeView.vue'
+import { default as CustomerHomeView } from '@/views/customer/HomeView/HomeView.vue'
 import ProductView from '@/views/seller/ProductView.vue'
 import LoginForm from '@/views/authentication/forms/LoginForm.vue'
 import RegisterForm from '@/views/authentication/forms/RegisterForm.vue'
 import ForgotPasswordForm from '@/views/authentication/forms/ForgotPasswordForm.vue'
 import ResetPasswordForm from '@/views/authentication/forms/ResetPasswordForm.vue'
 import ProductDetailView from '@/views/customer/ProductDetailView.vue'
+import ProfileView from '@/views/customer/ProfileView/ProfileView.vue'
 import CartView from '@/views/customer/CartView/CartView.vue'
 
 const loginFormProps = {
@@ -47,18 +48,29 @@ const resetFormProps = {
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) {
+      return savedPosition
+    } else {
+      return { top: 0 }
+    }
+  },
   routes: [
     {
       path: '/',
       component: CustomerHomeView,
     },
     {
-      path: '/product-detail',
+      path: '/product',
       component: ProductDetailView,
     },
     {
       path: '/cart',
       component: CartView,
+    },
+    {
+      path: '/profile',
+      component: ProfileView,
     },
     {
       path: '/',

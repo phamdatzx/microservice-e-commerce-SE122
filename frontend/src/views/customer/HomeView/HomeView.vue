@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import CarouselItem from '@/components/CarouselItem.vue'
-import CategoryItem from '@/components/CategoryItem.vue'
 import Header from '@/components/Header.vue'
 import ProductItem from '@/components/ProductItem.vue'
 
 import { Splide, SplideSlide } from '@splidejs/vue-splide'
 import '@splidejs/vue-splide/css'
 import { ref } from 'vue'
+import CategoryItem from './components/CategoryItem.vue'
 
 const categories = [
   'Laptops',
@@ -240,8 +239,8 @@ const activeTab = ref('best-seller')
     </el-row>
 
     <div
-      class="box-shadow border-radius"
-      style="background-color: #fff; padding: 20px; margin-bottom: 20px"
+      class="box-shadow border-radius top-categories"
+      style="background-color: #fff; padding: 20px 20px 40px; margin-bottom: 20px"
     >
       <div style="display: flex; margin-bottom: 12px">
         <h3 style="font-weight: bold">TOP CATEGORIES</h3>
@@ -277,7 +276,7 @@ const activeTab = ref('best-seller')
     >
       <el-tabs v-model="activeTab">
         <el-tab-pane label="BEST SELLER" name="best-seller">
-          <el-row :gutter="20" style="padding-bottom: 20px">
+          <el-row :gutter="20">
             <el-col
               :span="4.8"
               class="el-col-4-8"
@@ -301,7 +300,7 @@ const activeTab = ref('best-seller')
     </div>
 
     <div
-      class="box-shadow border-radius"
+      class="box-shadow border-radius recently-viewed"
       style="background-color: #fff; padding: 20px; margin-bottom: 20px"
     >
       <div style="display: flex; margin-bottom: 12px">
@@ -338,8 +337,6 @@ const activeTab = ref('best-seller')
       </Splide>
     </div>
   </main>
-
-  <div style="height: 1000px"></div>
 </template>
 
 <style lang="css" scoped>
@@ -352,5 +349,22 @@ const activeTab = ref('best-seller')
   &:hover {
     color: #999;
   }
+}
+</style>
+
+<style>
+.top-categories .splide__pagination__page {
+  position: relative !important;
+  top: 34px;
+}
+
+.recently-viewed .splide__pagination__page {
+  position: relative !important;
+  top: 16px;
+}
+
+.splide__pagination__page.is-active {
+  background-color: var(--main-color);
+  transform: scale(1.2);
 }
 </style>
