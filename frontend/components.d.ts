@@ -64,6 +64,7 @@ declare module 'vue' {
     MessengerIcon: typeof import('./src/components/icons/MessengerIcon.vue')['default']
     PinterestIcon: typeof import('./src/components/icons/PinterestIcon.vue')['default']
     ProductItem: typeof import('./src/components/ProductItem.vue')['default']
+    ProductList: typeof import('./src/components/ProductList.vue')['default']
     RedFlagIcon: typeof import('./src/components/icons/RedFlagIcon.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']

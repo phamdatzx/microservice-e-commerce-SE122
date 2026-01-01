@@ -2,7 +2,7 @@
 import { Splide, SplideSlide, Options } from '@splidejs/vue-splide'
 import Header from '@/components/Header.vue'
 import { onMounted, ref } from 'vue'
-import { quantityFormatNumber, soldQuantityFormatNumber } from '@/utils/quantityFormatNumber'
+import { quantityFormatNumber } from '@/utils/quantityFormatNumber'
 import RedFlagIcon from '@/components/icons/RedFlagIcon.vue'
 import MessengerIcon from '@/components/icons/MessengerIcon.vue'
 import FacebookIcon from '@/components/icons/FacebookIcon.vue'

@@ -13,6 +13,7 @@ import ProductDetailView from '@/views/customer/ProductDetailView.vue'
 import ProfileView from '@/views/customer/ProfileView/ProfileView.vue'
 import CartView from '@/views/customer/CartView/CartView.vue'
 import SellerView from '@/views/customer/SellerView/SellerView.vue'
+import SearchView from '@/views/customer/SearchView/SearchView.vue'
 
 const loginFormProps = {
   title: 'Welcome Back',
@@ -76,6 +77,11 @@ const router = createRouter({
     {
       path: '/seller-page',
       component: SellerView,
+    },
+    {
+      path: '/search',
+      name: 'search',
+      component: SearchView,
     },
     {
       path: '/',

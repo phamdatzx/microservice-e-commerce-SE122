@@ -79,8 +79,7 @@ import { ArrowDown, Goods, Star, User } from '@element-plus/icons-vue'
             </div>
             <template #dropdown>
               <el-dropdown-menu class="custom-dropdown-menu">
-                <el-dropdown-item>Limited Edition</el-dropdown-item>
-                <el-dropdown-item>Best Sellers</el-dropdown-item>
+                <el-dropdown-item>Top Sales</el-dropdown-item>
                 <el-dropdown-item>New Arrivals</el-dropdown-item>
                 <el-dropdown-item>Summer Collection</el-dropdown-item>
               </el-dropdown-menu>
@@ -153,7 +152,7 @@ import { ArrowDown, Goods, Star, User } from '@element-plus/icons-vue'
 }
 
 .shop-details {
-  color: #white;
+  color: white;
   flex: 1;
 }
 
@@ -341,21 +340,5 @@ import { ArrowDown, Goods, Star, User } from '@element-plus/icons-vue'
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 15px;
-}
-</style>
-
-<style>
-.custom-dropdown-menu .el-dropdown-menu__item {
-  padding: 12px 16px !important;
-  --el-dropdown-menuItem-hover-color: var(--main-color);
-  --el-dropdown-menuItem-hover-fill: #f5f5f5;
-}
-
-.pagination-wrapper {
-  .el-pagination.is-background .btn-next,
-  .el-pagination.is-background .btn-prev,
-  .el-pagination.is-background .el-pager li {
-    --el-pagination-button-bg-color: #fff;
-  }
 }
 </style>
