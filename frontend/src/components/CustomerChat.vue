@@ -22,7 +22,14 @@ import {
 import PinIcon from './icons/PinIcon.vue'
 import UnpinIcon from './icons/UnpinIcon.vue'
 
-const isChatVisible = ref(false)
+const props = defineProps({
+  isEmbedded: {
+    type: Boolean,
+    default: false,
+  },
+})
+
+const isChatVisible = ref(props.isEmbedded)
 const searchQuery = ref('')
 const filters = ['All', 'Unread', 'Pinned']
 const activeFilter = ref('All')
@@ -31,6 +38,7 @@ const videoInputRef = ref<HTMLInputElement | null>(null)
 const isContentHidden = ref(false)
 
 const toggleChat = () => {
+  if (props.isEmbedded) return
   isChatVisible.value = !isChatVisible.value
 }
 
@@ -218,12 +226,24 @@ const onVideoSelected = (event: Event) => {
     console.log('Video selected:', file.name)
   }
 }
+
+const getMsgClass = (msg: any) => {
+  if (props.isEmbedded) {
+    return msg.sender === 'sender' ? 'receiver' : 'sender'
+  }
+  return msg.sender
+}
 </script>
 
 <template>
-  <div class="customer-chat-container">
+  <div class="customer-chat-container" :class="{ 'is-embedded': isEmbedded }">
     <!-- Floating Button -->
-    <button class="chat-floating-btn" :class="{ 'btn-hidden': isChatVisible }" @click="toggleChat">
+    <button
+      v-if="!isEmbedded"
+      class="chat-floating-btn"
+      :class="{ 'btn-hidden': isChatVisible }"
+      @click="toggleChat"
+    >
       <el-icon class="chat-icon"><ChatDotRound /></el-icon>
       <span class="chat-text">Chat</span>
       <span class="unread-badge">5</span>
@@ -240,10 +260,10 @@ const onVideoSelected = (event: Event) => {
           <span class="header-title">Chat (5)</span>
         </div>
         <div class="header-actions">
-          <el-icon class="action-icon" @click="toggleContent">
+          <el-icon v-if="!isEmbedded" class="action-icon" @click="toggleContent">
             <component :is="isContentHidden ? ArrowLeft : ArrowRight" />
           </el-icon>
-          <el-icon class="action-icon" @click="toggleChat"><Close /></el-icon>
+          <el-icon v-if="!isEmbedded" class="action-icon" @click="toggleChat"><Close /></el-icon>
         </div>
       </div>
 
@@ -349,9 +369,15 @@ const onVideoSelected = (event: Event) => {
               <div class="warning-box">
                 <el-icon class="warning-icon"><ChatDotRound /></el-icon>
                 <div class="warning-text">
-                  NOTE: Swoo does NOT allow: Deposit/Bank Transfer outside the system, providing
-                  personal phone numbers, or other external activities. Please stay alert to avoid
-                  scams!
+                  <span v-if="isEmbedded">
+                    NOTE: Please answer customers politely and avoid conducting transactions outside
+                    the platform to ensure your safety and account status.
+                  </span>
+                  <span v-else>
+                    NOTE: Swoo does NOT allow: Deposit/Bank Transfer outside the system, providing
+                    personal phone numbers, or other external activities. Please stay alert to avoid
+                    scams!
+                  </span>
                 </div>
               </div>
 
@@ -367,7 +393,8 @@ const onVideoSelected = (event: Event) => {
                   <!-- Show order card after Yesterday separator -->
                   <div v-if="msg.date === 'Yesterday' && index === 0" class="order-info-card">
                     <div class="order-info-header">
-                      <span>You are chatting with the Seller about this order</span>
+                      <span v-if="isEmbedded">Customer is chatting with you about this order</span>
+                      <span v-else>You are chatting with the Seller about this order</span>
                     </div>
                     <div class="order-info-body">
                       <img src="../assets/product-imgs/product1.png" class="order-item-img" />
@@ -379,7 +406,7 @@ const onVideoSelected = (event: Event) => {
                     </div>
                   </div>
 
-                  <div class="msg-row" :class="msg.sender">
+                  <div class="msg-row" :class="getMsgClass(msg)">
                     <div class="msg-bubble">
                       {{ msg.text }}
                       <span class="msg-time">{{ msg.time }}</span>
@@ -431,6 +458,15 @@ const onVideoSelected = (event: Event) => {
   right: 20px;
   z-index: 1500;
   font-family: inherit;
+}
+
+.customer-chat-container.is-embedded {
+  position: relative;
+  bottom: 0;
+  right: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
 }
 
 .chat-floating-btn {
@@ -492,6 +528,13 @@ const onVideoSelected = (event: Event) => {
   border: 1px solid #e5e5e5;
   animation: slideIn 0.3s ease-out;
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.is-embedded .chat-window {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  animation: none;
 }
 
 .chat-window.content-hidden {
@@ -758,6 +801,10 @@ const onVideoSelected = (event: Event) => {
   color: #999;
 }
 
+.is-embedded .order-info-header {
+  background-color: white;
+}
+
 .order-info-body {
   background-color: #f0fdf4;
   padding: 8px 10px;
@@ -765,6 +812,10 @@ const onVideoSelected = (event: Event) => {
   gap: 12px;
   min-height: 60px;
   align-items: center;
+}
+
+.is-embedded .order-info-body {
+  background-color: white;
 }
 
 .order-item-img {

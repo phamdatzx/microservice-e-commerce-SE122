@@ -14,6 +14,7 @@ import ProfileView from '@/views/customer/ProfileView/ProfileView.vue'
 import CartView from '@/views/customer/CartView/CartView.vue'
 import SellerView from '@/views/customer/SellerView/SellerView.vue'
 import SearchView from '@/views/customer/SearchView/SearchView.vue'
+import ChatView from '@/views/seller/ChatView.vue'
 
 const loginFormProps = {
   title: 'Welcome Back',
@@ -130,6 +131,7 @@ const router = createRouter({
       children: [
         { path: 'category', name: 'category', component: CategoryView },
         { path: 'product', name: 'product', component: ProductView },
+        { path: 'chat', name: 'chat', component: ChatView },
       ],
     },
   ],
