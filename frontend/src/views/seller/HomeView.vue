@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import { ArrowDown, ArrowRight, Goods, Menu, ChatDotRound, User } from '@element-plus/icons-vue'
+import {
+  ArrowDown,
+  ArrowRight,
+  Goods,
+  Menu,
+  ChatDotRound,
+  User,
+  Ticket,
+} from '@element-plus/icons-vue'
 
 const handleOpen = (key: string, keyPath: string[]) => {
   console.log(key, keyPath)
@@ -87,6 +95,12 @@ const handleClose = (key: string, keyPath: string[]) => {
               <el-menu-item index="2">
                 <el-icon><Menu /></el-icon>
                 <span>Category</span>
+              </el-menu-item>
+            </RouterLink>
+            <RouterLink to="/seller/voucher">
+              <el-menu-item index="6">
+                <el-icon><Ticket /></el-icon>
+                <span>Voucher</span>
               </el-menu-item>
             </RouterLink>
             <RouterLink to="/seller/product">
