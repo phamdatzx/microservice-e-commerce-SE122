@@ -21,10 +21,9 @@ interface AdminUser {
 // Mock Data
 const userData = ref<AdminUser[]>([])
 const dialogVisible = ref(false)
-const dialogMode = ref<'add' | 'edit'>('add')
 const dialogContent = ref({
-  title: 'Add User',
-  mainBtnText: 'Add',
+  title: 'Edit User',
+  mainBtnText: 'Save',
 })
 const isLoading = ref(false)
 const searchQuery = ref('')
@@ -77,42 +76,12 @@ const handleCurrentChange = (val: number) => {
   currentPage.value = val
 }
 
-const openModal = (mode: 'add' | 'edit', row?: AdminUser) => {
-  dialogMode.value = mode
+const openModal = (row: AdminUser) => {
   dialogVisible.value = true
-
-  if (mode === 'add') {
-    dialogContent.value = {
-      title: 'Add User',
-      mainBtnText: 'Add',
-    }
-    clearRuleForm()
-  } else if (mode === 'edit' && row) {
-    dialogContent.value = {
-      title: 'Edit User',
-      mainBtnText: 'Save',
-    }
-    Object.assign(ruleForm, row) // Populate form
-  }
+  Object.assign(ruleForm, row) // Populate form
 }
 
 // #region Handlers
-const handleAddUser = () => {
-  // Mock
-  const { id, ...newUser } = ruleForm
-  userData.value.unshift({
-    id: `new-${Date.now()}`,
-    ...newUser,
-  })
-  ElNotification({
-    title: 'Success',
-    message: 'User added successfully',
-    type: 'success',
-  })
-  dialogVisible.value = false
-  clearRuleForm()
-}
-
 const handleEditUser = () => {
   // Mock
   const index = userData.value.findIndex((u) => u.id === ruleForm.id)
@@ -167,8 +136,7 @@ const submitForm = async (formEl: FormInstance | undefined) => {
   if (!formEl) return
   await formEl.validate((valid) => {
     if (valid) {
-      if (dialogMode.value === 'add') handleAddUser()
-      else handleEditUser()
+      handleEditUser()
     }
   })
 }
@@ -197,9 +165,6 @@ const clearRuleForm = () => {
           style="width: 300px"
           clearable
         />
-        <el-button size="large" :icon="Plus" color="var(--main-color)" @click="openModal('add')">
-          Add New User
-        </el-button>
       </div>
     </div>
 
@@ -222,9 +187,7 @@ const clearRuleForm = () => {
       </el-table-column>
       <el-table-column align="center" label="Actions" width="180">
         <template #default="{ row }">
-          <el-button type="primary" link :icon="Edit" @click="openModal('edit', row)"
-            >Edit</el-button
-          >
+          <el-button type="primary" link :icon="Edit" @click="openModal(row)">Edit</el-button>
           <el-button type="danger" link :icon="Delete" @click="handleDeleteBtnClick(row)"
             >Delete</el-button
           >

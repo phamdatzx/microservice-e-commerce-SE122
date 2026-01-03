@@ -14,6 +14,7 @@ import ProfileView from '@/views/customer/ProfileView/ProfileView.vue'
 import CartView from '@/views/customer/CartView/CartView.vue'
 import SellerView from '@/views/customer/SellerView/SellerView.vue'
 import SearchView from '@/views/customer/SearchView/SearchView.vue'
+import CheckoutView from '@/views/customer/CheckoutView/CheckoutView.vue'
 import ChatView from '@/views/seller/ChatView.vue'
 import SellerProfileView from '@/views/seller/ProfileView.vue'
 import VoucherManagerView from '@/views/seller/VoucherManagerView.vue'
@@ -82,6 +83,10 @@ const router = createRouter({
     {
       path: '/profile',
       component: ProfileView,
+    },
+    {
+      path: '/checkout',
+      component: CheckoutView,
     },
     {
       path: '/seller-page',

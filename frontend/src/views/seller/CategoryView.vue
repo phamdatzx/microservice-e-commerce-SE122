@@ -53,7 +53,15 @@ const fetchCategories = () => {
       }))
     })
     .catch((error) => {
-      console.error(error)
+      console.error('Fetch categories failed, using mock data:', error)
+      // Fallback Mock Data
+      categoryData.value = [
+        { id: 'mock-1', name: 'Áo thun Nam', productCount: 15 },
+        { id: 'mock-2', name: 'Quần Jean Nữ', productCount: 24 },
+        { id: 'mock-3', name: 'Phụ kiện điện tử', productCount: 8 },
+        { id: 'mock-4', name: 'Giày thể thao', productCount: 42 },
+        { id: 'mock-5', name: 'Đồ gia dụng', productCount: 12 },
+      ]
     })
     .finally(() => {
       isLoading.value = false
