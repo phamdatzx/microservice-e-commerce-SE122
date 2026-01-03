@@ -21,6 +21,7 @@ import ShippingManagerView from '@/views/seller/ShippingManagerView.vue'
 import StatisticView from '@/views/seller/StatisticView.vue'
 import AdminHomeView from '@/views/admin/HomeView.vue'
 import CategoryManagerView from '@/views/admin/CategoryView.vue'
+import UserView from '@/views/admin/UserView.vue'
 
 const loginFormProps = {
   title: 'Welcome Back',
@@ -148,7 +149,10 @@ const router = createRouter({
       path: '/admin',
       name: 'admin',
       component: AdminHomeView,
-      children: [{ path: 'category', name: 'admin-category', component: CategoryManagerView }],
+      children: [
+        { path: 'category', name: 'admin-category', component: CategoryManagerView },
+        { path: 'users', name: 'admin-users', component: UserView },
+      ],
     },
   ],
 })
