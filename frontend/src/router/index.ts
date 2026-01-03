@@ -18,6 +18,7 @@ import ChatView from '@/views/seller/ChatView.vue'
 import SellerProfileView from '@/views/seller/ProfileView.vue'
 import VoucherManagerView from '@/views/seller/VoucherManagerView.vue'
 import ShippingManagerView from '@/views/seller/ShippingManagerView.vue'
+import StatisticView from '@/views/seller/StatisticView.vue'
 
 const loginFormProps = {
   title: 'Welcome Back',
@@ -138,6 +139,7 @@ const router = createRouter({
         { path: 'profile', name: 'seller-profile', component: SellerProfileView },
         { path: 'voucher', name: 'voucher', component: VoucherManagerView },
         { path: 'shipping', name: 'shipping', component: ShippingManagerView },
+        { path: 'statistic', name: 'statistic', component: StatisticView },
       ],
     },
   ],

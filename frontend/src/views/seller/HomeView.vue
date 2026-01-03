@@ -8,6 +8,7 @@ import {
   User,
   Ticket,
   Van,
+  TrendCharts,
 } from '@element-plus/icons-vue'
 
 const handleOpen = (key: string, keyPath: string[]) => {
@@ -92,6 +93,12 @@ const handleClose = (key: string, keyPath: string[]) => {
                 <el-menu-item index="1-4-1">item one</el-menu-item>
               </el-sub-menu>
             </el-sub-menu>
+            <RouterLink to="/seller/statistic">
+              <el-menu-item index="8">
+                <el-icon><TrendCharts /></el-icon>
+                <span>Statistics</span>
+              </el-menu-item>
+            </RouterLink>
             <RouterLink to="/seller/category">
               <el-menu-item index="2">
                 <el-icon><Menu /></el-icon>
