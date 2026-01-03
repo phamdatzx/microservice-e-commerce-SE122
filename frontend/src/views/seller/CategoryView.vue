@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Delete, Edit } from '@element-plus/icons-vue'
+import { Delete, Edit, Plus, Search } from '@element-plus/icons-vue'
 import axios from 'axios'
 import {
   ElLoading,
@@ -8,15 +8,14 @@ import {
   type FormInstance,
   type FormRules,
 } from 'element-plus'
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, reactive, ref, computed } from 'vue'
 
 interface SellerCategory {
   id: string
-  seller_id: string
+  seller_id?: string
   name: string
+  productCount: number
 }
-
-type DialogMode = 'add' | 'edit'
 
 const userId = ref('7d27d61d-8cb3-4ef9-a9ff-0a92f217855b')
 // const token = localStorage.getItem('access_token')
@@ -25,13 +24,15 @@ const token =
 
 const categoryData = ref<SellerCategory[]>([])
 const dialogVisible = ref(false)
-const dialogMode = ref<DialogMode>('add')
+const dialogMode = ref<'add' | 'edit'>('add')
 const dialogContent = ref({
-  title: 'Add category',
-  placeholder: 'Please enter a category',
+  title: 'Add Category',
   mainBtnText: 'Add',
 })
 const isLoading = ref(false)
+const searchQuery = ref('')
+const currentPage = ref(1)
+const pageSize = ref(10)
 
 onMounted(() => {
   fetchCategories()
@@ -42,8 +43,14 @@ const fetchCategories = () => {
   axios
     .get(import.meta.env.VITE_GET_SELLER_CATEGORY_API_URL + '/' + userId.value + '/category')
     .then((response) => {
-      categoryData.value = response.data
-      console.log(categoryData.value)
+      // Map response to SellerCategory with Mock Data for missing fields to match Layout
+      categoryData.value = response.data.map((item: any, index: number) => ({
+        id: item.id,
+        seller_id: item.seller_id,
+        name: item.name,
+        // Mock Product Count
+        productCount: Math.floor(Math.random() * 50) + 1,
+      }))
     })
     .catch((error) => {
       console.error(error)
@@ -53,76 +60,92 @@ const fetchCategories = () => {
     })
 }
 
-const openModal = (mode: DialogMode, category?: string, id?: string) => {
+// #region Pagination & Filter
+const filteredData = computed(() => {
+  if (!searchQuery.value) return categoryData.value
+  return categoryData.value.filter((category) =>
+    category.name.toLowerCase().includes(searchQuery.value.toLowerCase()),
+  )
+})
+
+const paginatedData = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return filteredData.value.slice(start, end)
+})
+
+const handleSizeChange = (val: number) => {
+  pageSize.value = val
+  currentPage.value = 1
+}
+
+const handleCurrentChange = (val: number) => {
+  currentPage.value = val
+}
+// #endregion
+
+// #endregion
+
+// #region Modal
+const openModal = (mode: 'add' | 'edit', row?: SellerCategory) => {
   dialogMode.value = mode
   dialogVisible.value = true
 
   if (mode === 'add') {
     dialogContent.value = {
-      title: 'Add category',
-      placeholder: 'Please enter a category',
+      title: 'Add Category',
       mainBtnText: 'Add',
     }
     clearRuleForm()
-  } else if (mode === 'edit') {
+  } else if (mode === 'edit' && row) {
     dialogContent.value = {
-      title: 'Edit category',
-      placeholder: 'Please edit the category',
+      title: 'Edit Category',
       mainBtnText: 'Save',
     }
-    ruleForm.category = category ?? ''
-    ruleForm.id = id ?? ''
+    ruleForm.category = row.name
+    ruleForm.id = row.id
   }
 }
+// #endregion
 
+// #region API Actions
 const handleAddCategory = () => {
   const loading = ElLoading.service({
     lock: true,
     text: 'Loading',
     background: 'rgba(0, 0, 0, 0.7)',
   })
-  if (ruleForm.category.trim() === '') {
-    ElNotification({
-      title: 'Error!',
-      message: 'Category name cannot be empty.',
-      type: 'error',
+  axios
+    .post(
+      import.meta.env.VITE_MANAGE_SELLER_CATEGORY_API_URL,
+      {
+        name: ruleForm.category,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    )
+    .then((response) => {
+      ElNotification({
+        title: 'Success!',
+        message: `Category "${ruleForm.category}" was added successfully.`,
+        type: 'success',
+      })
+      fetchCategories()
+      dialogVisible.value = false
     })
-    return
-  } else {
-    axios
-      .post(
-        import.meta.env.VITE_MANAGE_SELLER_CATEGORY_API_URL,
-        {
-          name: ruleForm.category,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      )
-      .then((response) => {
-        // Success
-        ElNotification({
-          title: 'Success!',
-          message: `Category "${ruleForm.category}" was added successfully.`,
-          type: 'success',
-        })
-        fetchCategories()
+    .catch((error) => {
+      ElNotification({
+        title: 'Error!',
+        message: error.message,
+        type: 'error',
       })
-      .catch((error) => {
-        ElNotification({
-          title: 'Error!',
-          message: error.message,
-          type: 'error',
-        })
-      })
-      .finally(() => {
-        loading.close()
-        dialogVisible.value = false
-        ruleForm.category = ''
-      })
-  }
+    })
+    .finally(() => {
+      loading.close()
+    })
 }
 
 const handleEditCategory = () => {
@@ -144,13 +167,13 @@ const handleEditCategory = () => {
       },
     )
     .then((response) => {
-      // Success
       ElNotification({
         title: 'Success!',
         message: `Category "${ruleForm.category}" was updated successfully.`,
         type: 'success',
       })
       fetchCategories()
+      dialogVisible.value = false
     })
     .catch((error) => {
       ElNotification({
@@ -161,20 +184,23 @@ const handleEditCategory = () => {
     })
     .finally(() => {
       loading.close()
-      dialogVisible.value = false
-      clearRuleForm()
     })
 }
 
-const handleDeleteBtnClick = (categoryId: string, categoryName: string) => {
-  ElMessageBox.confirm(`Delete category name: "${categoryName}"?`, 'Confirm delete', {
-    type: 'warning',
-    confirmButtonText: 'Delete',
-    cancelButtonText: 'Cancel',
-  }).then(async () => {
-    handleDeleteCategory(categoryId, categoryName)
+const handleDeleteBtnClick = (row: SellerCategory) => {
+  ElMessageBox.confirm(
+    `Delete category "${row.name}" with ${row.productCount} products?`,
+    'Confirm Delete',
+    {
+      type: 'warning',
+      confirmButtonText: 'Delete',
+      cancelButtonText: 'Cancel',
+    },
+  ).then(async () => {
+    handleDeleteCategory(row.id, row.name)
   })
 }
+
 const handleDeleteCategory = (categoryId: string, categoryName: string) => {
   const loading = ElLoading.service({
     lock: true,
@@ -189,25 +215,19 @@ const handleDeleteCategory = (categoryId: string, categoryName: string) => {
       },
     })
     .then((response) => {
-      // Failed: wrong token
       if (response.data.code === 401) {
         ElNotification({
           title: 'Error!',
           message: response.data.message,
           type: 'error',
         })
-        return
-      }
-      // Failed: wrong id
-      else if (response.data.code === 500) {
+      } else if (response.data.code === 500) {
         ElNotification({
           title: 'Error!',
           message: response.data.message,
           type: 'error',
         })
-      }
-      // Success
-      else {
+      } else {
         ElNotification({
           title: 'Success!',
           message: `Category "${categoryName}" was deleted successfully.`,
@@ -216,7 +236,6 @@ const handleDeleteCategory = (categoryId: string, categoryName: string) => {
         fetchCategories()
       }
     })
-    // API failed
     .catch((error) => {
       ElNotification({
         title: 'Error!',
@@ -228,6 +247,7 @@ const handleDeleteCategory = (categoryId: string, categoryName: string) => {
       loading.close()
     })
 }
+// #endregion
 
 // #region Form
 interface RuleForm {
@@ -240,86 +260,146 @@ const ruleForm = reactive<RuleForm>({
   id: '',
 })
 const rules = reactive<FormRules<RuleForm>>({
-  category: [{ required: true, message: 'Please input category', trigger: 'change' }],
+  category: [{ required: true, message: 'Please input category name', trigger: 'change' }],
 })
 
 const submitForm = async (formEl: FormInstance | undefined) => {
   if (!formEl) return
-  await formEl.validate((valid, fields) => {
+  await formEl.validate((valid) => {
     if (valid) {
-      handleFormSubmit()
-    } else {
-      console.log('error submit!', fields)
+      if (dialogMode.value === 'add') handleAddCategory()
+      else handleEditCategory()
     }
   })
 }
 
-const handleFormSubmit = () => {
-  if (dialogMode.value === 'add') {
-    handleAddCategory()
-  } else if (dialogMode.value === 'edit') {
-    handleEditCategory()
-  }
-}
-
 const clearRuleForm = () => {
   ruleFormRef.value?.resetFields()
+  ruleForm.category = ''
+  ruleForm.id = ''
 }
 // #endregion
 </script>
 
 <template>
-  <el-button
-    type="primary"
-    size="large"
-    style="margin-bottom: 12px"
-    color="#1aae51"
-    @click="openModal('add')"
-  >
-    Add category
-  </el-button>
-  <el-table v-loading="isLoading" :data="categoryData" border style="width: 100%">
-    <el-table-column type="index" label="Index" width="100" />
-    <el-table-column prop="name" label="Category" />
-    <el-table-column align="center" label="Operations" width="140">
-      <template #default="{ row }">
-        <el-button type="primary" :icon="Edit" @click="openModal('edit', row.name, row.id)" />
-        <el-button type="danger" :icon="Delete" @click="handleDeleteBtnClick(row.id, row.name)" />
-      </template>
-    </el-table-column>
-  </el-table>
-
-  <!-- Dialog -->
-  <el-dialog
-    v-model="dialogVisible"
-    :title="dialogContent.title"
-    width="500"
-    align-center
-    destroy-on-close
-  >
-    <el-form
-      label-width="auto"
-      style="max-width: 600px"
-      ref="ruleFormRef"
-      :model="ruleForm"
-      :rules="rules"
-    >
-      <el-form-item prop="category">
+  <div class="seller-category-view">
+    <div class="toolbar">
+      <h2>Category Management</h2>
+      <div style="display: flex; gap: 12px">
         <el-input
-          v-model="ruleForm.category"
-          size="large"
-          :placeholder="dialogContent.placeholder"
+          v-model="searchQuery"
+          placeholder="Search categories..."
+          :prefix-icon="Search"
+          style="width: 240px"
           clearable
         />
-      </el-form-item>
-    </el-form>
-    <template #footer>
-      <div class="dialog-footer">
-        <el-button @click="dialogVisible = false">Cancel</el-button>
-        <el-button type="primary" @click="submitForm(ruleFormRef)">
-          {{ dialogContent.mainBtnText }}
+        <el-button
+          type="primary"
+          size="large"
+          :icon="Plus"
+          color="#1aae51"
+          @click="openModal('add')"
+        >
+          Add New Category
         </el-button>
       </div>
-    </template>
-  </el-dialog>
+    </div>
+
+    <el-table v-loading="isLoading" :data="paginatedData" border style="width: 100%">
+      <el-table-column type="index" label="#" width="60" align="center" />
+
+      <el-table-column prop="name" label="Category Name" min-width="200" />
+
+      <el-table-column prop="productCount" label="Products" width="120" align="center" sortable>
+        <template #default="{ row }">
+          <el-tag type="info" effect="plain" round>{{ row.productCount }}</el-tag>
+        </template>
+      </el-table-column>
+
+      <el-table-column align="center" label="Actions" width="180">
+        <template #default="{ row }">
+          <el-button type="primary" link :icon="Edit" @click="openModal('edit', row)"
+            >Edit</el-button
+          >
+          <el-button type="danger" link :icon="Delete" @click="handleDeleteBtnClick(row)"
+            >Delete</el-button
+          >
+        </template>
+      </el-table-column>
+    </el-table>
+
+    <div class="pagination-container">
+      <el-pagination
+        v-model:current-page="currentPage"
+        v-model:page-size="pageSize"
+        :page-sizes="[10, 20, 50, 100]"
+        layout="total, sizes, prev, pager, next, jumper"
+        :total="filteredData.length"
+        @size-change="handleSizeChange"
+        @current-change="handleCurrentChange"
+      />
+    </div>
+
+    <!-- Dialog -->
+    <el-dialog
+      v-model="dialogVisible"
+      :title="dialogContent.title"
+      width="500"
+      align-center
+      destroy-on-close
+    >
+      <el-form
+        label-width="120px"
+        ref="ruleFormRef"
+        :model="ruleForm"
+        :rules="rules"
+        label-position="top"
+      >
+        <el-form-item label="Category Name" prop="category">
+          <el-input
+            v-model="ruleForm.category"
+            size="large"
+            placeholder="Enter category name"
+            clearable
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="dialogVisible = false">Cancel</el-button>
+          <el-button type="primary" @click="submitForm(ruleFormRef)">
+            {{ dialogContent.mainBtnText }}
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
+  </div>
 </template>
+
+<style scoped>
+.seller-category-view {
+  padding: 24px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.toolbar h2 {
+  margin: 0;
+  font-size: 20px;
+  color: #1e293b;
+}
+
+.pagination-container {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+</style>
