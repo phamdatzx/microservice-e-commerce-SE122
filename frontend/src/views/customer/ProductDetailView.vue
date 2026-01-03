@@ -2,7 +2,7 @@
 import { Splide, SplideSlide, Options } from '@splidejs/vue-splide'
 import Header from '@/components/Header.vue'
 import { onMounted, ref } from 'vue'
-import { quantityFormatNumber, soldQuantityFormatNumber } from '@/utils/quantityFormatNumber'
+import { quantityFormatNumber } from '@/utils/quantityFormatNumber'
 import RedFlagIcon from '@/components/icons/RedFlagIcon.vue'
 import MessengerIcon from '@/components/icons/MessengerIcon.vue'
 import FacebookIcon from '@/components/icons/FacebookIcon.vue'
@@ -236,7 +236,7 @@ onMounted(() => {
                 v-model="rating"
                 disabled
                 show-score
-                text-color="#ff9900"
+                text-color="var(--main-color)"
                 score-template="{value} points"
               />
               <el-divider direction="vertical" />
@@ -349,7 +349,12 @@ onMounted(() => {
               <el-icon size="large" style="margin-right: 6px"><ShoppingCart /></el-icon>
               Add to Cart
             </el-button>
-            <el-button type="primary" color="#f6ab4a" size="large" style="width: 100%; margin: 0">
+            <el-button
+              type="primary"
+              color="var(--main-color)"
+              size="large"
+              style="width: 100%; margin: 0"
+            >
               <el-icon size="large" style="margin-right: 6px"><Goods /></el-icon>
               Buy Now
             </el-button>

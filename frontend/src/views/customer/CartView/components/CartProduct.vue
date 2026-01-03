@@ -33,7 +33,7 @@ const quantity = defineModel<number>()
       <p
         style="line-height: 16px"
         :style="{
-          color: props.product.isSoldOut ? 'rgb(238, 77, 45)' : 'rgba(0, 0, 0, 0)',
+          color: props.product.isSoldOut ? 'var(--main-color)' : 'rgba(0, 0, 0, 0)',
         }"
       >
         This product option is sold out, please select another option.

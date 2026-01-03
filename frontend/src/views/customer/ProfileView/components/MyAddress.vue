@@ -238,8 +238,8 @@ const editAddress = (address: Address) => {
 }
 
 .tag.default {
-  color: #ee4d2d;
-  border: 1px solid #ee4d2d;
+  color: var(--main-color);
+  border: 1px solid var(--main-color);
 }
 
 .address-actions {

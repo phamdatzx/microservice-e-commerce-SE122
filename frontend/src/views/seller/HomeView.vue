@@ -1,5 +1,15 @@
 <script setup lang="ts">
-import { ArrowDown, ArrowRight, Goods, Menu } from '@element-plus/icons-vue'
+import {
+  ArrowDown,
+  ArrowRight,
+  Goods,
+  Menu,
+  ChatDotRound,
+  User,
+  Ticket,
+  Van,
+  TrendCharts,
+} from '@element-plus/icons-vue'
 
 const handleOpen = (key: string, keyPath: string[]) => {
   console.log(key, keyPath)
@@ -83,16 +93,46 @@ const handleClose = (key: string, keyPath: string[]) => {
                 <el-menu-item index="1-4-1">item one</el-menu-item>
               </el-sub-menu>
             </el-sub-menu>
+            <RouterLink to="/seller/statistic">
+              <el-menu-item index="8">
+                <el-icon><TrendCharts /></el-icon>
+                <span>Statistics</span>
+              </el-menu-item>
+            </RouterLink>
             <RouterLink to="/seller/category">
               <el-menu-item index="2">
                 <el-icon><Menu /></el-icon>
                 <span>Category</span>
               </el-menu-item>
             </RouterLink>
+            <RouterLink to="/seller/voucher">
+              <el-menu-item index="6">
+                <el-icon><Ticket /></el-icon>
+                <span>Voucher</span>
+              </el-menu-item>
+            </RouterLink>
+            <RouterLink to="/seller/shipping">
+              <el-menu-item index="7">
+                <el-icon><Van /></el-icon>
+                <span>Shipping</span>
+              </el-menu-item>
+            </RouterLink>
             <RouterLink to="/seller/product">
               <el-menu-item index="3">
                 <el-icon><Goods /></el-icon>
                 <span>Product</span>
+              </el-menu-item>
+            </RouterLink>
+            <RouterLink to="/seller/chat">
+              <el-menu-item index="4">
+                <el-icon><ChatDotRound /></el-icon>
+                <span>Chat</span>
+              </el-menu-item>
+            </RouterLink>
+            <RouterLink to="/seller/profile">
+              <el-menu-item index="5">
+                <el-icon><User /></el-icon>
+                <span>Profile</span>
               </el-menu-item>
             </RouterLink>
           </el-menu>

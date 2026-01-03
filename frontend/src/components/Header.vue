@@ -1,4 +1,6 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import CustomerChat from './CustomerChat.vue'
+</script>
 
 <template>
   <!-- Header -->
@@ -142,6 +144,8 @@
       <span class="breadcrumb-current">login</span>
     </div>
   </div>
+
+  <CustomerChat />
 </template>
 
 <style scoped>

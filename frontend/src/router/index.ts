@@ -12,6 +12,13 @@ import ResetPasswordForm from '@/views/authentication/forms/ResetPasswordForm.vu
 import ProductDetailView from '@/views/customer/ProductDetailView.vue'
 import ProfileView from '@/views/customer/ProfileView/ProfileView.vue'
 import CartView from '@/views/customer/CartView/CartView.vue'
+import SellerView from '@/views/customer/SellerView/SellerView.vue'
+import SearchView from '@/views/customer/SearchView/SearchView.vue'
+import ChatView from '@/views/seller/ChatView.vue'
+import SellerProfileView from '@/views/seller/ProfileView.vue'
+import VoucherManagerView from '@/views/seller/VoucherManagerView.vue'
+import ShippingManagerView from '@/views/seller/ShippingManagerView.vue'
+import StatisticView from '@/views/seller/StatisticView.vue'
 
 const loginFormProps = {
   title: 'Welcome Back',
@@ -73,6 +80,15 @@ const router = createRouter({
       component: ProfileView,
     },
     {
+      path: '/seller-page',
+      component: SellerView,
+    },
+    {
+      path: '/search',
+      name: 'search',
+      component: SearchView,
+    },
+    {
       path: '/',
       component: AuthenticationView,
       children: [
@@ -119,6 +135,11 @@ const router = createRouter({
       children: [
         { path: 'category', name: 'category', component: CategoryView },
         { path: 'product', name: 'product', component: ProductView },
+        { path: 'chat', name: 'chat', component: ChatView },
+        { path: 'profile', name: 'seller-profile', component: SellerProfileView },
+        { path: 'voucher', name: 'voucher', component: VoucherManagerView },
+        { path: 'shipping', name: 'shipping', component: ShippingManagerView },
+        { path: 'statistic', name: 'statistic', component: StatisticView },
       ],
     },
   ],

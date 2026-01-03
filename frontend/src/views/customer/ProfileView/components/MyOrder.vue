@@ -181,11 +181,11 @@ const orderTabs = [
 }
 
 .order-tabs :deep(.el-tabs__item.is-active) {
-  color: #ee4d2d;
+  color: var(--main-color);
 }
 
 .order-tabs :deep(.el-tabs__active-bar) {
-  background-color: #ee4d2d;
+  background-color: var(--main-color);
 }
 
 .search-orders {
