@@ -197,13 +197,7 @@ const clearRuleForm = () => {
           style="width: 300px"
           clearable
         />
-        <el-button
-          type="primary"
-          size="large"
-          :icon="Plus"
-          color="#3b82f6"
-          @click="openModal('add')"
-        >
+        <el-button size="large" :icon="Plus" color="var(--main-color)" @click="openModal('add')">
           Add New User
         </el-button>
       </div>
