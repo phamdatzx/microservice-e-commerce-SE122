@@ -21,6 +21,8 @@ interface Order {
   paymentMethod: string
   countdown: string
   confirmedDate: string // ISO 8601
+
+  isProcessed: boolean
   products: Product[]
 }
 
@@ -42,6 +44,8 @@ const orders = ref<Order[]>([
     paymentMethod: 'COD',
     countdown: 'Prepare by 23/08/2025',
     confirmedDate: '2025-08-20T10:00:00',
+
+    isProcessed: false,
     products: [
       {
         id: 'p1',
@@ -62,6 +66,7 @@ const orders = ref<Order[]>([
     paymentMethod: 'ShopeePay',
     countdown: 'Prepare by 20/08/2025',
     confirmedDate: '2025-08-18T14:30:00',
+    isProcessed: true,
     products: [
       {
         id: 'p2',
@@ -98,6 +103,7 @@ const orders = ref<Order[]>([
     paymentMethod: 'COD',
     countdown: 'Prepare by 13/08/2025',
     confirmedDate: '2025-08-10T09:15:00',
+    isProcessed: false,
     products: [
       {
         id: 'p5',
@@ -119,6 +125,7 @@ const orders = ref<Order[]>([
     paymentMethod: 'COD',
     countdown: 'Confirm by 24/08/2025',
     confirmedDate: '2025-08-21T08:00:00',
+    isProcessed: false,
     products: [
       {
         id: 'p6',
@@ -139,6 +146,7 @@ const orders = ref<Order[]>([
     paymentMethod: 'ShopeePay',
     countdown: 'Estimated 25/08/2025',
     confirmedDate: '2025-08-19T11:45:00',
+    isProcessed: true,
     products: [
       {
         id: 'p7',
@@ -159,6 +167,7 @@ const orders = ref<Order[]>([
     paymentMethod: 'Credit Card',
     countdown: 'Completed 20/08/2025',
     confirmedDate: '2025-08-15T16:20:00',
+    isProcessed: true,
     products: [
       {
         id: 'p8',
@@ -179,6 +188,7 @@ const orders = ref<Order[]>([
     paymentMethod: 'COD',
     countdown: 'Cancelled by User',
     confirmedDate: '2025-08-12T13:10:00',
+    isProcessed: true,
     products: [
       {
         id: 'p9',
@@ -199,6 +209,7 @@ const orders = ref<Order[]>([
     paymentMethod: 'COD',
     countdown: 'Return requested',
     confirmedDate: '2025-08-22T09:50:00',
+    isProcessed: false,
     products: [
       {
         id: 'p10',
@@ -251,7 +262,14 @@ const filteredOrders = computed(() => {
     })
   }
 
-  // 4. Sort
+  // 4. Filter by Sub-tab
+  if (activeSubTab.value === 'unprocessed') {
+    result = result.filter((o) => !o.isProcessed)
+  } else if (activeSubTab.value === 'processed') {
+    result = result.filter((o) => o.isProcessed)
+  }
+
+  // 5. Sort
   result = [...result].sort((a, b) => {
     const dateA = new Date(a.confirmedDate).getTime()
     const dateB = new Date(b.confirmedDate).getTime()
@@ -263,6 +281,87 @@ const filteredOrders = computed(() => {
   })
 
   return result
+})
+
+const subTabCounts = computed(() => {
+  // Base list filtered by Tab, Search, Date (same as filteredOrders before Sub-tab step)
+  let result = orders.value
+
+  // 1. Tab
+  if (activeTab.value !== 'all') {
+    const statusMap: Record<string, string> = {
+      to_confirm: 'TO_CONFIRM',
+      to_pickup: 'TO_PICKUP',
+      shipping: 'SHIPPING',
+      completed: 'COMPLETED',
+      cancelled: 'CANCELLED',
+      return: 'RETURNED',
+    }
+    result = result.filter((o) => o.status === statusMap[activeTab.value])
+  }
+
+  // 2. Search
+  if (searchKeyword.value) {
+    const kw = searchKeyword.value.toLowerCase()
+    result = result.filter(
+      (o) =>
+        o.id.toLowerCase().includes(kw) ||
+        o.customerName.toLowerCase().includes(kw) ||
+        o.products.some((p) => p.name.toLowerCase().includes(kw)),
+    )
+  }
+
+  // 3. Date
+  if (dateRange.value && Array.isArray(dateRange.value) && dateRange.value.length === 2) {
+    const start = new Date(dateRange.value[0])
+    const end = new Date(dateRange.value[1])
+    result = result.filter((o) => {
+      const orderDate = new Date(o.confirmedDate)
+      return orderDate >= start && orderDate <= end
+    })
+  }
+
+  const allCount = result.length
+  const unprocessedCount = result.filter((o) => !o.isProcessed).length
+  const processedCount = result.filter((o) => o.isProcessed).length
+
+  return { all: allCount, unprocessed: unprocessedCount, processed: processedCount }
+})
+
+const tabCounts = computed(() => {
+  const counts = {
+    all: orders.value.length,
+    to_confirm: 0,
+    to_pickup: 0,
+    shipping: 0,
+    completed: 0,
+    cancelled: 0,
+    return: 0,
+  }
+
+  orders.value.forEach((order) => {
+    switch (order.status) {
+      case 'TO_CONFIRM':
+        counts.to_confirm++
+        break
+      case 'TO_PICKUP':
+        counts.to_pickup++
+        break
+      case 'SHIPPING':
+        counts.shipping++
+        break
+      case 'COMPLETED':
+        counts.completed++
+        break
+      case 'CANCELLED':
+        counts.cancelled++
+        break
+      case 'RETURNED':
+        counts.return++
+        break
+    }
+  })
+  return counts
 })
 
 const handleExport = () => {
@@ -313,13 +412,13 @@ const handleBatchDelivery = () => {
     <!-- Main Tabs -->
     <div class="main-tabs">
       <el-tabs v-model="activeTab" class="custom-tabs">
-        <el-tab-pane label="All" name="all" />
-        <el-tab-pane label="To Confirm" name="to_confirm" />
-        <el-tab-pane label="To Pickup (8)" name="to_pickup" />
-        <el-tab-pane label="Shipping (10)" name="shipping" />
-        <el-tab-pane label="Completed" name="completed" />
-        <el-tab-pane label="Cancelled" name="cancelled" />
-        <el-tab-pane label="Return/Refund" name="return" />
+        <el-tab-pane :label="`All (${tabCounts.all})`" name="all" />
+        <el-tab-pane :label="`To Confirm (${tabCounts.to_confirm})`" name="to_confirm" />
+        <el-tab-pane :label="`To Pickup (${tabCounts.to_pickup})`" name="to_pickup" />
+        <el-tab-pane :label="`Shipping (${tabCounts.shipping})`" name="shipping" />
+        <el-tab-pane :label="`Completed (${tabCounts.completed})`" name="completed" />
+        <el-tab-pane :label="`Cancelled (${tabCounts.cancelled})`" name="cancelled" />
+        <el-tab-pane :label="`Return/Refund (${tabCounts.return})`" name="return" />
       </el-tabs>
     </div>
 
@@ -349,9 +448,13 @@ const handleBatchDelivery = () => {
       <div class="sub-tabs-row">
         <div class="sub-tabs">
           <el-radio-group v-model="activeSubTab" size="small">
-            <el-radio-button size="large" label="all">All (8)</el-radio-button>
-            <el-radio-button size="large" label="unprocessed">Unprocessed (4)</el-radio-button>
-            <el-radio-button size="large" label="processed">Processed (4)</el-radio-button>
+            <el-radio-button size="large" label="all">All ({{ subTabCounts.all }})</el-radio-button>
+            <el-radio-button size="large" label="unprocessed"
+              >Unprocessed ({{ subTabCounts.unprocessed }})</el-radio-button
+            >
+            <el-radio-button size="large" label="processed"
+              >Processed ({{ subTabCounts.processed }})</el-radio-button
+            >
           </el-radio-group>
         </div>
       </div>
@@ -360,7 +463,7 @@ const handleBatchDelivery = () => {
     <!-- Orders List Section -->
     <div class="orders-section">
       <div class="orders-header-bar">
-        <h3>4 Orders</h3>
+        <h3>{{ filteredOrders.length }} Orders</h3>
         <div class="orders-actions">
           <span class="sort-label">Sort by</span>
           <el-select v-model="sortBy" placeholder="Confirmed Date" style="width: 200px">
