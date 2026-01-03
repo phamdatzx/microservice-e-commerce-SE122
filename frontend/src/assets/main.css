@@ -9,6 +9,24 @@
   box-sizing: border-box;
 }
 
+.admin-layout {
+  --el-color-primary: #3b82f6;
+
+  .el-button--primary.is-link,
+  .el-button--primary.is-plain,
+  .el-button--primary.is-text {
+    --el-color-primary: #3b82f6;
+  }
+
+  .el-button--primary {
+    --el-color-primary: #3b82f6;
+  }
+
+  .el-pager li.is-active {
+    --el-pagination-hover-color: #3b82f6;
+  }
+}
+
 body {
   font-family:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;

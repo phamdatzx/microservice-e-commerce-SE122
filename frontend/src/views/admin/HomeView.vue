@@ -1,0 +1,204 @@
+<script setup lang="ts">
+import { ArrowDown, ArrowRight, Menu } from '@element-plus/icons-vue'
+
+const handleOpen = (key: string, keyPath: string[]) => {
+  console.log(key, keyPath)
+}
+const handleClose = (key: string, keyPath: string[]) => {
+  console.log(key, keyPath)
+}
+</script>
+
+<template>
+  <div class="common-layout admin-layout">
+    <el-container>
+      <el-header
+        class="header"
+        style="background-color: white; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); height: 64px"
+      >
+        <div class="container">
+          <div class="header-content">
+            <!-- Admin Logo Style (Blue/Purple gradient) -->
+            <div class="logo">
+              <div class="logo-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.2-2.858.59-4.18"
+                    stroke="white"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </div>
+              <div class="logo-text">
+                <span class="logo-name">SWOO</span>
+                <span class="logo-tagline">ADMIN PANEL</span>
+              </div>
+            </div>
+
+            <div class="breadcrumb">
+              <div class="container">
+                <a href="#" class="breadcrumb-link">Admin</a>
+                <span class="breadcrumb-separator">
+                  <el-icon><ArrowRight /></el-icon>
+                </span>
+                <span class="breadcrumb-current">Dashboard</span>
+              </div>
+            </div>
+
+            <div class="user-section">
+              <img
+                src="https://placehold.co/40x40"
+                alt="User Avatar"
+                class="user-avatar"
+                style="border-radius: 100%"
+              />
+              <span>Admin User</span>
+              <el-icon><ArrowDown /></el-icon>
+            </div>
+          </div>
+        </div>
+      </el-header>
+      <el-container style="height: calc(100vh - 64px)">
+        <el-aside width="200px" style="margin-top: 3px">
+          <el-menu default-active="1" @open="handleOpen" @close="handleClose" style="height: 100%">
+            <RouterLink to="/admin/category">
+              <el-menu-item index="1">
+                <el-icon><Menu /></el-icon>
+                <span>Category</span>
+              </el-menu-item>
+            </RouterLink>
+          </el-menu>
+        </el-aside>
+        <el-main style="background-color: #f6f6f6">
+          <RouterView />
+        </el-main>
+      </el-container>
+    </el-container>
+  </div>
+</template>
+
+<style scoped>
+.admin-layout {
+  --el-color-primary: #409eff;
+  --el-color-primary-light-3: #79bbff;
+  --el-color-primary-light-5: #a0cfff;
+  --el-color-primary-light-7: #c6e2ff;
+  --el-color-primary-light-8: #d9ecff;
+  --el-color-primary-light-9: #ecf5ff;
+  --el-color-primary-dark-2: #337ecc;
+
+  /* Also override main-color if used by custom components */
+  --main-color: #409eff;
+}
+
+a {
+  text-decoration: none;
+}
+
+/* Header Styles */
+.container {
+  margin: 0 auto;
+}
+
+.header {
+  padding: 0 0;
+}
+
+.header-link {
+  color: #666;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.header-link:hover {
+  color: #333;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: 20px;
+}
+
+.logo-icon {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #1e40af, #3b82f6); /* Blue gradient for Admin */
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.logo-name {
+  font-size: 24px;
+  font-weight: 800;
+  color: #333;
+  line-height: 1;
+}
+
+.logo-tagline {
+  font-size: 12px;
+  color: #666;
+  letter-spacing: 1px;
+}
+
+/* Breadcrumb */
+.breadcrumb {
+  background: white;
+  margin-left: 24px;
+}
+
+.breadcrumb .container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+}
+
+.breadcrumb-link {
+  color: #666;
+  text-decoration: none;
+}
+
+.breadcrumb-link:hover {
+  color: #3b82f6;
+}
+
+.breadcrumb-separator {
+  color: #999;
+  margin: 0 4px;
+}
+
+.breadcrumb-current {
+  color: #333;
+  font-weight: 600;
+}
+
+/* User section */
+.user-section {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  padding: 12px 16px;
+
+  &:hover {
+    background-color: #f5f5f5;
+  }
+}
+</style>
