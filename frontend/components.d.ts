@@ -12,10 +12,10 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     CarouselItem: typeof import('./src/components/CarouselItem.vue')['default']
-    CategoryItem: typeof import('./src/components/CategoryItem.vue')['default']
     CustomerChat: typeof import('./src/components/CustomerChat.vue')['default']
     CustomerComment: typeof import('./src/components/CustomerComment.vue')['default']
     ElAside: typeof import('element-plus/es')['ElAside']
+    ElAvatar: typeof import('element-plus/es')['ElAvatar']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElCarousel: typeof import('element-plus/es')['ElCarousel']
     ElCarouselItem: typeof import('element-plus/es')['ElCarouselItem']
@@ -58,7 +58,6 @@ declare module 'vue' {
     ElTabPane: typeof import('element-plus/es')['ElTabPane']
     ElTabs: typeof import('element-plus/es')['ElTabs']
     ElTag: typeof import('element-plus/es')['ElTag']
-    ElTree: typeof import('element-plus/es')['ElTree']
     ElUpload: typeof import('element-plus/es')['ElUpload']
     FacebookIcon: typeof import('./src/components/icons/FacebookIcon.vue')['default']
     Header: typeof import('./src/components/Header.vue')['default']

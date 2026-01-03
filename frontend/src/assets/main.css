@@ -2,6 +2,7 @@
 
 * {
   --main-color: #1aba1a;
+  --el-color-primary: var(--main-color);
 
   margin: 0;
   padding: 0;
@@ -98,4 +99,9 @@ button {
 
 .el-checkbox__label {
   --el-checkbox-checked-text-color: var(--main-color);
+}
+
+.el-radio-button__inner {
+  --el-radio-button-checked-bg-color: var(--main-color);
+  --el-radio-button-checked-border-color: var(--main-color);
 }

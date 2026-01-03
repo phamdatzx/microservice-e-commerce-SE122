@@ -7,6 +7,7 @@ import {
   ChatDotRound,
   User,
   Ticket,
+  Van,
 } from '@element-plus/icons-vue'
 
 const handleOpen = (key: string, keyPath: string[]) => {
@@ -101,6 +102,12 @@ const handleClose = (key: string, keyPath: string[]) => {
               <el-menu-item index="6">
                 <el-icon><Ticket /></el-icon>
                 <span>Voucher</span>
+              </el-menu-item>
+            </RouterLink>
+            <RouterLink to="/seller/shipping">
+              <el-menu-item index="7">
+                <el-icon><Van /></el-icon>
+                <span>Shipping</span>
               </el-menu-item>
             </RouterLink>
             <RouterLink to="/seller/product">

@@ -17,6 +17,7 @@ import SearchView from '@/views/customer/SearchView/SearchView.vue'
 import ChatView from '@/views/seller/ChatView.vue'
 import SellerProfileView from '@/views/seller/ProfileView.vue'
 import VoucherManagerView from '@/views/seller/VoucherManagerView.vue'
+import ShippingManagerView from '@/views/seller/ShippingManagerView.vue'
 
 const loginFormProps = {
   title: 'Welcome Back',
@@ -136,6 +137,7 @@ const router = createRouter({
         { path: 'chat', name: 'chat', component: ChatView },
         { path: 'profile', name: 'seller-profile', component: SellerProfileView },
         { path: 'voucher', name: 'voucher', component: VoucherManagerView },
+        { path: 'shipping', name: 'shipping', component: ShippingManagerView },
       ],
     },
   ],
