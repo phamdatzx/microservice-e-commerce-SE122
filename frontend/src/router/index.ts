@@ -14,7 +14,7 @@ import ProfileView from '@/views/customer/ProfileView/ProfileView.vue'
 import CartView from '@/views/customer/CartView/CartView.vue'
 import SellerView from '@/views/customer/SellerView/SellerView.vue'
 import SearchView from '@/views/customer/SearchView/SearchView.vue'
-import CheckoutView from '@/views/customer/CheckoutView/CheckoutView.vue'
+// import CheckoutView from '@/views/customer/CheckoutView/CheckoutView.vue'
 import ChatView from '@/views/seller/ChatView.vue'
 import SellerProfileView from '@/views/seller/ProfileView.vue'
 import VoucherManagerView from '@/views/seller/VoucherManagerView.vue'
@@ -24,6 +24,7 @@ import AdminHomeView from '@/views/admin/HomeView.vue'
 import CategoryManagerView from '@/views/admin/CategoryView.vue'
 import UserView from '@/views/admin/UserView.vue'
 import ReportView from '@/views/admin/ReportView.vue'
+import OrderTrackingView from '@/views/customer/OrderTrackingView/OrderTrackingView.vue'
 
 const loginFormProps = {
   title: 'Welcome Back',
@@ -84,9 +85,13 @@ const router = createRouter({
       path: '/profile',
       component: ProfileView,
     },
+    // {
+    //   path: '/checkout',
+    //   component: CheckoutView,
+    // },
     {
-      path: '/checkout',
-      component: CheckoutView,
+      path: '/order-tracking',
+      component: OrderTrackingView,
     },
     {
       path: '/seller-page',
