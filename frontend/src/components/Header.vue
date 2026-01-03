@@ -5,16 +5,6 @@ import CustomerChat from './CustomerChat.vue'
 <template>
   <!-- Header -->
   <header class="header">
-    <div class="header-top">
-      <div class="container">
-        <div class="header-top-left"></div>
-        <div class="header-top-right">
-          <a href="#" class="header-link">Sell on Swoo</a>
-          <a href="#" class="header-link">Order Track</a>
-        </div>
-      </div>
-    </div>
-
     <div class="header-main">
       <div class="container">
         <div class="header-content">
@@ -154,48 +144,6 @@ import CustomerChat from './CustomerChat.vue'
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 20px;
-}
-
-.header-top {
-  background-color: #e9ecef;
-  padding: 8px 0;
-  font-size: 14px;
-}
-
-.header-top .container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.header-top-left {
-  display: flex;
-  gap: 15px;
-  align-items: center;
-}
-
-.hotline {
-  color: #666;
-}
-
-.phone {
-  font-weight: 600;
-  color: #333;
-}
-
-.header-top-right {
-  display: flex;
-  gap: 20px;
-}
-
-.header-link {
-  color: #666;
-  text-decoration: none;
-  font-size: 14px;
-}
-
-.header-link:hover {
-  color: #333;
 }
 
 .header-main {
