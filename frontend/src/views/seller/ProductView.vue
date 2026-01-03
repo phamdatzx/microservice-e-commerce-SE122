@@ -12,6 +12,7 @@ import {
   RefreshLeft,
   RefreshRight,
   Right,
+  Search,
 } from '@element-plus/icons-vue'
 import axios from 'axios'
 import {
@@ -25,7 +26,7 @@ import {
   type UploadProps,
   type UploadUserFile,
 } from 'element-plus'
-import { onMounted, reactive, ref, watch } from 'vue'
+import { onMounted, reactive, ref, watch, computed } from 'vue'
 
 interface ProductImage {
   id: string
@@ -75,9 +76,25 @@ const token =
 
 const productData = ref<Product[]>([])
 const isLoading = ref(false)
+const searchQuery = ref('')
 const currentPage = ref(1)
-const pageSize = ref(20)
+const pageSize = ref(10)
 const totalPages = ref(10)
+
+const filteredData = computed(() => {
+  if (!searchQuery.value) return productData.value
+  const query = searchQuery.value.toLowerCase()
+  return productData.value.filter(
+    (product) =>
+      product.name.toLowerCase().includes(query) || product.id.toLowerCase().includes(query),
+  )
+})
+
+const paginatedData = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return filteredData.value.slice(start, end)
+})
 
 onMounted(() => {
   fetchProducts()
@@ -90,7 +107,7 @@ const fetchProducts = () => {
       import.meta.env.VITE_GET_SELLER_PRODUCT_API_URL +
         '/' +
         'seller-1' +
-        `?sort_by=name&sort_direction=asc&page=${currentPage.value}&limit=${pageSize.value}`,
+        `?sort_by=name&sort_direction=asc`,
     )
     .then((response) => {
       productData.value = response.data.products
@@ -497,6 +514,15 @@ const categoryFilterMethod = (node: CascaderNode, keyword: string) => {
 const handleAddProduct = () => {}
 const handleEditProduct = () => {}
 
+const handleSizeChange = (val: number) => {
+  pageSize.value = val
+  currentPage.value = 1
+}
+
+const handleCurrentChange = (val: number) => {
+  currentPage.value = val
+}
+
 const getStatusTagContent = (status: string) => {
   if (status === 'AVAILABLE') return 'Available'
   else if (status === 'OUT_OF_STOCK') return 'Out of stock'
@@ -632,413 +658,443 @@ const download = (images: ProductImage[], index: number) => {
 </script>
 
 <template>
-  <el-button
-    type="primary"
-    size="large"
-    style="margin-bottom: 12px"
-    color="#1aae51"
-    @click="openModal('add')"
-    >Add Product</el-button
-  >
-  <el-table :data="productData" style="width: 100%">
-    <el-table-column width="1">
-      <template #default="props">
-        <span :class="`quantity-${props.row.variants?.length}`"></span>
-      </template>
-    </el-table-column>
-    <el-table-column type="expand" class-name="expand-column">
-      <template #default="props">
-        <el-table
-          :show-header="false"
-          :data="props.row.variants"
-          v-if="props.row.variants.length > 1"
-        >
-          <el-table-column width="48" />
-
-          <el-table-column align="right" width="128">
-            <template #default="scope">
-              <el-image
-                style="width: 52px; height: 52px; position: relative; top: 3px"
-                :src="scope.row.image ?? 'https://placehold.co/52x52'"
-                fit="contain"
-              />
-            </template>
-          </el-table-column>
-
-          <el-table-column>
-            <template #default="scope">
-              <p>
-                {{
-                  Object.entries(scope.row.options)
-                    .map(([key, value]) => {
-                      return `${key}: ${value}`
-                    })
-                    .join(', ')
-                }}
-              </p>
-            </template>
-          </el-table-column>
-
-          <el-table-column />
-
-          <el-table-column label="Price" width="180">
-            <template #default="scope"> {{ scope.row.price }}$ </template>
-          </el-table-column>
-
-          <el-table-column prop="stock" label="Stock" width="80" />
-
-          <el-table-column width="120" />
-
-          <el-table-column width="140" />
-        </el-table>
-      </template>
-    </el-table-column>
-    <el-table-column label="Product image" width="128" align="center">
-      <template #default="scope">
-        <el-image
-          style="width: 56px; height: 56px; position: relative; top: 3px"
-          :src="scope.row.images[0]?.url ?? 'https://placehold.co/56x56'"
-          fit="contain"
-          show-progress
-          preview-teleported
-          :preview-src-list="scope.row.images.map((image: ProductImage) => image.url)"
-        >
-          <template #toolbar="{ actions, prev, next, reset, activeIndex, setActiveItem }">
-            <el-icon @click="prev"><Back /></el-icon>
-            <el-icon @click="next"><Right /></el-icon>
-            <el-icon @click="setActiveItem(scope.row.images.length - 1)">
-              <DArrowRight />
-            </el-icon>
-            <el-icon @click="actions('zoomOut')"><ZoomOut /></el-icon>
-            <el-icon @click="actions('zoomIn', { enableTransition: false, zoomRate: 2 })">
-              <ZoomIn />
-            </el-icon>
-            <el-icon @click="actions('clockwise', { rotateDeg: 180, enableTransition: false })">
-              <RefreshRight />
-            </el-icon>
-            <el-icon @click="actions('anticlockwise')"><RefreshLeft /></el-icon>
-            <el-icon @click="reset"><Refresh /></el-icon>
-            <el-icon @click="download(scope.row.images, activeIndex)"><Download /></el-icon>
-          </template>
-        </el-image>
-      </template>
-    </el-table-column>
-    <el-table-column prop="name" label="Product name" />
-    <el-table-column prop="sold_count" label="Sold count" width="100" />
-    <el-table-column prop="price" label="Price" width="180">
-      <template #default="scope">
-        <p v-if="scope.row.variants?.length > 1">
-          {{
-            Math.min(...scope.row.variants.map((x: ProductVariant) => x.price)) +
-            '$ ~ ' +
-            Math.max(...scope.row.variants.map((x: ProductVariant) => x.price))
-          }}$
-        </p>
-        <p v-else>{{ scope.row.variants[0].price }}$</p>
-      </template>
-    </el-table-column>
-    <el-table-column prop="quantity" label="Stock" width="80">
-      <template #default="scope">
-        <p v-if="scope.row.variants?.length > 1">
-          {{
-            scope.row.variants.reduce((sum: number, item: ProductVariant) => sum + item.stock!, 0)
-          }}
-        </p>
-        <p v-else>{{ scope.row.variants[0].stock }}</p>
-      </template>
-    </el-table-column>
-    <el-table-column
-      prop="status"
-      label="Status"
-      align="center"
-      width="120"
-      :filters="[
-        { text: 'Available', value: 'AVAILABLE' },
-        { text: 'Out of stock', value: 'OUT_OF_STOCK' },
-        { text: 'Hidden', value: 'HIDDEN' },
-      ]"
-      :filter-method="filterTag"
-      filter-placement="bottom-end"
-    >
-      <template #default="scope">
-        <el-tag :type="getStatusTagType(scope.row.status)" disable-transitions>{{
-          scope.row.status
-        }}</el-tag>
-      </template>
-    </el-table-column>
-    <el-table-column align="center" label="Operations" width="140">
-      <template #default="{ row }">
-        <el-button type="primary" :icon="Edit" @click="openModal('edit')" />
-        <el-button type="danger" :icon="Delete" @click="handleDeleteBtnClick(row.id, row.name)" />
-      </template>
-    </el-table-column>
-  </el-table>
-
-  <el-pagination
-    background
-    layout="prev, pager, next"
-    :total="totalPages"
-    v-model:page-size="pageSize"
-    v-model:current-page="currentPage"
-    :page-sizes="[10, 20, 30, 40]"
-    @size-change="fetchProducts"
-    @current-change="fetchProducts"
-    size="large"
-    style="
-      display: flex;
-      justify-content: center;
-      margin-top: 20px;
-      --el-pagination-button-bg-color: #fff;
-    "
-  />
-
-  <!-- Add/Edit dialog -->
-  <el-dialog
-    v-model="dialogVisible"
-    :title="dialogContent.title"
-    width="800"
-    align-center
-    style="height: 90%; overflow-y: auto"
-  >
-    <el-form label-width="auto" ref="ruleFormRef" :model="ruleForm" :rules="rules">
-      <el-form-item prop="images" label="Image">
-        <el-upload
-          class="images-upload"
-          v-model:file-list="ruleForm.images"
-          accept="image/png, image/jpeg, image/jpg"
-          :auto-upload="false"
-          list-type="picture-card"
-          :limit="9"
-          multiple
-          :on-exceed="handleExceed"
-          :on-preview="handlePictureCardPreview"
-          :on-remove="handleRemove"
-          :on-change="handleChange"
-        >
-          <el-icon><Plus /></el-icon>
-        </el-upload>
-      </el-form-item>
-      <el-form-item prop="name" label="Name">
+  <div class="seller-product-view">
+    <div class="toolbar">
+      <h2>Product Management</h2>
+      <div style="display: flex; gap: 12px">
         <el-input
-          size="large"
-          v-model="ruleForm.name"
-          placeholder="Please input product name"
+          v-model="searchQuery"
+          placeholder="Search products..."
+          :prefix-icon="Search"
+          style="width: 240px"
           clearable
         />
-      </el-form-item>
-      <el-form-item prop="description" label="Description">
-        <el-input
-          size="large"
-          v-model="ruleForm.description"
-          :rows="6"
-          type="textarea"
-          placeholder="Please input product description"
-        />
-      </el-form-item>
-      <el-form-item prop="category" label="Category">
-        <el-cascader
-          size="large"
-          placeholder="Please select a category"
-          :options="categoryOptions"
-          filterable
-          :filter-method="categoryFilterMethod"
-          clearable
-          style="width: 100%"
-        />
-      </el-form-item>
-      <el-button
-        type="primary"
-        size="large"
-        style="margin-left: 82px; margin-bottom: 16px; margin-top: 12px"
-        @click="
-          () => {
-            if (hasGroup1) {
-              if (hasGroup2) {
-                hasGroup2 = false
-                // Pass data from group2 to group1
-              } else {
-                hasGroup1 = false
-              }
-            } else {
-              hasGroup1 = true
-            }
-          }
-        "
-      >
-        {{ hasGroup1 ? 'Remove product group 1' : 'Add product group' }}
-      </el-button>
-      <el-form-item prop="price" label="Price" v-show="!hasGroup1">
-        <el-input-number size="large" v-model="ruleForm.price" :min="1000" :max="1000000000000">
-          <template #prefix>
-            <span>đ</span>
-          </template>
-        </el-input-number>
-      </el-form-item>
-      <el-form-item prop="stock" label="Stock" v-show="!hasGroup1">
-        <el-input-number size="large" v-model="ruleForm.stock" :min="0" :max="1000000000000">
-        </el-input-number>
-      </el-form-item>
-
-      <el-form-item prop="group1" label="Group 1" v-show="hasGroup1">
-        <el-input
-          size="large"
-          v-model="ruleForm.group1"
-          placeholder="Please input group name"
-          clearable
-        />
-      </el-form-item>
-      <el-form-item prop="group1" label="Options" v-show="hasGroup1">
-        <el-select-v2
-          v-model="ruleForm.group1_options"
-          :options="[]"
-          placeholder="Please input an option then press enter"
-          style="margin-right: 16px; vertical-align: middle"
-          allow-create
-          default-first-option
-          filterable
-          multiple
-          clearable
-          popper-class="group_option_popper"
-          :reserve-keyword="false"
-        />
-      </el-form-item>
-
-      <el-button
-        v-show="hasGroup1"
-        type="primary"
-        size="large"
-        style="margin-left: 82px; margin-bottom: 16px; margin-top: 12px"
-        @click="hasGroup2 = !hasGroup2"
-      >
-        {{ hasGroup2 ? 'Remove product group 2' : 'Add product group 2' }}
-      </el-button>
-      <el-form-item prop="group2" label="Group 2" v-show="hasGroup2">
-        <el-input
-          size="large"
-          v-model="ruleForm.group2"
-          placeholder="Please input group name"
-          clearable
-        />
-      </el-form-item>
-      <el-form-item
-        prop="group2_options"
-        label="Options"
-        v-show="hasGroup2"
-        style="margin-bottom: 32px"
-      >
-        <el-select-v2
-          v-model="ruleForm.group2_options"
-          :options="[]"
-          placeholder="Please input an option then press enter"
-          style="margin-right: 16px; vertical-align: middle"
-          allow-create
-          default-first-option
-          filterable
-          multiple
-          clearable
-          popper-class="group_option_popper"
-          :reserve-keyword="false"
-        />
-      </el-form-item>
-      <!-- HAS ONE GROUP -->
-      <el-form-item prop="" label="Option list" v-show="hasGroup1 && !hasGroup2">
-        <el-table :data="optionListData" border style="width: 100%">
-          <el-table-column
-            prop="option1"
-            :label="ruleForm.group1 === '' ? 'Group 1' : ruleForm.group1"
-            width="100"
-          />
-          <el-table-column prop="image" label="Image" align="center" style="width: 80px">
-            <template #default="{ row }">
-              <el-upload
-                class="option-image-upload"
-                v-model:file-list="row.image"
-                accept="image/png, image/jpeg, image/jpg"
-                :auto-upload="false"
-                list-type="picture-card"
-                :limit="1"
-                :on-preview="handlePictureCardPreview"
-                :on-remove="handleRemove"
-                :on-change="handleChange"
-              >
-                <el-icon><Plus /></el-icon>
-              </el-upload>
-            </template>
-          </el-table-column>
-          <el-table-column prop="price" label="Price">
-            <template #default="{ row }">
-              <el-input v-model="row.price" placeholder="Input price" />
-            </template>
-          </el-table-column>
-          <el-table-column prop="stock" label="Stock">
-            <template #default="{ row }">
-              <el-input v-model="row.stock" placeholder="Input stock" />
-            </template>
-          </el-table-column>
-        </el-table>
-      </el-form-item>
-
-      <!-- HAS BOTH GROUPS -->
-      <el-form-item prop="" label="Option list" v-show="hasGroup1 && hasGroup2">
-        <el-table :data="optionListData" border style="width: 100%">
-          <el-table-column
-            prop="option1"
-            :label="ruleForm.group1 === '' ? 'Group 1' : ruleForm.group1"
-            width="100"
-          />
-          <el-table-column
-            prop="option2"
-            :label="ruleForm.group2 === '' ? 'Group 2' : ruleForm.group2"
-            width="100"
-          />
-          <el-table-column prop="image" label="Image" align="center" style="width: 80px">
-            <template #default="{ row }">
-              <el-upload
-                class="option-image-upload"
-                v-model:file-list="row.image"
-                accept="image/png, image/jpeg, image/jpg"
-                :auto-upload="false"
-                list-type="picture-card"
-                :limit="1"
-                :on-preview="handlePictureCardPreview"
-                :on-remove="handleRemove"
-                :on-change="handleChange"
-              >
-                <el-icon><Plus /></el-icon>
-              </el-upload>
-            </template>
-          </el-table-column>
-          <el-table-column prop="price" label="Price">
-            <template #default="{ row }">
-              <el-input v-model="row.price" placeholder="Input price" />
-            </template>
-          </el-table-column>
-          <el-table-column prop="stock" label="Stock">
-            <template #default="{ row }">
-              <el-input v-model="row.stock" placeholder="Input stock" />
-            </template>
-          </el-table-column>
-        </el-table>
-      </el-form-item>
-    </el-form>
-
-    <template #footer>
-      <div class="dialog-footer">
-        <el-button @click="dialogVisible = false">Cancel</el-button>
-        <el-button type="primary" @click="submitForm(ruleFormRef)">
-          {{ dialogContent.mainBtnText }}
+        <el-button size="large" :icon="Plus" color="var(--main-color)" @click="openModal('add')">
+          Add Product
         </el-button>
       </div>
-    </template>
-  </el-dialog>
+    </div>
 
-  <!-- Image preview dialog -->
-  <el-dialog v-model="previewImageDialogVisible">
-    <img w-full :src="previewImageUrl" alt="Preview Image" />
-  </el-dialog>
+    <el-table v-loading="isLoading" :data="paginatedData" border style="width: 100%">
+      <el-table-column width="1">
+        <template #default="props">
+          <span :class="`quantity-${props.row.variants?.length}`"></span>
+        </template>
+      </el-table-column>
+      <el-table-column type="expand" class-name="expand-column">
+        <template #default="props">
+          <el-table
+            :show-header="false"
+            :data="props.row.variants"
+            v-if="props.row.variants.length > 1"
+          >
+            <el-table-column width="48" />
+
+            <el-table-column align="right" width="128">
+              <template #default="scope">
+                <el-image
+                  style="width: 52px; height: 52px; position: relative; top: 3px"
+                  :src="scope.row.image ?? 'https://placehold.co/52x52'"
+                  fit="contain"
+                />
+              </template>
+            </el-table-column>
+
+            <el-table-column>
+              <template #default="scope">
+                <p>
+                  {{
+                    Object.entries(scope.row.options)
+                      .map(([key, value]) => {
+                        return `${key}: ${value}`
+                      })
+                      .join(', ')
+                  }}
+                </p>
+              </template>
+            </el-table-column>
+
+            <el-table-column />
+
+            <el-table-column label="Price" width="180">
+              <template #default="scope"> {{ scope.row.price }}$ </template>
+            </el-table-column>
+
+            <el-table-column prop="stock" label="Stock" width="80" />
+
+            <el-table-column width="120" />
+
+            <el-table-column width="140" />
+          </el-table>
+        </template>
+      </el-table-column>
+      <el-table-column label="Product image" width="128" align="center">
+        <template #default="scope">
+          <el-image
+            style="width: 56px; height: 56px; position: relative; top: 3px"
+            :src="scope.row.images[0]?.url ?? 'https://placehold.co/56x56'"
+            fit="contain"
+            show-progress
+            preview-teleported
+            :preview-src-list="scope.row.images.map((image: ProductImage) => image.url)"
+          >
+            <template #toolbar="{ actions, prev, next, reset, activeIndex, setActiveItem }">
+              <el-icon @click="prev"><Back /></el-icon>
+              <el-icon @click="next"><Right /></el-icon>
+              <el-icon @click="setActiveItem(scope.row.images.length - 1)">
+                <DArrowRight />
+              </el-icon>
+              <el-icon @click="actions('zoomOut')"><ZoomOut /></el-icon>
+              <el-icon @click="actions('zoomIn', { enableTransition: false, zoomRate: 2 })">
+                <ZoomIn />
+              </el-icon>
+              <el-icon @click="actions('clockwise', { rotateDeg: 180, enableTransition: false })">
+                <RefreshRight />
+              </el-icon>
+              <el-icon @click="actions('anticlockwise')"><RefreshLeft /></el-icon>
+              <el-icon @click="reset"><Refresh /></el-icon>
+              <el-icon @click="download(scope.row.images, activeIndex)"><Download /></el-icon>
+            </template>
+          </el-image>
+        </template>
+      </el-table-column>
+      <el-table-column prop="name" label="Product name" />
+      <el-table-column prop="sold_count" label="Sold count" width="100" />
+      <el-table-column prop="price" label="Price" width="180">
+        <template #default="scope">
+          <p v-if="scope.row.variants?.length > 1">
+            {{
+              Math.min(...scope.row.variants.map((x: ProductVariant) => x.price)) +
+              '$ ~ ' +
+              Math.max(...scope.row.variants.map((x: ProductVariant) => x.price))
+            }}$
+          </p>
+          <p v-else>{{ scope.row.variants[0].price }}$</p>
+        </template>
+      </el-table-column>
+      <el-table-column prop="quantity" label="Stock" width="80">
+        <template #default="scope">
+          <p v-if="scope.row.variants?.length > 1">
+            {{
+              scope.row.variants.reduce((sum: number, item: ProductVariant) => sum + item.stock!, 0)
+            }}
+          </p>
+          <p v-else>{{ scope.row.variants[0].stock }}</p>
+        </template>
+      </el-table-column>
+      <el-table-column
+        prop="status"
+        label="Status"
+        align="center"
+        width="120"
+        :filters="[
+          { text: 'Available', value: 'AVAILABLE' },
+          { text: 'Out of stock', value: 'OUT_OF_STOCK' },
+          { text: 'Hidden', value: 'HIDDEN' },
+        ]"
+        :filter-method="filterTag"
+        filter-placement="bottom-end"
+      >
+        <template #default="scope">
+          <el-tag :type="getStatusTagType(scope.row.status)" disable-transitions>{{
+            scope.row.status
+          }}</el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column align="center" label="Operations" width="140">
+        <template #default="{ row }">
+          <el-button type="primary" :icon="Edit" @click="openModal('edit')" />
+          <el-button type="danger" :icon="Delete" @click="handleDeleteBtnClick(row.id, row.name)" />
+        </template>
+      </el-table-column>
+    </el-table>
+
+    <div class="pagination-container">
+      <el-pagination
+        v-model:current-page="currentPage"
+        v-model:page-size="pageSize"
+        :page-sizes="[10, 20, 50, 100]"
+        layout="total, sizes, prev, pager, next, jumper"
+        :total="filteredData.length"
+        @size-change="handleSizeChange"
+        @current-change="handleCurrentChange"
+      />
+    </div>
+
+    <!-- Add/Edit dialog -->
+    <el-dialog
+      v-model="dialogVisible"
+      :title="dialogContent.title"
+      width="800"
+      align-center
+      style="height: 90%; overflow-y: auto"
+    >
+      <el-form label-width="auto" ref="ruleFormRef" :model="ruleForm" :rules="rules">
+        <el-form-item prop="images" label="Image">
+          <el-upload
+            class="images-upload"
+            v-model:file-list="ruleForm.images"
+            accept="image/png, image/jpeg, image/jpg"
+            :auto-upload="false"
+            list-type="picture-card"
+            :limit="9"
+            multiple
+            :on-exceed="handleExceed"
+            :on-preview="handlePictureCardPreview"
+            :on-remove="handleRemove"
+            :on-change="handleChange"
+          >
+            <el-icon><Plus /></el-icon>
+          </el-upload>
+        </el-form-item>
+        <el-form-item prop="name" label="Name">
+          <el-input
+            size="large"
+            v-model="ruleForm.name"
+            placeholder="Please input product name"
+            clearable
+          />
+        </el-form-item>
+        <el-form-item prop="description" label="Description">
+          <el-input
+            size="large"
+            v-model="ruleForm.description"
+            :rows="6"
+            type="textarea"
+            placeholder="Please input product description"
+          />
+        </el-form-item>
+        <el-form-item prop="category" label="Category">
+          <el-cascader
+            size="large"
+            placeholder="Please select a category"
+            :options="categoryOptions"
+            filterable
+            :filter-method="categoryFilterMethod"
+            clearable
+            style="width: 100%"
+          />
+        </el-form-item>
+        <el-button
+          type="primary"
+          size="large"
+          style="margin-left: 82px; margin-bottom: 16px; margin-top: 12px"
+          @click="
+            () => {
+              if (hasGroup1) {
+                if (hasGroup2) {
+                  hasGroup2 = false
+                  // Pass data from group2 to group1
+                } else {
+                  hasGroup1 = false
+                }
+              } else {
+                hasGroup1 = true
+              }
+            }
+          "
+        >
+          {{ hasGroup1 ? 'Remove product group 1' : 'Add product group' }}
+        </el-button>
+        <el-form-item prop="price" label="Price" v-show="!hasGroup1">
+          <el-input-number size="large" v-model="ruleForm.price" :min="1000" :max="1000000000000">
+            <template #prefix>
+              <span>đ</span>
+            </template>
+          </el-input-number>
+        </el-form-item>
+        <el-form-item prop="stock" label="Stock" v-show="!hasGroup1">
+          <el-input-number size="large" v-model="ruleForm.stock" :min="0" :max="1000000000000">
+          </el-input-number>
+        </el-form-item>
+
+        <el-form-item prop="group1" label="Group 1" v-show="hasGroup1">
+          <el-input
+            size="large"
+            v-model="ruleForm.group1"
+            placeholder="Please input group name"
+            clearable
+          />
+        </el-form-item>
+        <el-form-item prop="group1" label="Options" v-show="hasGroup1">
+          <el-select-v2
+            v-model="ruleForm.group1_options"
+            :options="[]"
+            placeholder="Please input an option then press enter"
+            style="margin-right: 16px; vertical-align: middle"
+            allow-create
+            default-first-option
+            filterable
+            multiple
+            clearable
+            popper-class="group_option_popper"
+            :reserve-keyword="false"
+          />
+        </el-form-item>
+
+        <el-button
+          v-show="hasGroup1"
+          type="primary"
+          size="large"
+          style="margin-left: 82px; margin-bottom: 16px; margin-top: 12px"
+          @click="hasGroup2 = !hasGroup2"
+        >
+          {{ hasGroup2 ? 'Remove product group 2' : 'Add product group 2' }}
+        </el-button>
+        <el-form-item prop="group2" label="Group 2" v-show="hasGroup2">
+          <el-input
+            size="large"
+            v-model="ruleForm.group2"
+            placeholder="Please input group name"
+            clearable
+          />
+        </el-form-item>
+        <el-form-item
+          prop="group2_options"
+          label="Options"
+          v-show="hasGroup2"
+          style="margin-bottom: 32px"
+        >
+          <el-select-v2
+            v-model="ruleForm.group2_options"
+            :options="[]"
+            placeholder="Please input an option then press enter"
+            style="margin-right: 16px; vertical-align: middle"
+            allow-create
+            default-first-option
+            filterable
+            multiple
+            clearable
+            popper-class="group_option_popper"
+            :reserve-keyword="false"
+          />
+        </el-form-item>
+        <!-- HAS ONE GROUP -->
+        <el-form-item prop="" label="Option list" v-show="hasGroup1 && !hasGroup2">
+          <el-table :data="optionListData" border style="width: 100%">
+            <el-table-column
+              prop="option1"
+              :label="ruleForm.group1 === '' ? 'Group 1' : ruleForm.group1"
+              width="100"
+            />
+            <el-table-column prop="image" label="Image" align="center" style="width: 80px">
+              <template #default="{ row }">
+                <el-upload
+                  class="option-image-upload"
+                  v-model:file-list="row.image"
+                  accept="image/png, image/jpeg, image/jpg"
+                  :auto-upload="false"
+                  list-type="picture-card"
+                  :limit="1"
+                  :on-preview="handlePictureCardPreview"
+                  :on-remove="handleRemove"
+                  :on-change="handleChange"
+                >
+                  <el-icon><Plus /></el-icon>
+                </el-upload>
+              </template>
+            </el-table-column>
+            <el-table-column prop="price" label="Price">
+              <template #default="{ row }">
+                <el-input v-model="row.price" placeholder="Input price" />
+              </template>
+            </el-table-column>
+            <el-table-column prop="stock" label="Stock">
+              <template #default="{ row }">
+                <el-input v-model="row.stock" placeholder="Input stock" />
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-form-item>
+
+        <!-- HAS BOTH GROUPS -->
+        <el-form-item prop="" label="Option list" v-show="hasGroup1 && hasGroup2">
+          <el-table :data="optionListData" border style="width: 100%">
+            <el-table-column
+              prop="option1"
+              :label="ruleForm.group1 === '' ? 'Group 1' : ruleForm.group1"
+              width="100"
+            />
+            <el-table-column
+              prop="option2"
+              :label="ruleForm.group2 === '' ? 'Group 2' : ruleForm.group2"
+              width="100"
+            />
+            <el-table-column prop="image" label="Image" align="center" style="width: 80px">
+              <template #default="{ row }">
+                <el-upload
+                  class="option-image-upload"
+                  v-model:file-list="row.image"
+                  accept="image/png, image/jpeg, image/jpg"
+                  :auto-upload="false"
+                  list-type="picture-card"
+                  :limit="1"
+                  :on-preview="handlePictureCardPreview"
+                  :on-remove="handleRemove"
+                  :on-change="handleChange"
+                >
+                  <el-icon><Plus /></el-icon>
+                </el-upload>
+              </template>
+            </el-table-column>
+            <el-table-column prop="price" label="Price">
+              <template #default="{ row }">
+                <el-input v-model="row.price" placeholder="Input price" />
+              </template>
+            </el-table-column>
+            <el-table-column prop="stock" label="Stock">
+              <template #default="{ row }">
+                <el-input v-model="row.stock" placeholder="Input stock" />
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="dialogVisible = false">Cancel</el-button>
+          <el-button type="primary" @click="submitForm(ruleFormRef)">
+            {{ dialogContent.mainBtnText }}
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
+
+    <!-- Image preview dialog -->
+    <el-dialog v-model="previewImageDialogVisible">
+      <img w-full :src="previewImageUrl" alt="Preview Image" />
+    </el-dialog>
+  </div>
 </template>
 
-<style>
+<style scoped>
+.seller-product-view {
+  padding: 24px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.toolbar h2 {
+  margin: 0;
+  font-size: 20px;
+  color: #1e293b;
+}
+
+.pagination-container {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
 .images-upload {
   .el-upload,
   .el-upload-list__item {

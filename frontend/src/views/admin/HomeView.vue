@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowDown, ArrowRight, Menu, User } from '@element-plus/icons-vue'
+import { ArrowDown, ArrowRight, Menu, User, Warning } from '@element-plus/icons-vue'
 
 const handleOpen = (key: string, keyPath: string[]) => {
   console.log(key, keyPath)
@@ -75,6 +75,12 @@ const handleClose = (key: string, keyPath: string[]) => {
                 <span>User</span>
               </el-menu-item>
             </RouterLink>
+            <RouterLink to="/admin/report">
+              <el-menu-item index="3">
+                <el-icon><Warning /></el-icon>
+                <span>Report</span>
+              </el-menu-item>
+            </RouterLink>
           </el-menu>
         </el-aside>
         <el-main style="background-color: #f6f6f6">
@@ -137,7 +143,7 @@ a {
 .logo-icon {
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, #1e40af, #3b82f6); /* Blue gradient for Admin */
+  background: linear-gradient(135deg, #16a34a, #22c55e); /* Green gradient for Admin */
   border-radius: 50%;
   display: flex;
   align-items: center;
