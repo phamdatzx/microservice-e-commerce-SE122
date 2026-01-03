@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Delete, Edit, Plus } from '@element-plus/icons-vue'
+import { Delete, Edit, Plus, Search } from '@element-plus/icons-vue'
 import axios from 'axios'
 import {
   ElLoading,
@@ -34,6 +34,7 @@ const dialogContent = ref({
   mainBtnText: 'Add',
 })
 const isLoading = ref(false)
+const searchQuery = ref('')
 
 onMounted(() => {
   fetchCategories()
@@ -87,10 +88,17 @@ const fetchCategories = () => {
 const currentPage = ref(1)
 const pageSize = ref(10)
 
+const filteredData = computed(() => {
+  if (!searchQuery.value) return categoryData.value
+  return categoryData.value.filter((category) =>
+    category.name.toLowerCase().includes(searchQuery.value.toLowerCase()),
+  )
+})
+
 const paginatedData = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value
   const end = start + pageSize.value
-  return categoryData.value.slice(start, end)
+  return filteredData.value.slice(start, end)
 })
 
 const handleSizeChange = (val: number) => {
@@ -238,9 +246,24 @@ const clearRuleForm = () => {
   <div class="admin-category-view">
     <div class="toolbar">
       <h2>General Category Management</h2>
-      <el-button type="primary" size="large" :icon="Plus" color="#3b82f6" @click="openModal('add')">
-        Add New Category
-      </el-button>
+      <div style="display: flex; gap: 12px">
+        <el-input
+          v-model="searchQuery"
+          placeholder="Search categories..."
+          :prefix-icon="Search"
+          style="width: 240px"
+          clearable
+        />
+        <el-button
+          type="primary"
+          size="large"
+          :icon="Plus"
+          color="#3b82f6"
+          @click="openModal('add')"
+        >
+          Add New Category
+        </el-button>
+      </div>
     </div>
 
     <el-table v-loading="isLoading" :data="paginatedData" border style="width: 100%">
@@ -284,7 +307,7 @@ const clearRuleForm = () => {
         v-model:page-size="pageSize"
         :page-sizes="[10, 20, 50, 100]"
         layout="total, sizes, prev, pager, next, jumper"
-        :total="categoryData.length"
+        :total="filteredData.length"
         @size-change="handleSizeChange"
         @current-change="handleCurrentChange"
       />

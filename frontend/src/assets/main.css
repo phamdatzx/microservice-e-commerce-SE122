@@ -25,6 +25,10 @@
   .el-pager li.is-active {
     --el-pagination-hover-color: #3b82f6;
   }
+
+  .el-input__wrapper.is-focus {
+    --el-input-focus-border-color: #3b82f6;
+  }
 }
 
 body {
