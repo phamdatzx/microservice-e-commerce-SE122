@@ -87,3 +87,4 @@ func (c *ProductServiceClient) GetVariantsByIds(variantIDs []string) ([]dto.Prod
 
 	return response.Variants, nil
 }
+

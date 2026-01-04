@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"order-service/client"
 	"order-service/dto"
+	appError "order-service/error"
 	"order-service/model"
 	"order-service/repository"
 )
@@ -28,6 +29,22 @@ func NewCartService(cartRepo repository.CartRepository) CartService {
 }
 
 func (s *cartService) AddCartItem(userID string, request dto.AddCartItemRequest) (*dto.CartItemResponse, error) {
+	//get variant information
+	productVariants, err := s.productClient.GetVariantsByIds([]string{request.VariantID})
+	if err != nil {
+		return nil, appError.NewAppError(500, "failed to get variant details")
+	}
+
+	if len(productVariants) == 0 {
+		return nil, appError.NewAppError(404, "variant not found")
+	}
+
+	stock := productVariants[0].Variant.Stock
+	if stock < request.Quantity {
+		return nil, appError.NewAppError(409, "not enough stock")
+	}
+
+	
 	// Check if cart item with same variant already exists
 	existingItem, err := s.repo.FindCartItemByUserAndVariant(userID, request.VariantID)
 	if err != nil {
@@ -37,6 +54,10 @@ func (s *cartService) AddCartItem(userID string, request dto.AddCartItemRequest)
 	// If exists, update quantity
 	if existingItem != nil {
 		newQuantity := existingItem.Quantity + request.Quantity
+		//check if newQuantity > stock
+		if newQuantity > stock {
+			return nil, appError.NewAppError(409, "not enough stock")
+		}
 		err = s.repo.UpdateCartItemQuantity(existingItem.ID, newQuantity)
 		if err != nil {
 			return nil, err
@@ -74,17 +95,17 @@ func (s *cartService) DeleteCartItem(userID, cartItemID string) error {
 	// Find the cart item by ID
 	cartItem, err := s.repo.FindCartItemByID(cartItemID)
 	if err != nil {
-		return err
+		return appError.NewAppError(500, "failed to get cart item")
 	}
 
 	// Check if cart item exists
 	if cartItem == nil {
-		return fmt.Errorf("cart item not found")
+		return appError.NewAppError(404, "cart item not found")
 	}
 
 	// Verify that the cart item belongs to the user
 	if cartItem.UserID != userID {
-		return fmt.Errorf("unauthorized: you can only delete your own cart items")
+		return appError.NewAppError(401, "unauthorized: you can only delete your own cart items")
 	}
 
 	// Delete the cart item
@@ -100,12 +121,12 @@ func (s *cartService) UpdateCartItemQuantity(userID, cartItemID string, quantity
 
 	// Check if cart item exists
 	if cartItem == nil {
-		return nil, fmt.Errorf("cart item not found")
+		return nil, appError.NewAppError(404, "cart item not found")
 	}
 
 	// Verify that the cart item belongs to the user
 	if cartItem.UserID != userID {
-		return nil, fmt.Errorf("unauthorized: you can only update your own cart items")
+		return nil, appError.NewAppError(401, "unauthorized: you can only update your own cart items")
 	}
 
 	// Update the quantity

@@ -44,7 +44,7 @@ func (c *CartController) AddCartItem(ctx *gin.Context) {
 	// Add cart item
 	response, err := c.service.AddCartItem(userID, request)
 	if err != nil {
-		ctx.Error(appError.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to add cart item", err))
+		ctx.Error(err)
 		return
 	}
 
