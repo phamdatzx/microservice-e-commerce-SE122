@@ -69,10 +69,8 @@ interface Product {
 
 type DialogMode = 'add' | 'edit'
 
-const userId = ref('7d27d61d-8cb3-4ef9-a9ff-0a92f217855b')
-// const token = localStorage.getItem('access_token')
-const token =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjY4Mjc1MDYsImlhdCI6MTc2Njc0MTEwNiwicm9sZSI6InNlbGxlciIsInVzZXJJZCI6IjdkMjdkNjFkLThjYjMtNGVmOS1hOWZmLTBhOTJmMjE3ODU1YiIsInVzZXJuYW1lIjoidGVzdDEifQ.cCs5gwsDkDVZZrnHHmeTFGmuleu9RR2Ieke8pYaRH_s'
+const userId = localStorage.getItem('user_id')
+const token = localStorage.getItem('access_token')
 
 const productData = ref<Product[]>([])
 const isLoading = ref(false)
@@ -106,7 +104,7 @@ const fetchProducts = () => {
     .get(
       import.meta.env.VITE_GET_SELLER_PRODUCT_API_URL +
         '/' +
-        'seller-1' +
+        userId +
         `?sort_by=name&sort_direction=asc`,
     )
     .then((response) => {
@@ -114,72 +112,11 @@ const fetchProducts = () => {
       totalPages.value = response.data.pagination.total_pages
     })
     .catch((error) => {
-      console.error('Fetch products failed, using mock data:', error)
-      productData.value = [
-        {
-          id: 'prod-1',
-          name: 'Áo Khoác Hoodie Unisex Basic',
-          description: 'Hoodie chất nỉ bông cao cấp, form rộng thoải mái.',
-          images: [{ id: 'img-1', url: 'https://placehold.co/400x400', order: 1 }],
-          status: 'AVAILABLE',
-          seller_id: 'seller-1',
-          rating: 4.8,
-          rate_count: 120,
-          sold_count: 450,
-          is_active: true,
-          created_at: new Date(),
-          updated_at: new Date(),
-          option_groups: [{ Key: 'Màu sắc', Values: ['Đen', 'Xám'] }],
-          variants: [
-            {
-              id: 'v-1',
-              sku: 'H-BLK-L',
-              options: { 'Màu sắc': 'Đen' },
-              price: 250000,
-              stock: 50,
-              image: 'https://placehold.co/200x200',
-            },
-            {
-              id: 'v-2',
-              sku: 'H-GRY-L',
-              options: { 'Màu sắc': 'Xám' },
-              price: 250000,
-              stock: 30,
-              image: 'https://placehold.co/200x200',
-            },
-          ],
-          category_ids: [],
-          seller_category_ids: [],
-        },
-        {
-          id: 'prod-2',
-          name: 'Quần Jean ống rộng phong cách Hàn Quốc',
-          description: 'Chất jean bền đẹp, không ra màu.',
-          images: [{ id: 'img-2', url: 'https://placehold.co/400x400', order: 1 }],
-          status: 'AVAILABLE',
-          seller_id: 'seller-1',
-          rating: 4.5,
-          rate_count: 85,
-          sold_count: 210,
-          is_active: true,
-          created_at: new Date(),
-          updated_at: new Date(),
-          option_groups: [],
-          variants: [
-            {
-              id: 'v-3',
-              sku: 'J-BLU-M',
-              options: {},
-              price: 320000,
-              stock: 15,
-              image: 'https://placehold.co/200x200',
-            },
-          ],
-          category_ids: [],
-          seller_category_ids: [],
-        },
-      ]
-      totalPages.value = 1
+      ElNotification({
+        title: 'Error!',
+        message: 'Fetch products failed: ' + error.message,
+        type: 'error',
+      })
     })
     .finally(() => {
       isLoading.value = false

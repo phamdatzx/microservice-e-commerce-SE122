@@ -17,10 +17,8 @@ interface SellerCategory {
   productCount: number
 }
 
-const userId = ref('7d27d61d-8cb3-4ef9-a9ff-0a92f217855b')
-// const token = localStorage.getItem('access_token')
-const token =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjY4Mjc1MDYsImlhdCI6MTc2Njc0MTEwNiwicm9sZSI6InNlbGxlciIsInVzZXJJZCI6IjdkMjdkNjFkLThjYjMtNGVmOS1hOWZmLTBhOTJmMjE3ODU1YiIsInVzZXJuYW1lIjoidGVzdDEifQ.cCs5gwsDkDVZZrnHHmeTFGmuleu9RR2Ieke8pYaRH_s'
+const userId = localStorage.getItem('user_id')
+const token = localStorage.getItem('access_token')
 
 const categoryData = ref<SellerCategory[]>([])
 const dialogVisible = ref(false)
@@ -41,27 +39,16 @@ onMounted(() => {
 const fetchCategories = () => {
   isLoading.value = true
   axios
-    .get(import.meta.env.VITE_GET_SELLER_CATEGORY_API_URL + '/' + userId.value + '/category')
+    .get(import.meta.env.VITE_GET_SELLER_CATEGORY_API_URL + '/' + userId + '/category')
     .then((response) => {
-      // Map response to SellerCategory with Mock Data for missing fields to match Layout
-      categoryData.value = response.data.map((item: any, index: number) => ({
-        id: item.id,
-        seller_id: item.seller_id,
-        name: item.name,
-        // Mock Product Count
-        productCount: Math.floor(Math.random() * 50) + 1,
-      }))
+      categoryData.value = response.data
     })
     .catch((error) => {
-      console.error('Fetch categories failed, using mock data:', error)
-      // Fallback Mock Data
-      categoryData.value = [
-        { id: 'mock-1', name: 'Áo thun Nam', productCount: 15 },
-        { id: 'mock-2', name: 'Quần Jean Nữ', productCount: 24 },
-        { id: 'mock-3', name: 'Phụ kiện điện tử', productCount: 8 },
-        { id: 'mock-4', name: 'Giày thể thao', productCount: 42 },
-        { id: 'mock-5', name: 'Đồ gia dụng', productCount: 12 },
-      ]
+      ElNotification({
+        title: 'Error!',
+        message: 'Fetch categories failed: ' + error.message,
+        type: 'error',
+      })
     })
     .finally(() => {
       isLoading.value = false
