@@ -226,6 +226,7 @@ const clearRuleForm = () => {
   ruleForm.category_ids = []
   ruleForm.seller_category_ids = []
   ruleForm.images = []
+  generateVariants() // Initialize with default variant
 }
 //#endregion
 
@@ -620,8 +621,27 @@ watch(
 
 const generateVariants = () => {
   const groups = ruleForm.option_groups.filter((g) => g.key && g.values.length > 0)
+
   if (groups.length === 0) {
-    ruleForm.variants = []
+    // If no option groups, ensure exactly one default variant exists
+    const oldV = ruleForm.variants[0]
+    const namePart = ruleForm.name.replace(/\s+/g, '-')
+    const autoSku = namePart ? namePart + '-DEFAULT' : ''
+    const currentSku = oldV?.sku || ''
+
+    // Overwrite if SKU is empty, is the old placeholder, or was auto-generated
+    const shouldOverwrite =
+      !currentSku || currentSku === 'S1-DEFAULT' || currentSku.endsWith('-DEFAULT')
+
+    ruleForm.variants = [
+      {
+        sku: shouldOverwrite ? autoSku : currentSku,
+        options: {},
+        price: oldV?.price ?? 0,
+        stock: oldV?.stock ?? 0,
+        images: oldV?.images ?? [],
+      },
+    ]
     return
   }
 
@@ -987,6 +1007,33 @@ const download = (images: ProductImage[], index: number) => {
               />
             </el-form-item>
           </div>
+
+          <div v-if="ruleForm.option_groups.length === 0" class="base-details-section">
+            <div style="display: flex; gap: 20px">
+              <el-form-item label="Price" style="flex: 1">
+                <el-input-number
+                  v-model="ruleForm.variants[0].price"
+                  :min="0"
+                  controls-position="right"
+                  style="width: 100%"
+                  size="large"
+                />
+              </el-form-item>
+              <el-form-item label="Stock" style="flex: 1">
+                <el-input-number
+                  v-model="ruleForm.variants[0].stock"
+                  :min="0"
+                  controls-position="right"
+                  style="width: 100%"
+                  size="large"
+                />
+              </el-form-item>
+            </div>
+            <el-form-item label="SKU">
+              <el-input v-model="ruleForm.variants[0].sku" placeholder="SKU" size="large" />
+            </el-form-item>
+          </div>
+
           <el-button
             type="primary"
             plain
@@ -998,12 +1045,14 @@ const download = (images: ProductImage[], index: number) => {
           </el-button>
         </div>
 
-        <el-divider v-if="ruleForm.variants.length > 0" content-position="left"
+        <el-divider
+          v-if="ruleForm.option_groups.length > 0 && ruleForm.variants.length > 0"
+          content-position="left"
           >Product Variants</el-divider
         >
 
         <el-table
-          v-if="ruleForm.variants.length > 0"
+          v-if="ruleForm.option_groups.length > 0 && ruleForm.variants.length > 0"
           :data="ruleForm.variants"
           border
           style="width: 100%; margin-top: 20px"
@@ -1153,6 +1202,10 @@ const download = (images: ProductImage[], index: number) => {
 .variant-info span {
   font-size: 13px;
   color: #64748b;
+}
+
+.base-details-section {
+  margin-bottom: 40px;
 }
 
 .images-upload :deep(.el-upload),
