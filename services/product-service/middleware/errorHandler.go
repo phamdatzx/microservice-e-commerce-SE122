@@ -29,9 +29,9 @@ func ErrorHandler() gin.HandlerFunc {
 				//if internal error provided
 				if appErr.Err != nil {
 					c.JSON(appErr.Code, gin.H{
-						"code":    appErr.Code,
-						"message": appErr.Message,
-						"internal_error": appErr.Err,
+						"code":           appErr.Code,
+						"message":        appErr.Message,
+						"internal_error": appErr.Err.Error(),
 					})
 				} else {
 					c.JSON(appErr.Code, gin.H{
