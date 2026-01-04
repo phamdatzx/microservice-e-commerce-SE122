@@ -21,6 +21,7 @@ type Product struct {
 	CreatedAt   time.Time `bson:"created_at" json:"created_at"`
 	UpdatedAt   time.Time `bson:"updated_at" json:"updated_at"`
 	Price       Price     `bson:"price" json:"price"`
+	Stock       int       `bson:"stock" json:"stock"`
 
 	OptionGroups []OptionGroup      `bson:"option_groups" json:"option_groups"` 
 	Variants     []Variant          `bson:"variants" json:"variants"`
@@ -47,6 +48,7 @@ type Variant struct {
 	Price   int               `bson:"price" json:"price"`
 	Stock   int               `bson:"stock" json:"stock"`
 	Image   string            `bson:"image" json:"image"`
+	SoldCount int               `bson:"sold_count" json:"sold_count"`
 }
 
 // Validate checks if the product has all required fields and valid data
@@ -110,14 +112,6 @@ func (p *Product) BeforeCreate() {
 		p.UpdatedAt = time.Now()
 	}
 
-	// Set default status if not provided
-	if p.Status == "" {
-		p.Status = "draft"
-	}
-
-	// Initialize IsActive to false by default if not set
-	// (Go's zero value for bool is already false, but being explicit)
-
 	// Initialize nested ProductImages IDs
 	for i := range p.Images {
 		p.Images[i].BeforeCreate()
@@ -140,9 +134,55 @@ func (p *Product) BeforeCreate() {
 		p.Variants = []Variant{}
 	}
 
-	//Initialize variant ID
+	// Initialize variant IDs and sold counts
 	for i := range p.Variants {
-		p.Variants[i].ID = uuid.New().String()
+		if p.Variants[i].ID == "" {
+			p.Variants[i].ID = uuid.New().String()
+		}
+		// Initialize variant sold count to 0
+		p.Variants[i].SoldCount = 0
+	}
+
+	// Initialize product sold count to 0
+	p.SoldCount = 0
+
+	// Calculate stock, price (min/max) based on variants
+	if len(p.Variants) > 0 {
+		totalStock := 0
+		minPrice := p.Variants[0].Price
+		maxPrice := p.Variants[0].Price
+
+		for _, variant := range p.Variants {
+			totalStock += variant.Stock
+			
+			if variant.Price < minPrice {
+				minPrice = variant.Price
+			}
+			if variant.Price > maxPrice {
+				maxPrice = variant.Price
+			}
+		}
+
+		// Set price range
+		p.Price.Min = minPrice
+		p.Price.Max = maxPrice
+
+		// Set stock
+		p.Stock = totalStock
+
+		// Set status based on stock availability
+		if p.Status == "" {
+			if totalStock > 0 {
+				p.Status = "available"
+			} else {
+				p.Status = "out_of_stock"
+			}
+		}
+	} else {
+		// No variants: set default status
+		if p.Status == "" {
+			p.Status = "draft"
+		}
 	}
 }
 
