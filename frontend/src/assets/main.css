@@ -115,6 +115,10 @@ button {
   --el-button-hover-border-color: #67be6f !important;
 }
 
+.el-button--danger {
+  --el-button-hover-bg-color: #ff8f8f !important;
+}
+
 .el-button:hover {
   --el-button-hover-bg-color: #f6fbf5;
   --el-button-hover-border-color: #bee3c0;

@@ -18,6 +18,7 @@ import axios from 'axios'
 import {
   ElMessage,
   ElMessageBox,
+  ElNotification,
   type CascaderNode,
   type FormInstance,
   type FormRules,
@@ -77,22 +78,10 @@ const isLoading = ref(false)
 const searchQuery = ref('')
 const currentPage = ref(1)
 const pageSize = ref(10)
-const totalPages = ref(10)
-
-const filteredData = computed(() => {
-  if (!searchQuery.value) return productData.value
-  const query = searchQuery.value.toLowerCase()
-  return productData.value.filter(
-    (product) =>
-      product.name.toLowerCase().includes(query) || product.id.toLowerCase().includes(query),
-  )
-})
-
-const paginatedData = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  return filteredData.value.slice(start, end)
-})
+const total = ref(0)
+const sortBy = ref('name')
+const sortDirection = ref('asc')
+const filterStatus = ref('')
 
 onMounted(() => {
   fetchProducts()
@@ -105,11 +94,11 @@ const fetchProducts = () => {
       import.meta.env.VITE_BE_API_URL +
         '/product/public/products/seller/' +
         userId +
-        `?sort_by=name&sort_direction=asc`,
+        `?status=${filterStatus.value}&search=${searchQuery.value}&sort_by=${sortBy.value}&sort_direction=${sortDirection.value}&page=${currentPage.value}&limit=${pageSize.value}`,
     )
     .then((response) => {
       productData.value = response.data.products
-      totalPages.value = response.data.pagination.total_pages
+      total.value = response.data.pagination.total_items
     })
     .catch((error) => {
       ElNotification({
@@ -516,13 +505,47 @@ const categoryFilterMethod = (node: CascaderNode, keyword: string) => {
 const handleAddProduct = () => {}
 const handleEditProduct = () => {}
 
+const handleSortChange = ({ prop, order }: { prop: string; order: string }) => {
+  if (order === 'ascending') {
+    sortDirection.value = 'asc'
+  } else if (order === 'descending') {
+    sortDirection.value = 'desc'
+  } else {
+    // defaults
+    sortBy.value = 'name'
+    sortDirection.value = 'asc'
+    fetchProducts()
+    return
+  }
+
+  // Map prop to API sort keys if needed
+  if (prop === 'quantity') {
+    sortBy.value = 'stock'
+  } else {
+    sortBy.value = prop
+  }
+
+  fetchProducts()
+}
+
+const handleFilterChange = (filters: any) => {
+  if (filters.status && filters.status.length > 0) {
+    filterStatus.value = filters.status.join(',')
+  } else {
+    filterStatus.value = ''
+  }
+  fetchProducts()
+}
+
 const handleSizeChange = (val: number) => {
   pageSize.value = val
   currentPage.value = 1
+  fetchProducts()
 }
 
 const handleCurrentChange = (val: number) => {
   currentPage.value = val
+  fetchProducts()
 }
 
 const getStatusTagContent = (status: string) => {
@@ -540,6 +563,13 @@ const getStatusTagType = (status: string) => {
 
 const filterTag = (value: string, row: any) => {
   return row.status === value
+}
+
+const getRowClassName = ({ row }: { row: Product }) => {
+  if (!row.variants || row.variants.length <= 1) {
+    return 'hide-expand'
+  }
+  return ''
 }
 
 //#region MODAL
@@ -670,6 +700,8 @@ const download = (images: ProductImage[], index: number) => {
           :prefix-icon="Search"
           style="width: 240px"
           clearable
+          @change="fetchProducts"
+          @clear="fetchProducts"
         />
         <el-button size="large" :icon="Plus" color="var(--main-color)" @click="openModal('add')">
           Add Product
@@ -677,139 +709,156 @@ const download = (images: ProductImage[], index: number) => {
       </div>
     </div>
 
-    <el-table v-loading="isLoading" :data="paginatedData" border style="width: 100%">
-      <el-table-column width="1">
-        <template #default="props">
-          <span :class="`quantity-${props.row.variants?.length}`"></span>
-        </template>
-      </el-table-column>
-      <el-table-column type="expand" class-name="expand-column">
-        <template #default="props">
-          <el-table
-            :show-header="false"
-            :data="props.row.variants"
-            v-if="props.row.variants.length > 1"
-          >
-            <el-table-column width="48" />
-
-            <el-table-column align="right" width="128">
-              <template #default="scope">
-                <el-image
-                  style="width: 52px; height: 52px; position: relative; top: 3px"
-                  :src="scope.row.image ?? 'https://placehold.co/52x52'"
-                  fit="contain"
-                />
-              </template>
-            </el-table-column>
-
-            <el-table-column>
-              <template #default="scope">
-                <p>
-                  {{
-                    Object.entries(scope.row.options)
-                      .map(([key, value]) => {
-                        return `${key}: ${value}`
-                      })
-                      .join(', ')
-                  }}
-                </p>
-              </template>
-            </el-table-column>
-
-            <el-table-column />
-
-            <el-table-column label="Price" width="180">
-              <template #default="scope"> {{ scope.row.price }}$ </template>
-            </el-table-column>
-
-            <el-table-column prop="stock" label="Stock" width="80" />
-
-            <el-table-column width="120" />
-
-            <el-table-column width="140" />
-          </el-table>
-        </template>
-      </el-table-column>
-      <el-table-column label="Product image" width="128" align="center">
-        <template #default="scope">
-          <el-image
-            style="width: 56px; height: 56px; position: relative; top: 3px"
-            :src="scope.row.images[0]?.url ?? 'https://placehold.co/56x56'"
-            fit="contain"
-            show-progress
-            preview-teleported
-            :preview-src-list="scope.row.images.map((image: ProductImage) => image.url)"
-          >
-            <template #toolbar="{ actions, prev, next, reset, activeIndex, setActiveItem }">
-              <el-icon @click="prev"><Back /></el-icon>
-              <el-icon @click="next"><Right /></el-icon>
-              <el-icon @click="setActiveItem(scope.row.images.length - 1)">
-                <DArrowRight />
-              </el-icon>
-              <el-icon @click="actions('zoomOut')"><ZoomOut /></el-icon>
-              <el-icon @click="actions('zoomIn', { enableTransition: false, zoomRate: 2 })">
-                <ZoomIn />
-              </el-icon>
-              <el-icon @click="actions('clockwise', { rotateDeg: 180, enableTransition: false })">
-                <RefreshRight />
-              </el-icon>
-              <el-icon @click="actions('anticlockwise')"><RefreshLeft /></el-icon>
-              <el-icon @click="reset"><Refresh /></el-icon>
-              <el-icon @click="download(scope.row.images, activeIndex)"><Download /></el-icon>
-            </template>
-          </el-image>
-        </template>
-      </el-table-column>
-      <el-table-column prop="name" label="Product name" />
-      <el-table-column prop="sold_count" label="Sold count" width="100" />
-      <el-table-column prop="price" label="Price" width="180">
-        <template #default="scope">
-          <p v-if="scope.row.variants?.length > 1">
-            {{
-              Math.min(...scope.row.variants.map((x: ProductVariant) => x.price)) +
-              '$ ~ ' +
-              Math.max(...scope.row.variants.map((x: ProductVariant) => x.price))
-            }}$
-          </p>
-          <p v-else>{{ scope.row.variants[0].price }}$</p>
-        </template>
-      </el-table-column>
-      <el-table-column prop="quantity" label="Stock" width="80">
-        <template #default="scope">
-          <p v-if="scope.row.variants?.length > 1">
-            {{
-              scope.row.variants.reduce((sum: number, item: ProductVariant) => sum + item.stock!, 0)
-            }}
-          </p>
-          <p v-else>{{ scope.row.variants[0].stock }}</p>
-        </template>
-      </el-table-column>
-      <el-table-column
-        prop="status"
-        label="Status"
-        align="center"
-        width="120"
-        :filters="[
-          { text: 'Available', value: 'AVAILABLE' },
-          { text: 'Out of stock', value: 'OUT_OF_STOCK' },
-          { text: 'Hidden', value: 'HIDDEN' },
-        ]"
-        :filter-method="filterTag"
-        filter-placement="bottom-end"
+    <div class="table-container">
+      <el-table
+        v-loading="isLoading"
+        :data="productData"
+        border
+        style="width: 100%"
+        height="100%"
+        :row-class-name="getRowClassName"
+        @sort-change="handleSortChange"
+        @filter-change="handleFilterChange"
       >
-        <template #default="scope">
-          <el-tag :type="getStatusTagType(scope.row.status)" disable-transitions>{{
-            scope.row.status
-          }}</el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column align="center" label="Operations" width="140">
-        <template #default="{ row }">
-          <el-button type="primary" :icon="Edit" @click="openModal('edit')" />
-          <el-button type="danger" :icon="Delete" @click="handleDeleteBtnClick(row.id, row.name)" />
-        </template>
-      </el-table-column>
-    </el-table>
+        <el-table-column width="1">
+          <template #default="props">
+            <span :class="`quantity-${props.row.variants?.length}`"></span>
+          </template>
+        </el-table-column>
+        <el-table-column type="expand" class-name="expand-column">
+          <template #default="props">
+            <el-table
+              :show-header="false"
+              :data="props.row.variants"
+              v-if="props.row.variants.length > 1"
+            >
+              <el-table-column width="48" />
+
+              <el-table-column align="right" width="128">
+                <template #default="scope">
+                  <el-image
+                    style="width: 52px; height: 52px; position: relative; top: 3px"
+                    :src="scope.row.image ?? 'https://placehold.co/52x52'"
+                    fit="contain"
+                  />
+                </template>
+              </el-table-column>
+
+              <el-table-column>
+                <template #default="scope">
+                  <p>
+                    {{
+                      Object.entries(scope.row.options)
+                        .map(([key, value]) => {
+                          return `${key}: ${value}`
+                        })
+                        .join(', ')
+                    }}
+                  </p>
+                </template>
+              </el-table-column>
+
+              <el-table-column />
+
+              <el-table-column label="Price" width="180">
+                <template #default="scope"> {{ scope.row.price }}$ </template>
+              </el-table-column>
+
+              <el-table-column prop="stock" label="Stock" width="80" />
+
+              <el-table-column width="120" />
+
+              <el-table-column width="140" />
+            </el-table>
+          </template>
+        </el-table-column>
+        <el-table-column label="Product image" width="128" align="center">
+          <template #default="scope">
+            <el-image
+              style="width: 56px; height: 56px; position: relative; top: 3px"
+              :src="scope.row.images[0]?.url ?? 'https://placehold.co/56x56'"
+              fit="contain"
+              show-progress
+              preview-teleported
+              :preview-src-list="scope.row.images.map((image: ProductImage) => image.url)"
+            >
+              <template #toolbar="{ actions, prev, next, reset, activeIndex, setActiveItem }">
+                <el-icon @click="prev"><Back /></el-icon>
+                <el-icon @click="next"><Right /></el-icon>
+                <el-icon @click="setActiveItem(scope.row.images.length - 1)">
+                  <DArrowRight />
+                </el-icon>
+                <el-icon @click="actions('zoomOut')"><ZoomOut /></el-icon>
+                <el-icon @click="actions('zoomIn', { enableTransition: false, zoomRate: 2 })">
+                  <ZoomIn />
+                </el-icon>
+                <el-icon @click="actions('clockwise', { rotateDeg: 180, enableTransition: false })">
+                  <RefreshRight />
+                </el-icon>
+                <el-icon @click="actions('anticlockwise')"><RefreshLeft /></el-icon>
+                <el-icon @click="reset"><Refresh /></el-icon>
+                <el-icon @click="download(scope.row.images, activeIndex)"><Download /></el-icon>
+              </template>
+            </el-image>
+          </template>
+        </el-table-column>
+        <el-table-column prop="name" label="Product name" sortable="custom" />
+        <el-table-column prop="sold_count" label="Sold count" width="120" sortable="custom" />
+        <el-table-column prop="price" label="Price" width="180" sortable="custom">
+          <template #default="scope">
+            <p v-if="scope.row.variants?.length > 1">
+              {{
+                Math.min(...scope.row.variants.map((x: ProductVariant) => x.price)) +
+                '$ ~ ' +
+                Math.max(...scope.row.variants.map((x: ProductVariant) => x.price))
+              }}$
+            </p>
+            <p v-else>{{ scope.row.variants[0].price }}$</p>
+          </template>
+        </el-table-column>
+        <el-table-column prop="quantity" label="Stock" width="100" sortable="custom">
+          <template #default="scope">
+            <p v-if="scope.row.variants?.length > 1">
+              {{
+                scope.row.variants.reduce(
+                  (sum: number, item: ProductVariant) => sum + item.stock!,
+                  0,
+                )
+              }}
+            </p>
+            <p v-else>{{ scope.row.variants[0].stock }}</p>
+          </template>
+        </el-table-column>
+        <el-table-column
+          prop="status"
+          label="Status"
+          column-key="status"
+          align="center"
+          width="120"
+          :filters="[
+            { text: 'Available', value: 'AVAILABLE' },
+            { text: 'Out of stock', value: 'OUT_OF_STOCK' },
+            { text: 'Hidden', value: 'HIDDEN' },
+          ]"
+        >
+          <template #default="scope">
+            <el-tag :type="getStatusTagType(scope.row.status)" disable-transitions>{{
+              scope.row.status
+            }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column align="center" label="Operations" width="140">
+          <template #default="{ row }">
+            <el-button type="primary" :icon="Edit" @click="openModal('edit')" />
+            <el-button
+              type="danger"
+              :icon="Delete"
+              @click="handleDeleteBtnClick(row.id, row.name)"
+            />
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
 
     <div class="pagination-container">
       <el-pagination
@@ -817,7 +866,8 @@ const download = (images: ProductImage[], index: number) => {
         v-model:page-size="pageSize"
         :page-sizes="[10, 20, 50, 100]"
         layout="total, sizes, prev, pager, next, jumper"
-        :total="filteredData.length"
+        :total="total"
+        size="large"
         @size-change="handleSizeChange"
         @current-change="handleCurrentChange"
       />
@@ -1076,6 +1126,11 @@ const download = (images: ProductImage[], index: number) => {
   background: white;
   border-radius: 8px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .toolbar {
@@ -1083,6 +1138,7 @@ const download = (images: ProductImage[], index: number) => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  flex-shrink: 0;
 }
 
 .toolbar h2 {
@@ -1091,10 +1147,17 @@ const download = (images: ProductImage[], index: number) => {
   color: #1e293b;
 }
 
+.table-container {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .pagination-container {
   margin-top: 20px;
   display: flex;
   justify-content: flex-end;
+  flex-shrink: 0;
 }
 
 .images-upload {
@@ -1134,15 +1197,13 @@ const download = (images: ProductImage[], index: number) => {
   transition: none !important;
 }
 
-.expand-column:has(.quantity-1) {
+:deep(.hide-expand .el-table__expand-column .el-table__expand-icon) {
   display: none;
 }
+</style>
 
-.el-table__cell:has(.quantity-1) ~ .expand-column .el-table__expand-icon {
-  visibility: hidden;
-}
-
-.el-table__expand-icon svg {
+<style>
+.seller-product-view .el-table__expand-icon svg {
   scale: 1.5;
 }
 </style>
