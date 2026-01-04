@@ -14,7 +14,7 @@ interface SellerCategory {
   id: string
   seller_id?: string
   name: string
-  productCount: number
+  product_count: number
 }
 
 const userId = localStorage.getItem('user_id')
@@ -77,8 +77,6 @@ const handleSizeChange = (val: number) => {
 const handleCurrentChange = (val: number) => {
   currentPage.value = val
 }
-// #endregion
-
 // #endregion
 
 // #region Modal
@@ -184,7 +182,7 @@ const handleEditCategory = () => {
 
 const handleDeleteBtnClick = (row: SellerCategory) => {
   ElMessageBox.confirm(
-    `Delete category "${row.name}" with ${row.productCount} products?`,
+    `Delete category "${row.name}" with ${row.product_count} products?`,
     'Confirm Delete',
     {
       type: 'warning',
@@ -299,9 +297,9 @@ const clearRuleForm = () => {
 
       <el-table-column prop="name" label="Category Name" min-width="200" />
 
-      <el-table-column prop="productCount" label="Products" width="120" align="center" sortable>
+      <el-table-column prop="product_count" label="Products" width="120" align="center" sortable>
         <template #default="{ row }">
-          <el-tag type="info" effect="plain" round>{{ row.productCount }}</el-tag>
+          <el-tag type="info" effect="plain" round>{{ row.product_count }}</el-tag>
         </template>
       </el-table-column>
 
