@@ -16,10 +16,10 @@ import {
 } from '@element-plus/icons-vue'
 import axios from 'axios'
 import {
+  ElLoading,
   ElMessage,
   ElMessageBox,
   ElNotification,
-  type CascaderNode,
   type FormInstance,
   type FormRules,
   type UploadFile,
@@ -36,17 +36,16 @@ interface ProductImage {
 }
 
 interface OptionGroup {
-  Key: string
-  Values: string[]
+  key: string
+  values: string[]
 }
 
 interface ProductVariant {
-  id: string
   sku: string
   options: Record<string, string>
   price: number
   stock: number
-  image: string
+  images: UploadUserFile[]
 }
 
 interface Product {
@@ -112,276 +111,8 @@ const fetchProducts = () => {
     })
 }
 
-const categoryOptions = [
-  {
-    value: 'guide',
-    label: 'Guide',
-    children: [
-      {
-        value: 'disciplines',
-        label: 'Disciplines',
-        children: [
-          {
-            value: 'consistency',
-            label: 'Consistency',
-          },
-          {
-            value: 'feedback',
-            label: 'Feedback',
-          },
-          {
-            value: 'efficiency',
-            label: 'Efficiency',
-          },
-          {
-            value: 'controllability',
-            label: 'Controllability',
-          },
-        ],
-      },
-      {
-        value: 'navigation',
-        label: 'Navigation',
-        children: [
-          {
-            value: 'side nav',
-            label: 'Side Navigation',
-          },
-          {
-            value: 'top nav',
-            label: 'Top Navigation',
-          },
-        ],
-      },
-    ],
-  },
-  {
-    value: 'component',
-    label: 'Component',
-    children: [
-      {
-        value: 'basic',
-        label: 'Basic',
-        children: [
-          {
-            value: 'layout',
-            label: 'Layout',
-          },
-          {
-            value: 'color',
-            label: 'Color',
-          },
-          {
-            value: 'typography',
-            label: 'Typography',
-          },
-          {
-            value: 'icon',
-            label: 'Icon',
-          },
-          {
-            value: 'button',
-            label: 'Button',
-          },
-        ],
-      },
-      {
-        value: 'form',
-        label: 'Form',
-        children: [
-          {
-            value: 'radio',
-            label: 'Radio',
-          },
-          {
-            value: 'checkbox',
-            label: 'Checkbox',
-          },
-          {
-            value: 'input',
-            label: 'Input',
-          },
-          {
-            value: 'input-number',
-            label: 'InputNumber',
-          },
-          {
-            value: 'select',
-            label: 'Select',
-          },
-          {
-            value: 'cascader',
-            label: 'Cascader',
-          },
-          {
-            value: 'switch',
-            label: 'Switch',
-          },
-          {
-            value: 'slider',
-            label: 'Slider',
-          },
-          {
-            value: 'time-picker',
-            label: 'TimePicker',
-          },
-          {
-            value: 'date-picker',
-            label: 'DatePicker',
-          },
-          {
-            value: 'datetime-picker',
-            label: 'DateTimePicker',
-          },
-          {
-            value: 'upload',
-            label: 'Upload',
-          },
-          {
-            value: 'rate',
-            label: 'Rate',
-          },
-          {
-            value: 'form',
-            label: 'Form',
-          },
-        ],
-      },
-      {
-        value: 'data',
-        label: 'Data',
-        children: [
-          {
-            value: 'table',
-            label: 'Table',
-          },
-          {
-            value: 'tag',
-            label: 'Tag',
-          },
-          {
-            value: 'progress',
-            label: 'Progress',
-          },
-          {
-            value: 'tree',
-            label: 'Tree',
-          },
-          {
-            value: 'pagination',
-            label: 'Pagination',
-          },
-          {
-            value: 'badge',
-            label: 'Badge',
-          },
-        ],
-      },
-      {
-        value: 'notice',
-        label: 'Notice',
-        children: [
-          {
-            value: 'alert',
-            label: 'Alert',
-          },
-          {
-            value: 'loading',
-            label: 'Loading',
-          },
-          {
-            value: 'message',
-            label: 'Message',
-          },
-          {
-            value: 'message-box',
-            label: 'MessageBox',
-          },
-          {
-            value: 'notification',
-            label: 'Notification',
-          },
-        ],
-      },
-      {
-        value: 'navigation',
-        label: 'Navigation',
-        children: [
-          {
-            value: 'menu',
-            label: 'Menu',
-          },
-          {
-            value: 'tabs',
-            label: 'Tabs',
-          },
-          {
-            value: 'breadcrumb',
-            label: 'Breadcrumb',
-          },
-          {
-            value: 'dropdown',
-            label: 'Dropdown',
-          },
-          {
-            value: 'steps',
-            label: 'Steps',
-          },
-        ],
-      },
-      {
-        value: 'others',
-        label: 'Others',
-        children: [
-          {
-            value: 'dialog',
-            label: 'Dialog',
-          },
-          {
-            value: 'tooltip',
-            label: 'Tooltip',
-          },
-          {
-            value: 'popover',
-            label: 'Popover',
-          },
-          {
-            value: 'card',
-            label: 'Card',
-          },
-          {
-            value: 'carousel',
-            label: 'Carousel',
-          },
-          {
-            value: 'collapse',
-            label: 'Collapse',
-          },
-        ],
-      },
-    ],
-  },
-  {
-    value: 'resource',
-    label: 'Resource',
-    children: [
-      {
-        value: 'axure',
-        label: 'Axure Components',
-      },
-      {
-        value: 'sketch',
-        label: 'Sketch Templates',
-      },
-      {
-        value: 'docs',
-        label: 'Design Documentation',
-      },
-    ],
-  },
-]
-
-const optionListData = ref<ProductOption[]>([])
+const generalCategoryOptions = ref<{ value: string; label: string }[]>([])
+const sellerCategoryOptions = ref<{ value: string; label: string }[]>([])
 
 const dialogVisible = ref(false)
 const dialogMode = ref<DialogMode>('add')
@@ -392,47 +123,74 @@ const dialogContent = ref({
 
 const previewImageDialogVisible = ref(false)
 const previewImageUrl = ref('')
-const hasGroup1 = ref(false)
-const hasGroup2 = ref(false)
+// Categories will be fetched from API in a real app
+onMounted(() => {
+  fetchGeneralCategories()
+  fetchSellerCategories()
+})
 
-//#region FORM
-type ProductOption = {
-  image: File | undefined
-  option1: string
-  option2: string
-  price: number | undefined
-  stock: number | undefined
+const fetchGeneralCategories = () => {
+  axios
+    .get(import.meta.env.VITE_BE_API_URL + '/product/public/category')
+    .then((res) => {
+      generalCategoryOptions.value = res.data.map((c: any) => ({
+        value: c.id,
+        label: c.name,
+      }))
+    })
+    .catch(() => {
+      // Fallback
+      generalCategoryOptions.value = [
+        { value: '1', label: 'Fashion' },
+        { value: '2', label: 'Electronics' },
+      ]
+    })
 }
 
+const fetchSellerCategories = () => {
+  axios
+    .get(import.meta.env.VITE_BE_API_URL + '/product/public/seller/' + userId + '/category')
+    .then((res) => {
+      sellerCategoryOptions.value = res.data.map((c: any) => ({
+        value: c.id,
+        label: c.name,
+      }))
+    })
+    .catch(() => {
+      // Fallback
+      sellerCategoryOptions.value = [
+        { value: '1', label: 'Shirts' },
+        { value: '2', label: 'Pants' },
+      ]
+    })
+}
+
+//#region FORM
 interface RuleForm {
+  id?: string
   images: UploadUserFile[]
   name: string
-  category: string // or might be category_id
+  category_ids: string[]
+  seller_category_ids: string[]
   description: string
-  visibility: boolean
-  price: number | undefined
-  stock: number | undefined
-  group1: string
-  group2: string
-  group1_options: string[]
-  group2_options: string[]
-  product_options: ProductOption[]
+  status: string
+  is_active: boolean
+  option_groups: OptionGroup[]
+  variants: ProductVariant[]
 }
 
 const ruleFormRef = ref<FormInstance>()
 const ruleForm = reactive<RuleForm>({
+  id: undefined,
   images: [],
   name: '',
-  category: '',
+  category_ids: [],
+  seller_category_ids: [],
   description: '',
-  visibility: true,
-  price: undefined,
-  stock: undefined,
-  group1: '',
-  group2: '',
-  group1_options: [],
-  group2_options: [],
-  product_options: [],
+  status: 'AVAILABLE',
+  is_active: true,
+  option_groups: [],
+  variants: [],
 })
 
 const rules = reactive<FormRules<RuleForm>>({})
@@ -458,6 +216,16 @@ const handleFormSubmit = () => {
 
 const clearRuleForm = () => {
   ruleFormRef.value?.resetFields()
+  ruleForm.id = undefined
+  ruleForm.name = ''
+  ruleForm.description = ''
+  ruleForm.status = 'AVAILABLE'
+  ruleForm.is_active = true
+  ruleForm.option_groups = []
+  ruleForm.variants = []
+  ruleForm.category_ids = []
+  ruleForm.seller_category_ids = []
+  ruleForm.images = []
 }
 //#endregion
 
@@ -490,20 +258,221 @@ const handleRemove: UploadProps['onRemove'] = (uploadFile, uploadFiles) => {
   console.log(uploadFile, uploadFiles)
 }
 
+const handleVariantImageChange = (uploadFile: UploadFile, row: ProductVariant) => {
+  const rawFile = uploadFile.raw
+  if (!rawFile) return
+
+  const isImage = rawFile.type.startsWith('image/')
+  if (!isImage) {
+    ElMessage.error('Only .png, .jpg and .jpeg files are allowed')
+    row.images = [] // Clear invalid file
+    return
+  }
+}
+
 const handlePictureCardPreview: UploadProps['onPreview'] = (uploadFile) => {
   previewImageUrl.value = uploadFile.url!
   previewImageDialogVisible.value = true
 }
-//#endregion
 
-//#region CATEGORY CASCADER
-const categoryFilterMethod = (node: CascaderNode, keyword: string) => {
-  return node.label.toLowerCase().includes(keyword.toLowerCase())
+const uploadProductImages = async (productId: string, images: UploadUserFile[]) => {
+  if (images.length === 0) return
+
+  const formData = new FormData()
+  images.forEach((img) => {
+    if (img.raw) {
+      formData.append('image', img.raw)
+    }
+  })
+
+  await axios.post(`${import.meta.env.VITE_BE_API_URL}/product/${productId}/images`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+      Authorization: `Bearer ${token}`,
+    },
+  })
+}
+
+const uploadVariantImages = async (
+  productId: string,
+  variants: ProductVariant[],
+  serverVariants: any[],
+) => {
+  const formData = new FormData()
+  let hasImages = false
+
+  variants.forEach((v) => {
+    if (v.images && v.images.length > 0 && v.images[0].raw) {
+      // Find server variant ID by SKU
+      const serverV = serverVariants.find((sv) => sv.sku === v.sku)
+      if (serverV) {
+        formData.append(serverV.id, v.images[0].raw)
+        hasImages = true
+      }
+    }
+  })
+
+  if (!hasImages) return
+
+  await axios.post(
+    `${import.meta.env.VITE_BE_API_URL}/product/${productId}/variants/images`,
+    formData,
+    {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  )
 }
 //#endregion
+const handleAddProduct = () => {
+  const loading = ElLoading.service({
+    lock: true,
+    text: 'Adding product and uploading images...',
+    background: 'rgba(0, 0, 0, 0.7)',
+  })
 
-const handleAddProduct = () => {}
-const handleEditProduct = () => {}
+  // Format the payload according to the user example
+  const payload = {
+    name: ruleForm.name,
+    description: ruleForm.description,
+    status: ruleForm.status,
+    is_active: ruleForm.is_active,
+    option_groups: ruleForm.option_groups.map((g) => ({
+      key: g.key,
+      values: g.values,
+    })),
+    variants: ruleForm.variants.map((v) => ({
+      sku: v.sku,
+      options: v.options,
+      price: v.price,
+      stock: v.stock,
+    })),
+    category_ids: ruleForm.category_ids,
+    seller_category_ids: ruleForm.seller_category_ids,
+  }
+
+  axios
+    .post(import.meta.env.VITE_BE_API_URL + '/product', payload, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    .then(async (response: any) => {
+      const productId = response.data.id
+      const serverVariants = response.data.variants
+
+      try {
+        // Sequentially upload images
+        await uploadProductImages(productId, ruleForm.images)
+        await uploadVariantImages(productId, ruleForm.variants, serverVariants)
+
+        ElNotification({
+          title: 'Success!',
+          message: 'Product added successfully with images',
+          type: 'success',
+        })
+        dialogVisible.value = false
+        fetchProducts()
+      } catch (uploadError: any) {
+        ElNotification({
+          title: 'Partial Success',
+          message: 'Product added, but image upload failed: ' + uploadError.message,
+          type: 'warning',
+        })
+        dialogVisible.value = false
+        fetchProducts()
+      }
+    })
+    .catch((error) => {
+      ElNotification({
+        title: 'Error!',
+        message: 'Add product failed: ' + error.message,
+        type: 'error',
+      })
+    })
+    .finally(() => {
+      loading.close()
+    })
+}
+
+const handleEditProduct = () => {
+  const loading = ElLoading.service({
+    lock: true,
+    text: 'Saving changes and updating images...',
+    background: 'rgba(0, 0, 0, 0.7)',
+  })
+
+  // Format the payload according to the user example
+  const payload = {
+    name: ruleForm.name,
+    description: ruleForm.description,
+    status: ruleForm.status,
+    is_active: ruleForm.is_active,
+    option_groups: ruleForm.option_groups.map((g) => ({
+      key: g.key,
+      values: g.values,
+    })),
+    variants: ruleForm.variants.map((v) => ({
+      sku: v.sku,
+      options: v.options,
+      price: v.price,
+      stock: v.stock,
+    })),
+    category_ids: ruleForm.category_ids,
+    seller_category_ids: ruleForm.seller_category_ids,
+  }
+
+  const productId = ruleForm.id
+
+  axios
+    .put(import.meta.env.VITE_BE_API_URL + '/product/seller/products/' + productId, payload, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    .then(async (response: any) => {
+      const serverVariants = response.data.variants
+
+      try {
+        // Sequentially upload images
+        // We only upload images that have a 'raw' property (newly selected files)
+        const newImages = ruleForm.images.filter((img) => !!img.raw)
+        if (newImages.length > 0) {
+          await uploadProductImages(productId!, newImages)
+        }
+
+        await uploadVariantImages(productId!, ruleForm.variants, serverVariants)
+
+        ElNotification({
+          title: 'Success!',
+          message: 'Product updated successfully',
+          type: 'success',
+        })
+        dialogVisible.value = false
+        fetchProducts()
+      } catch (uploadError: any) {
+        ElNotification({
+          title: 'Partial Success',
+          message: 'Product details updated, but image upload failed: ' + uploadError.message,
+          type: 'warning',
+        })
+        dialogVisible.value = false
+        fetchProducts()
+      }
+    })
+    .catch((error) => {
+      ElNotification({
+        title: 'Error!',
+        message: 'Update product failed: ' + error.message,
+        type: 'error',
+      })
+    })
+    .finally(() => {
+      loading.close()
+    })
+}
 
 const handleSortChange = ({ prop, order }: { prop: string; order: string }) => {
   if (order === 'ascending') {
@@ -573,7 +542,7 @@ const getRowClassName = ({ row }: { row: Product }) => {
 }
 
 //#region MODAL
-const openModal = (mode: DialogMode) => {
+const openModal = (mode: DialogMode, product?: Product) => {
   dialogMode.value = mode
   dialogVisible.value = true
   if (mode === 'add') {
@@ -582,14 +551,42 @@ const openModal = (mode: DialogMode) => {
       mainBtnText: 'Add',
     }
     clearRuleForm()
-  } else if (mode === 'edit') {
+  } else if (mode === 'edit' && product) {
     dialogContent.value = {
       title: 'Edit product',
       mainBtnText: 'Save',
     }
-    // TODO: set ruleForm values here!!!
-    // ruleForm.category = category ?? ''
-    // ruleForm.id = id ?? ''
+    ruleForm.id = product.id
+    ruleForm.name = product.name
+    ruleForm.description = product.description
+    ruleForm.status = product.status
+    ruleForm.is_active = product.is_active
+    ruleForm.category_ids = product.category_ids
+    ruleForm.seller_category_ids = product.seller_category_ids
+    ruleForm.option_groups = (product.option_groups || []).map((g: any) => ({
+      key: g.key || g.Key,
+      values: g.values || g.Values,
+    }))
+    ruleForm.variants = (product.variants || []).map((v: any) => ({
+      sku: v.sku,
+      options: v.options,
+      price: v.price,
+      stock: v.stock,
+      // Map the single image string from server to the images array for UI preview
+      images: v.image
+        ? [
+            {
+              name: v.sku,
+              url: v.image,
+            },
+          ]
+        : [],
+    }))
+    // Main product images
+    ruleForm.images = (product.images || []).map((img) => ({
+      name: img.id,
+      url: img.url,
+    }))
   }
 }
 
@@ -605,68 +602,76 @@ const handleDeleteBtnClick = (id: string, name: string) => {
 const handleDeleteProduct = (id: string, name: string) => {}
 //#endregion
 
+const addOptionGroup = () => {
+  ruleForm.option_groups.push({ key: '', values: [] })
+}
+
+const removeOptionGroup = (index: number) => {
+  ruleForm.option_groups.splice(index, 1)
+}
+
 watch(
-  [() => ruleForm.group1_options, () => ruleForm.group2_options],
-  ([new_group1_options, new_group2_options]) => {
-    let newOptionListData: ProductOption[] = []
-    if (new_group2_options.length) {
-      new_group1_options.forEach((group1_option) => {
-        new_group2_options.forEach((group2_option) => {
-          newOptionListData.push({
-            image: undefined,
-            option1: group1_option,
-            option2: group2_option,
-            price: undefined,
-            stock: undefined,
-          })
-        })
-      })
-
-      optionListData.value.forEach((option) => {
-        if (
-          option.image !== undefined ||
-          option.price !== undefined ||
-          option.stock !== undefined
-        ) {
-          newOptionListData[
-            newOptionListData.findIndex(
-              (newOption) =>
-                option.option1 === newOption.option1 && option.option2 === newOption.option2,
-            )
-          ] = option
-        }
-
-        optionListData.value = newOptionListData
-      })
-    } else {
-      new_group1_options.forEach((group1_option) => {
-        newOptionListData.push({
-          image: undefined,
-          option1: group1_option,
-          option2: '',
-          price: undefined,
-          stock: undefined,
-        })
-      })
-
-      optionListData.value.forEach((option) => {
-        if (
-          option.image !== undefined ||
-          option.price !== undefined ||
-          option.stock !== undefined
-        ) {
-          newOptionListData[
-            newOptionListData.findIndex((newOption) => option.option1 === newOption.option1)
-          ] = option
-        }
-
-        optionListData.value = newOptionListData
-      })
-
-      optionListData.value = newOptionListData
-    }
+  [() => ruleForm.option_groups, () => ruleForm.name],
+  () => {
+    generateVariants()
   },
+  { deep: true },
 )
+
+const generateVariants = () => {
+  const groups = ruleForm.option_groups.filter((g) => g.key && g.values.length > 0)
+  if (groups.length === 0) {
+    ruleForm.variants = []
+    return
+  }
+
+  const combinations = (idx: number, currentOptions: Record<string, string>): any[] => {
+    if (idx === groups.length) {
+      return [currentOptions]
+    }
+
+    const res: any[] = []
+    const group = groups[idx]
+    if (!group) return []
+    for (const val of group.values) {
+      res.push(...combinations(idx + 1, { ...currentOptions, [group.key]: val }))
+    }
+    return res
+  }
+
+  const allCombinations = combinations(0, {})
+
+  // Preserve existing variant data (price, stock, images) if possible
+  const oldVariants = [...ruleForm.variants]
+  ruleForm.variants = allCombinations.map((options) => {
+    const existing = oldVariants.find((v) => {
+      return Object.entries(options).every(([key, val]) => v.options[key] === val)
+    })
+
+    const optionsPart = Object.values(options)
+      .map((ov: any) => ov.toString().replace(/\s+/g, '-'))
+      .join('-')
+
+    // Generate SKU logic: Name-Val1-Val2
+    const sku = (ruleForm.name.replace(/\s+/g, '-') || '') + '-' + optionsPart
+
+    if (existing) {
+      // If the existing SKU is empty or starts with a dash (meaning name was empty), update it
+      if (!existing.sku || existing.sku.startsWith('-')) {
+        existing.sku = sku
+      }
+      return existing
+    }
+
+    return {
+      sku: sku,
+      options: options,
+      price: 0,
+      stock: 0,
+      images: [],
+    }
+  })
+}
 
 const download = (images: ProductImage[], index: number) => {
   if (!images[index]) return
@@ -849,7 +854,7 @@ const download = (images: ProductImage[], index: number) => {
         </el-table-column>
         <el-table-column align="center" label="Operations" width="140">
           <template #default="{ row }">
-            <el-button type="primary" :icon="Edit" @click="openModal('edit')" />
+            <el-button type="primary" :icon="Edit" @click="openModal('edit', row)" />
             <el-button
               type="danger"
               :icon="Delete"
@@ -916,191 +921,146 @@ const download = (images: ProductImage[], index: number) => {
             placeholder="Please input product description"
           />
         </el-form-item>
-        <el-form-item prop="category" label="Category">
-          <el-cascader
+        <el-form-item label="General Categories">
+          <el-select
+            v-model="ruleForm.category_ids"
+            multiple
             size="large"
-            placeholder="Please select a category"
-            :options="categoryOptions"
             filterable
-            :filter-method="categoryFilterMethod"
-            clearable
+            placeholder="Select general categories"
             style="width: 100%"
-          />
+          >
+            <el-option
+              v-for="item in generalCategoryOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
         </el-form-item>
-        <el-button
-          type="primary"
-          size="large"
-          style="margin-left: 82px; margin-bottom: 16px; margin-top: 12px"
-          @click="
-            () => {
-              if (hasGroup1) {
-                if (hasGroup2) {
-                  hasGroup2 = false
-                  // Pass data from group2 to group1
-                } else {
-                  hasGroup1 = false
-                }
-              } else {
-                hasGroup1 = true
-              }
-            }
-          "
+
+        <el-form-item label="Seller Categories">
+          <el-select
+            v-model="ruleForm.seller_category_ids"
+            multiple
+            size="large"
+            filterable
+            placeholder="Select seller categories"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="item in sellerCategoryOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
+        </el-form-item>
+
+        <div class="option-groups-section">
+          <div
+            v-for="(group, index) in ruleForm.option_groups"
+            :key="index"
+            class="option-group-card"
+          >
+            <div class="group-header">
+              <span>Option Group {{ index + 1 }}</span>
+              <el-button type="danger" link :icon="Delete" @click="removeOptionGroup(index)"
+                >Remove</el-button
+              >
+            </div>
+            <el-form-item label="Group Key">
+              <el-input v-model="group.key" placeholder="e.g., Size, Color" />
+            </el-form-item>
+            <el-form-item label="Values">
+              <el-select-v2
+                v-model="group.values"
+                :options="[]"
+                placeholder="Press Enter to add values"
+                allow-create
+                default-first-option
+                filterable
+                multiple
+                clearable
+                popper-class="group_option_popper"
+                :reserve-keyword="false"
+              />
+            </el-form-item>
+          </div>
+          <el-button
+            type="primary"
+            plain
+            :icon="Plus"
+            @click="addOptionGroup"
+            v-if="ruleForm.option_groups.length < 2"
+          >
+            Add Option Group
+          </el-button>
+        </div>
+
+        <el-divider v-if="ruleForm.variants.length > 0" content-position="left"
+          >Product Variants</el-divider
         >
-          {{ hasGroup1 ? 'Remove product group 1' : 'Add product group' }}
-        </el-button>
-        <el-form-item prop="price" label="Price" v-show="!hasGroup1">
-          <el-input-number size="large" v-model="ruleForm.price" :min="1000" :max="1000000000000">
-            <template #prefix>
-              <span>đ</span>
+
+        <el-table
+          v-if="ruleForm.variants.length > 0"
+          :data="ruleForm.variants"
+          border
+          style="width: 100%; margin-top: 20px"
+        >
+          <el-table-column label="Image" width="100" align="center">
+            <template #default="{ row }">
+              <el-upload
+                class="option-image-upload"
+                v-model:file-list="row.images"
+                accept="image/png, image/jpeg, image/jpg"
+                :auto-upload="false"
+                list-type="picture-card"
+                :limit="1"
+                :on-preview="handlePictureCardPreview"
+                :on-change="(file: any) => handleVariantImageChange(file, row)"
+              >
+                <el-icon><Plus /></el-icon>
+              </el-upload>
             </template>
-          </el-input-number>
-        </el-form-item>
-        <el-form-item prop="stock" label="Stock" v-show="!hasGroup1">
-          <el-input-number size="large" v-model="ruleForm.stock" :min="0" :max="1000000000000">
-          </el-input-number>
-        </el-form-item>
+          </el-table-column>
 
-        <el-form-item prop="group1" label="Group 1" v-show="hasGroup1">
-          <el-input
-            size="large"
-            v-model="ruleForm.group1"
-            placeholder="Please input group name"
-            clearable
-          />
-        </el-form-item>
-        <el-form-item prop="group1" label="Options" v-show="hasGroup1">
-          <el-select-v2
-            v-model="ruleForm.group1_options"
-            :options="[]"
-            placeholder="Please input an option then press enter"
-            style="margin-right: 16px; vertical-align: middle"
-            allow-create
-            default-first-option
-            filterable
-            multiple
-            clearable
-            popper-class="group_option_popper"
-            :reserve-keyword="false"
-          />
-        </el-form-item>
+          <el-table-column label="Variant" min-width="150">
+            <template #default="{ row }">
+              <div class="variant-info">
+                <span v-for="(val, key) in row.options" :key="key"> {{ key }}: {{ val }} </span>
+              </div>
+            </template>
+          </el-table-column>
 
-        <el-button
-          v-show="hasGroup1"
-          type="primary"
-          size="large"
-          style="margin-left: 82px; margin-bottom: 16px; margin-top: 12px"
-          @click="hasGroup2 = !hasGroup2"
-        >
-          {{ hasGroup2 ? 'Remove product group 2' : 'Add product group 2' }}
-        </el-button>
-        <el-form-item prop="group2" label="Group 2" v-show="hasGroup2">
-          <el-input
-            size="large"
-            v-model="ruleForm.group2"
-            placeholder="Please input group name"
-            clearable
-          />
-        </el-form-item>
-        <el-form-item
-          prop="group2_options"
-          label="Options"
-          v-show="hasGroup2"
-          style="margin-bottom: 32px"
-        >
-          <el-select-v2
-            v-model="ruleForm.group2_options"
-            :options="[]"
-            placeholder="Please input an option then press enter"
-            style="margin-right: 16px; vertical-align: middle"
-            allow-create
-            default-first-option
-            filterable
-            multiple
-            clearable
-            popper-class="group_option_popper"
-            :reserve-keyword="false"
-          />
-        </el-form-item>
-        <!-- HAS ONE GROUP -->
-        <el-form-item prop="" label="Option list" v-show="hasGroup1 && !hasGroup2">
-          <el-table :data="optionListData" border style="width: 100%">
-            <el-table-column
-              prop="option1"
-              :label="ruleForm.group1 === '' ? 'Group 1' : ruleForm.group1"
-              width="100"
-            />
-            <el-table-column prop="image" label="Image" align="center" style="width: 80px">
-              <template #default="{ row }">
-                <el-upload
-                  class="option-image-upload"
-                  v-model:file-list="row.image"
-                  accept="image/png, image/jpeg, image/jpg"
-                  :auto-upload="false"
-                  list-type="picture-card"
-                  :limit="1"
-                  :on-preview="handlePictureCardPreview"
-                  :on-remove="handleRemove"
-                  :on-change="handleChange"
-                >
-                  <el-icon><Plus /></el-icon>
-                </el-upload>
-              </template>
-            </el-table-column>
-            <el-table-column prop="price" label="Price">
-              <template #default="{ row }">
-                <el-input v-model="row.price" placeholder="Input price" />
-              </template>
-            </el-table-column>
-            <el-table-column prop="stock" label="Stock">
-              <template #default="{ row }">
-                <el-input v-model="row.stock" placeholder="Input stock" />
-              </template>
-            </el-table-column>
-          </el-table>
-        </el-form-item>
+          <el-table-column label="Price" width="150">
+            <template #default="{ row }">
+              <el-input-number
+                v-model="row.price"
+                :min="0"
+                controls-position="right"
+                style="width: 100%"
+              />
+            </template>
+          </el-table-column>
 
-        <!-- HAS BOTH GROUPS -->
-        <el-form-item prop="" label="Option list" v-show="hasGroup1 && hasGroup2">
-          <el-table :data="optionListData" border style="width: 100%">
-            <el-table-column
-              prop="option1"
-              :label="ruleForm.group1 === '' ? 'Group 1' : ruleForm.group1"
-              width="100"
-            />
-            <el-table-column
-              prop="option2"
-              :label="ruleForm.group2 === '' ? 'Group 2' : ruleForm.group2"
-              width="100"
-            />
-            <el-table-column prop="image" label="Image" align="center" style="width: 80px">
-              <template #default="{ row }">
-                <el-upload
-                  class="option-image-upload"
-                  v-model:file-list="row.image"
-                  accept="image/png, image/jpeg, image/jpg"
-                  :auto-upload="false"
-                  list-type="picture-card"
-                  :limit="1"
-                  :on-preview="handlePictureCardPreview"
-                  :on-remove="handleRemove"
-                  :on-change="handleChange"
-                >
-                  <el-icon><Plus /></el-icon>
-                </el-upload>
-              </template>
-            </el-table-column>
-            <el-table-column prop="price" label="Price">
-              <template #default="{ row }">
-                <el-input v-model="row.price" placeholder="Input price" />
-              </template>
-            </el-table-column>
-            <el-table-column prop="stock" label="Stock">
-              <template #default="{ row }">
-                <el-input v-model="row.stock" placeholder="Input stock" />
-              </template>
-            </el-table-column>
-          </el-table>
-        </el-form-item>
+          <el-table-column label="Stock" width="120">
+            <template #default="{ row }">
+              <el-input-number
+                v-model="row.stock"
+                :min="0"
+                controls-position="right"
+                style="width: 100%"
+              />
+            </template>
+          </el-table-column>
+
+          <el-table-column label="SKU" width="180">
+            <template #default="{ row }">
+              <el-input v-model="row.sku" placeholder="SKU" />
+            </template>
+          </el-table-column>
+        </el-table>
       </el-form>
 
       <template #footer>
@@ -1160,25 +1120,51 @@ const download = (images: ProductImage[], index: number) => {
   flex-shrink: 0;
 }
 
-.images-upload {
-  .el-upload,
-  .el-upload-list__item {
-    width: 120px !important;
-    height: 120px !important;
-  }
+.option-groups-section {
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 8px;
+  margin-bottom: 24px;
 }
-.el-upload,
-.el-upload-list__item {
+
+.option-group-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.variant-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.variant-info span {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.images-upload :deep(.el-upload),
+.images-upload :deep(.el-upload-list__item) {
   width: 120px !important;
   height: 120px !important;
 }
 
-.option-image-upload {
-  .el-upload,
-  .el-upload-list__item {
-    width: 80px !important;
-    height: 80px !important;
-  }
+.option-image-upload :deep(.el-upload),
+.option-image-upload :deep(.el-upload-list__item) {
+  width: 80px !important;
+  height: 80px !important;
 }
 
 /* Hide group option popper */
@@ -1187,12 +1173,12 @@ const download = (images: ProductImage[], index: number) => {
 }
 
 /* Disable adding multiple pictures to a product option */
-.option-image-upload .el-upload-list__item + .el-upload {
+.option-image-upload :deep(.el-upload-list__item + .el-upload) {
   display: none;
 }
 
 /* Make option image upload stays still */
-.option-image-upload .el-upload-list__item {
+.option-image-upload :deep(.el-upload-list__item) {
   animation: none !important;
   transition: none !important;
 }

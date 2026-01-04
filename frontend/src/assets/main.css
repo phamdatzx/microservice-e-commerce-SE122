@@ -124,3 +124,8 @@ button {
   --el-button-hover-bg-color: #f6fbf5;
   --el-button-hover-border-color: #bee3c0;
 }
+
+.el-button--primary.is-plain {
+  --el-button-border-color: var(--el-color-primary) !important;
+  --el-button-bg-color: #f6fbf5 !important;
+}
