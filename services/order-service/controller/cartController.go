@@ -69,16 +69,7 @@ func (c *CartController) DeleteCartItem(ctx *gin.Context) {
 	// Delete cart item
 	err := c.service.DeleteCartItem(userID, cartItemID)
 	if err != nil {
-		// Check if it's an authorization error
-		if err.Error() == "unauthorized: you can only delete your own cart items" {
-			ctx.Error(appError.NewAppErrorWithErr(http.StatusForbidden, "Unauthorized", err))
-			return
-		}
-		if err.Error() == "cart item not found" {
-			ctx.Error(appError.NewAppErrorWithErr(http.StatusNotFound, "Cart item not found", err))
-			return
-		}
-		ctx.Error(appError.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to delete cart item", err))
+		ctx.Error(err)
 		return
 	}
 
@@ -116,16 +107,7 @@ func (c *CartController) UpdateCartItemQuantity(ctx *gin.Context) {
 	// Update cart item quantity
 	response, err := c.service.UpdateCartItemQuantity(userID, cartItemID, request.Quantity)
 	if err != nil {
-		// Check if it's an authorization error
-		if err.Error() == "unauthorized: you can only update your own cart items" {
-			ctx.Error(appError.NewAppErrorWithErr(http.StatusForbidden, "Unauthorized", err))
-			return
-		}
-		if err.Error() == "cart item not found" {
-			ctx.Error(appError.NewAppErrorWithErr(http.StatusNotFound, "Cart item not found", err))
-			return
-		}
-		ctx.Error(appError.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to update cart item quantity", err))
+		ctx.Error(err)
 		return
 	}
 
@@ -143,7 +125,7 @@ func (c *CartController) GetCartItems(ctx *gin.Context) {
 	// Get cart items from service
 	cartItems, err := c.service.GetCartItems(userID)
 	if err != nil {
-		ctx.Error(appError.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to fetch cart items", err))
+		ctx.Error(err)
 		return
 	}
 

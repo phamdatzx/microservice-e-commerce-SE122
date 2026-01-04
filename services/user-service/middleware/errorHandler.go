@@ -26,10 +26,19 @@ func ErrorHandler() gin.HandlerFunc {
 					log.Printf("Error [%d]: %v", appErr.Code, appErr.Err)
 				}
 
-				c.JSON(appErr.Code, gin.H{
-					"code":    appErr.Code,
-					"message": appErr.Message,
-				})
+				//if internal error provided
+				if appErr.Err != nil {
+					c.JSON(appErr.Code, gin.H{
+						"code":    appErr.Code,
+						"message": appErr.Message,
+						"internal_error": appErr.Err,
+					})
+				} else {
+					c.JSON(appErr.Code, gin.H{
+						"code":    appErr.Code,
+						"message": appErr.Message,
+					})
+				}
 				return
 			}
 
