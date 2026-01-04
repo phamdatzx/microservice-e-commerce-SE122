@@ -109,3 +109,13 @@ button {
 .el-menu-item.is-active {
   --el-menu-active-color: var(--el-color-primary);
 }
+
+.el-button--primary {
+  --el-button-hover-bg-color: #78c57d !important;
+  --el-button-hover-border-color: #67be6f !important;
+}
+
+.el-button:hover {
+  --el-button-hover-bg-color: #f6fbf5;
+  --el-button-hover-border-color: #bee3c0;
+}

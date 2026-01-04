@@ -292,28 +292,35 @@ const clearRuleForm = () => {
       </div>
     </div>
 
-    <el-table v-loading="isLoading" :data="paginatedData" border style="width: 100%">
-      <el-table-column type="index" label="#" width="60" align="center" />
+    <div class="table-container">
+      <el-table
+        v-loading="isLoading"
+        :data="paginatedData"
+        border
+        style="width: 100%; height: 100%"
+      >
+        <el-table-column type="index" label="#" width="60" align="center" />
 
-      <el-table-column prop="name" label="Category Name" min-width="200" />
+        <el-table-column prop="name" label="Category Name" min-width="200" />
 
-      <el-table-column prop="product_count" label="Products" width="120" align="center" sortable>
-        <template #default="{ row }">
-          <el-tag type="info" effect="plain" round>{{ row.product_count }}</el-tag>
-        </template>
-      </el-table-column>
+        <el-table-column prop="product_count" label="Products" width="120" align="center" sortable>
+          <template #default="{ row }">
+            <el-tag type="info" effect="plain" round>{{ row.product_count }}</el-tag>
+          </template>
+        </el-table-column>
 
-      <el-table-column align="center" label="Actions" width="180">
-        <template #default="{ row }">
-          <el-button type="primary" link :icon="Edit" @click="openModal('edit', row)"
-            >Edit</el-button
-          >
-          <el-button type="danger" link :icon="Delete" @click="handleDeleteBtnClick(row)"
-            >Delete</el-button
-          >
-        </template>
-      </el-table-column>
-    </el-table>
+        <el-table-column align="center" label="Actions" width="180">
+          <template #default="{ row }">
+            <el-button type="primary" link :icon="Edit" @click="openModal('edit', row)"
+              >Edit</el-button
+            >
+            <el-button type="danger" link :icon="Delete" @click="handleDeleteBtnClick(row)"
+              >Delete</el-button
+            >
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
 
     <div class="pagination-container">
       <el-pagination
@@ -369,6 +376,11 @@ const clearRuleForm = () => {
   background: white;
   border-radius: 8px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .toolbar {
@@ -376,6 +388,7 @@ const clearRuleForm = () => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  flex-shrink: 0;
 }
 
 .toolbar h2 {
@@ -384,9 +397,15 @@ const clearRuleForm = () => {
   color: #1e293b;
 }
 
+.table-container {
+  flex: 1;
+  overflow: hidden;
+}
+
 .pagination-container {
   margin-top: 20px;
   display: flex;
   justify-content: flex-end;
+  flex-shrink: 0;
 }
 </style>
