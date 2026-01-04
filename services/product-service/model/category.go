@@ -10,6 +10,7 @@ type Category struct {
 	ID    string `bson:"_id" json:"id"`
 	Name  string `bson:"name" json:"name"`
 	Image string `bson:"image" json:"image"`
+	ProductCount int `bson:"product_count" json:"product_count"`
 }
 
 // Validate checks if the category has all required fields

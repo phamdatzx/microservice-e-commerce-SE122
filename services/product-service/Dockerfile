@@ -1,43 +1,37 @@
 # =========================
 # 1. Build stage
 # =========================
-FROM golang:alpine AS builder
+FROM golang:1.24-alpine AS builder
 
-# Cài đặt các công cụ cần thiết
+# Cài git (chỉ cần ở build stage)
 RUN apk add --no-cache git
 
-# Tạo thư mục làm việc trong container
 WORKDIR /app
 
-# Sao chép go.mod và go.sum trước (để cache dependency)
-COPY go.mod ./
-# COPY go.sum ./ 
-# Commenting out go.sum as it might not exist yet
+# Copy module files trước để cache dependency
+COPY go.mod go.sum ./
 
-# Tải module
-RUN go mod tidy
+# Download dependencies (cache layer này)
+RUN go mod download
 
-# Sao chép toàn bộ source code vào container
+# Copy source code
 COPY . .
 
-# Build binary (static binary để dễ chạy ở Alpine)
-RUN go build -o server .
+# Build static binary
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    go build -ldflags="-s -w" -o server
 
 # =========================
 # 2. Run stage
 # =========================
-FROM alpine:latest
+FROM scratch
 
-# Cài chứng chỉ CA (để HTTPS hoạt động)
-RUN apk add --no-cache ca-certificates
+# Copy CA certificates
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
-WORKDIR /root/
+# Copy binary
+COPY --from=builder /app/server /server
 
-# Sao chép binary từ stage trước
-COPY --from=builder /app/server .
-
-# Expose port (ví dụ Gin chạy cổng 8080)
 EXPOSE 8080
 
-# Lệnh chạy ứng dụng
-CMD ["./server"]
+ENTRYPOINT ["/server"]

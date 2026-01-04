@@ -15,7 +15,9 @@ func RegisterUserRoutes(rg *gin.RouterGroup, c controller.UserController) {
 		user.POST("/public/activate", c.ActivateAccount)
 		user.POST("/public/send-reset-password", c.SendResetPasswordRequest)
 		user.POST("/public/reset-password", c.ResetPassword)
+		user.POST("/public/check-username", c.CheckUsernameExists)
 		user.GET("/test-private", c.TestPrivate)
 		user.GET("/my-info", c.GetMyInfo)
 	}
 }
+

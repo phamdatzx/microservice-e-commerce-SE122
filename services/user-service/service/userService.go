@@ -15,6 +15,7 @@ type UserService interface {
 	SendResetPasswordRequest(request dto.SendResetPasswordRequestDto) error
 	ResetPassword(token string, request dto.ResetPasswordRequest) error
 	GetMyInfo(userId string) (dto.MyInfoResponse, error)
+	CheckUsernameExists(request dto.CheckUsernameRequest) (dto.CheckUsernameResponse, error)
 }
 
 type userService struct {
@@ -136,3 +137,13 @@ func (s *userService) GetMyInfo(userId string) (dto.MyInfoResponse, error) {
 		IsBanned: user.IsBanned,
 	}, nil
 }
+
+func (s *userService) CheckUsernameExists(request dto.CheckUsernameRequest) (dto.CheckUsernameResponse, error) {
+	exists, err := s.repo.CheckUserExists(request.Username)
+	if err != nil {
+		return dto.CheckUsernameResponse{}, err
+	}
+
+	return dto.CheckUsernameResponse{Exists: exists}, nil
+}
+
