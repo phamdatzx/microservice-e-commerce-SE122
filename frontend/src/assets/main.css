@@ -113,6 +113,7 @@ button {
 .el-button--primary {
   --el-button-hover-bg-color: #78c57d !important;
   --el-button-hover-border-color: #67be6f !important;
+  --el-button-active-bg-color: var(--main-color) !important;
 }
 
 .el-button--danger {

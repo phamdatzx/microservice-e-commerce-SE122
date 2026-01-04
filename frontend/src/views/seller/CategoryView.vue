@@ -309,14 +309,10 @@ const clearRuleForm = () => {
           </template>
         </el-table-column>
 
-        <el-table-column align="center" label="Actions" width="180">
+        <el-table-column align="center" label="Operations" width="140">
           <template #default="{ row }">
-            <el-button type="primary" link :icon="Edit" @click="openModal('edit', row)"
-              >Edit</el-button
-            >
-            <el-button type="danger" link :icon="Delete" @click="handleDeleteBtnClick(row)"
-              >Delete</el-button
-            >
+            <el-button type="primary" :icon="Edit" @click="openModal('edit', row)" />
+            <el-button type="danger" :icon="Delete" @click="handleDeleteBtnClick(row)" />
           </template>
         </el-table-column>
       </el-table>
