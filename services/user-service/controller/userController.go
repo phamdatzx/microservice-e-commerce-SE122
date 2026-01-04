@@ -181,3 +181,32 @@ func (c *UserController) GetMyInfo(ctx *gin.Context) {
 
 	utils.SuccessResponse(ctx, 200, "Get my info successfully", response)
 }
+
+func (c *UserController) CheckUsernameExists(ctx *gin.Context) {
+	var request dto.CheckUsernameRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// validate struct
+	if err := validate.Struct(request); err != nil {
+		var errors string
+		for _, err := range err.(validator.ValidationErrors) {
+			errors += err.Field() + " is invalid: " + err.Tag() + ", "
+		}
+		_ = ctx.Error(appError.NewAppError(400, errors))
+		ctx.Abort()
+		return
+	}
+
+	response, err := c.service.CheckUsernameExists(request)
+	if err != nil {
+		_ = ctx.Error(err)
+		ctx.Abort()
+		return
+	}
+
+	utils.SuccessResponse(ctx, 200, "Check username successfully", response)
+}
+
