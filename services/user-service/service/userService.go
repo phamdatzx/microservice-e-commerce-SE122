@@ -14,6 +14,7 @@ type UserService interface {
 	ActivateAccount(token string) error
 	SendResetPasswordRequest(request dto.SendResetPasswordRequestDto) error
 	ResetPassword(token string, request dto.ResetPasswordRequest) error
+	GetMyInfo(userId string) (dto.MyInfoResponse, error)
 }
 
 type userService struct {
@@ -65,7 +66,7 @@ func (s *userService) Login(request dto.LoginRequest) (dto.LoginResponse, error)
 		if err != nil {
 			return dto.LoginResponse{}, err
 		}
-		return dto.LoginResponse{AccessToken: token, Role: user.Role}, nil
+		return dto.LoginResponse{AccessToken: token, Role: user.Role, UserId: user.ID.String()}, nil
 	} else { //incorrect info
 		return dto.LoginResponse{}, customError.NewAppError(401, "incorrect password")
 	}
@@ -116,4 +117,22 @@ func (s *userService) ResetPassword(token string, request dto.ResetPasswordReque
 	//change new password
 	user.Password, _ = utils.HashPassword(request.Password)
 	return s.repo.Save(user)
+}
+
+func (s *userService) GetMyInfo(userId string) (dto.MyInfoResponse, error) {
+	user, err := s.repo.GetUserByID(userId)
+	if err != nil {
+		return dto.MyInfoResponse{}, err
+	}
+
+	return dto.MyInfoResponse{
+		ID:       user.ID.String(),
+		Username: user.Username,
+		Name:     user.Name,
+		Email:    user.Email,
+		Role:     user.Role,
+		IsActive: user.IsActive,
+		IsVerify: user.IsVerify,
+		IsBanned: user.IsBanned,
+	}, nil
 }

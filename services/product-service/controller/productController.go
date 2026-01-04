@@ -183,3 +183,26 @@ func (c *ProductController) GetProductsBySeller(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+func (c *ProductController) GetVariantsByIds(ctx *gin.Context) {
+	// Parse request body
+	var request dto.GetVariantsByIdsRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.Error(error.NewAppErrorWithErr(http.StatusBadRequest, "Invalid request body", err))
+		return
+	}
+
+	// Get variants from service
+	variants, err := c.service.GetVariantsByIds(request.VariantIDs)
+	if err != nil {
+		ctx.Error(error.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to fetch variants", err))
+		return
+	}
+
+	// Build response
+	response := dto.GetVariantsByIdsResponse{
+		Variants: variants,
+	}
+
+	ctx.JSON(http.StatusOK, response)
+}
+

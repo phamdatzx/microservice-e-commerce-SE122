@@ -18,6 +18,7 @@ type ProductService interface {
 	ProcessProductImageUpload(productID string, files []*multipart.FileHeader) ([]model.ProductImages, error)
 	ProcessVariantImageUpload(productID string, fileMap map[string][]*multipart.FileHeader) (map[string]string, error)
 	GetProductsBySeller(sellerID string, params dto.GetProductsQueryParams) (*dto.PaginatedProductsResponse, error)
+	GetVariantsByIds(variantIDs []string) ([]dto.CartVariantDto, error)
 }
 
 type productService struct {
@@ -191,5 +192,36 @@ func (s *productService) GetProductsBySeller(sellerID string, params dto.GetProd
 	// Build paginated response
 	response := dto.NewPaginatedProductsResponse(products, total, params.Page, params.Limit)
 	return response, nil
+}
+
+func (s *productService) GetVariantsByIds(variantIDs []string) ([]dto.CartVariantDto, error) {
+	// Get products containing the variants
+	variantToProduct, err := s.repo.FindVariantsByIds(variantIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build response DTOs
+	var result []dto.CartVariantDto
+	for _, variantID := range variantIDs {
+		product, exists := variantToProduct[variantID]
+		if !exists {
+			// Variant not found, skip it
+			continue
+		}
+
+		// Find the specific variant in the product
+		for _, variant := range product.Variants {
+			if variant.ID == variantID {
+				result = append(result, dto.CartVariantDto{
+					ProductName: product.Name,
+					Variant:     variant,
+				})
+				break
+			}
+		}
+	}
+
+	return result, nil
 }
 

@@ -20,6 +20,7 @@ type Product struct {
 	IsActive    bool      `bson:"is_active" json:"is_active"`
 	CreatedAt   time.Time `bson:"created_at" json:"created_at"`
 	UpdatedAt   time.Time `bson:"updated_at" json:"updated_at"`
+	Price       Price     `bson:"price" json:"price"`
 
 	OptionGroups []OptionGroup      `bson:"option_groups" json:"option_groups"` 
 	Variants     []Variant          `bson:"variants" json:"variants"`
@@ -27,6 +28,11 @@ type Product struct {
 	// Many-to-many relationships stored as arrays of IDs
 	CategoryIDs       []string `bson:"category_ids" json:"category_ids,omitempty"`
 	SellerCategoryIDs []string `bson:"seller_category_ids" json:"seller_category_ids,omitempty"`
+}
+
+type Price struct {
+	Min int `bson:"min" json:"min"`
+	Max int `bson:"max" json:"max"`
 }
 
 type OptionGroup struct {

@@ -10,6 +10,7 @@ type UserRepository interface {
 	CreateUser(user *model.User) error
 	CheckUserExists(username string) (bool, error)
 	GetUserByUsername(username string) (*model.User, error)
+	GetUserByID(id string) (*model.User, error)
 	ActivateAccount(id string) error
 	Save(user *model.User) error
 }
@@ -38,6 +39,15 @@ func (r *userRepository) CheckUserExists(username string) (bool, error) {
 func (r *userRepository) GetUserByUsername(username string) (*model.User, error) {
 	var user model.User
 	err := r.db.First(&user, "username = ?", username).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (r *userRepository) GetUserByID(id string) (*model.User, error) {
+	var user model.User
+	err := r.db.First(&user, "id = ?", id).Error
 	if err != nil {
 		return nil, err
 	}
