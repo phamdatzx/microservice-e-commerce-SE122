@@ -27,10 +27,6 @@ const handleFormSent = () => {
     })
     .then((loginRes) => {
       if (loginRes.data.status === 200) {
-        ElNotification({
-          title: 'Login successful!',
-          type: 'success',
-        })
         localStorage.setItem('access_token', loginRes.data.data.access_token)
         emits('success')
       } else {
