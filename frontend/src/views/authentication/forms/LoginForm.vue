@@ -28,7 +28,7 @@ const handleFormSent = () => {
     .then((loginRes) => {
       if (loginRes.data.status === 200) {
         localStorage.setItem('access_token', loginRes.data.data.access_token)
-        emits('success')
+        emits('success', loginRes.data.data)
       } else {
         ElNotification({
           title: 'Login failed!',

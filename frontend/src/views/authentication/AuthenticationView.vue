@@ -10,9 +10,15 @@ const propsData = computed(() => route.meta)
 const formComponent = ref()
 const mainBtn = ref()
 
-const handleSuccess = () => {
-  if (route.path === '/login') {
-    router.push('/')
+const handleSuccess = (userData: any) => {
+  if (route.path === '/login' || route.path === '/') {
+    if (userData?.role === 'seller') {
+      router.push('/seller')
+    } else if (userData?.role === 'admin') {
+      router.push('/admin')
+    } else {
+      router.push('/')
+    }
   }
 }
 
@@ -54,9 +60,9 @@ watch(
                   :is="Component"
                   ref="formComponent"
                   @success="
-                    () => {
+                    (userData: any) => {
                       mainBtn.style.display = 'none'
-                      handleSuccess()
+                      handleSuccess(userData)
                     }
                   "
                 />
