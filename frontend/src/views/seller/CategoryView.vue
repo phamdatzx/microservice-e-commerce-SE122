@@ -39,7 +39,7 @@ onMounted(() => {
 const fetchCategories = () => {
   isLoading.value = true
   axios
-    .get(import.meta.env.VITE_GET_SELLER_CATEGORY_API_URL + '/' + userId + '/category')
+    .get(import.meta.env.VITE_BE_API_URL + '/product/public/seller/' + userId + '/category')
     .then((response) => {
       categoryData.value = response.data
     })
@@ -112,7 +112,7 @@ const handleAddCategory = () => {
   })
   axios
     .post(
-      import.meta.env.VITE_MANAGE_SELLER_CATEGORY_API_URL,
+      import.meta.env.VITE_BE_API_URL + '/product/seller-category',
       {
         name: ruleForm.category,
       },
@@ -151,7 +151,7 @@ const handleEditCategory = () => {
   })
   axios
     .put(
-      import.meta.env.VITE_MANAGE_SELLER_CATEGORY_API_URL + '/' + ruleForm.id,
+      import.meta.env.VITE_BE_API_URL + '/product/seller-category/' + ruleForm.id,
       {
         name: ruleForm.category,
       },
@@ -204,7 +204,7 @@ const handleDeleteCategory = (categoryId: string, categoryName: string) => {
   })
 
   axios
-    .delete(import.meta.env.VITE_MANAGE_SELLER_CATEGORY_API_URL + '/' + categoryId, {
+    .delete(import.meta.env.VITE_BE_API_URL + '/product/seller-category/' + categoryId, {
       headers: {
         Authorization: `Bearer ${token}`,
       },

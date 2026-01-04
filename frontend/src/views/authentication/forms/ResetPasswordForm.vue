@@ -7,7 +7,7 @@ import { useRoute } from 'vue-router'
 import { handlePasswordToggle } from '@/utils/handlePasswordToggle'
 import PasswordToggleBtn from '../components/PasswordToggleBtn.vue'
 
-const USER_API_URL = import.meta.env.VITE_USER_API_URL
+const USER_API_URL = import.meta.env.VITE_BE_API_URL + '/user/public'
 
 const route = useRoute()
 const token = route.query.token

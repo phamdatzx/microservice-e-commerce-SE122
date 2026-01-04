@@ -6,7 +6,7 @@ import { ref } from 'vue'
 import PasswordToggleBtn from '../components/PasswordToggleBtn.vue'
 import './assets/formStyle.css'
 
-const USER_API_URL = import.meta.env.VITE_USER_API_URL
+const USER_API_URL = import.meta.env.VITE_BE_API_URL + '/user/public'
 
 const name = ref('')
 const username = ref('')

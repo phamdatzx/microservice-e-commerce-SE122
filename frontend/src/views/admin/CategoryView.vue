@@ -44,7 +44,7 @@ const fetchCategories = () => {
   isLoading.value = true
   // Using seller API for demo, replacing with mock data for missing fields
   axios
-    .get(import.meta.env.VITE_GET_SELLER_CATEGORY_API_URL + '/' + userId.value + '/category')
+    .get(import.meta.env.VITE_BE_API_URL + '/product/public/seller/' + userId.value + '/category')
     .then((response) => {
       // Map response to AdminCategory with Mock Data
       categoryData.value = response.data.map((item: any, index: number) => ({

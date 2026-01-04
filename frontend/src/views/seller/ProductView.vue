@@ -102,8 +102,8 @@ const fetchProducts = () => {
   isLoading.value = true
   axios
     .get(
-      import.meta.env.VITE_GET_SELLER_PRODUCT_API_URL +
-        '/' +
+      import.meta.env.VITE_BE_API_URL +
+        '/product/public/products/seller/' +
         userId +
         `?sort_by=name&sort_direction=asc`,
     )
