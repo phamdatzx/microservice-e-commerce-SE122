@@ -32,7 +32,7 @@ const handleFormSent = () => {
           type: 'success',
         })
         localStorage.setItem('access_token', loginRes.data.data.access_token)
-        // window.location.href = '/'
+        emits('success')
       } else {
         ElNotification({
           title: 'Login failed!',
