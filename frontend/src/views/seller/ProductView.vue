@@ -193,7 +193,26 @@ const ruleForm = reactive<RuleForm>({
   variants: [],
 })
 
-const rules = reactive<FormRules<RuleForm>>({})
+const rules = reactive<FormRules<RuleForm>>({
+  name: [{ required: true, message: 'Product name is required', trigger: 'blur' }],
+  variants: [
+    {
+      validator: (rule: any, value: any, callback: any) => {
+        if (!value || value.length === 0) {
+          callback(new Error('Product must have at least one variant'))
+        } else {
+          const invalidPrice = value.some((v: any) => v.price <= 0)
+          if (invalidPrice) {
+            callback(new Error('All variant prices must be greater than 0'))
+          } else {
+            callback()
+          }
+        }
+      },
+      trigger: 'change',
+    },
+  ],
+})
 
 const submitForm = async (formEl: FormInstance | undefined) => {
   if (!formEl) return
@@ -1010,10 +1029,10 @@ const download = (images: ProductImage[], index: number) => {
 
           <div v-if="ruleForm.option_groups.length === 0" class="base-details-section">
             <div style="display: flex; gap: 20px">
-              <el-form-item label="Price" style="flex: 1">
+              <el-form-item label="Price" style="flex: 1" prop="variants">
                 <el-input-number
                   v-model="ruleForm.variants[0].price"
-                  :min="0"
+                  :min="1"
                   controls-position="right"
                   style="width: 100%"
                   size="large"
@@ -1051,65 +1070,67 @@ const download = (images: ProductImage[], index: number) => {
           >Product Variants</el-divider
         >
 
-        <el-table
-          v-if="ruleForm.option_groups.length > 0 && ruleForm.variants.length > 0"
-          :data="ruleForm.variants"
-          border
-          style="width: 100%; margin-top: 20px"
-        >
-          <el-table-column label="Image" width="100" align="center">
-            <template #default="{ row }">
-              <el-upload
-                class="option-image-upload"
-                v-model:file-list="row.images"
-                accept="image/png, image/jpeg, image/jpg"
-                :auto-upload="false"
-                list-type="picture-card"
-                :limit="1"
-                :on-preview="handlePictureCardPreview"
-                :on-change="(file: any) => handleVariantImageChange(file, row)"
-              >
-                <el-icon><Plus /></el-icon>
-              </el-upload>
-            </template>
-          </el-table-column>
+        <el-form-item prop="variants">
+          <el-table
+            v-if="ruleForm.option_groups.length > 0 && ruleForm.variants.length > 0"
+            :data="ruleForm.variants"
+            border
+            style="width: 100%; margin-top: 20px"
+          >
+            <el-table-column label="Image" width="100" align="center">
+              <template #default="{ row }">
+                <el-upload
+                  class="option-image-upload"
+                  v-model:file-list="row.images"
+                  accept="image/png, image/jpeg, image/jpg"
+                  :auto-upload="false"
+                  list-type="picture-card"
+                  :limit="1"
+                  :on-preview="handlePictureCardPreview"
+                  :on-change="(file: any) => handleVariantImageChange(file, row)"
+                >
+                  <el-icon><Plus /></el-icon>
+                </el-upload>
+              </template>
+            </el-table-column>
 
-          <el-table-column label="Variant" min-width="150">
-            <template #default="{ row }">
-              <div class="variant-info">
-                <span v-for="(val, key) in row.options" :key="key"> {{ key }}: {{ val }} </span>
-              </div>
-            </template>
-          </el-table-column>
+            <el-table-column label="Variant" min-width="150">
+              <template #default="{ row }">
+                <div class="variant-info">
+                  <span v-for="(val, key) in row.options" :key="key"> {{ key }}: {{ val }} </span>
+                </div>
+              </template>
+            </el-table-column>
 
-          <el-table-column label="Price" width="150">
-            <template #default="{ row }">
-              <el-input-number
-                v-model="row.price"
-                :min="0"
-                controls-position="right"
-                style="width: 100%"
-              />
-            </template>
-          </el-table-column>
+            <el-table-column label="Price" width="150">
+              <template #default="{ row }">
+                <el-input-number
+                  v-model="row.price"
+                  :min="1"
+                  controls-position="right"
+                  style="width: 100%"
+                />
+              </template>
+            </el-table-column>
 
-          <el-table-column label="Stock" width="120">
-            <template #default="{ row }">
-              <el-input-number
-                v-model="row.stock"
-                :min="0"
-                controls-position="right"
-                style="width: 100%"
-              />
-            </template>
-          </el-table-column>
+            <el-table-column label="Stock" width="120">
+              <template #default="{ row }">
+                <el-input-number
+                  v-model="row.stock"
+                  :min="0"
+                  controls-position="right"
+                  style="width: 100%"
+                />
+              </template>
+            </el-table-column>
 
-          <el-table-column label="SKU" width="180">
-            <template #default="{ row }">
-              <el-input v-model="row.sku" placeholder="SKU" />
-            </template>
-          </el-table-column>
-        </el-table>
+            <el-table-column label="SKU" width="180">
+              <template #default="{ row }">
+                <el-input v-model="row.sku" placeholder="SKU" />
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-form-item>
       </el-form>
 
       <template #footer>
