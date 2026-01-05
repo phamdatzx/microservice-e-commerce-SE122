@@ -35,7 +35,7 @@ func (c *SellerCategoryController) CreateSellerCategory(ctx *gin.Context) {
 	}
 
 	if err := c.service.CreateSellerCategory(&sellerCategory); err != nil {
-		ctx.Error(error.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to create seller category", err))
+		ctx.Error(err)
 		return
 	}
 
@@ -47,7 +47,7 @@ func (c *SellerCategoryController) GetSellerCategoryByID(ctx *gin.Context) {
 
 	sellerCategory, err := c.service.GetSellerCategoryByID(id)
 	if err != nil {
-		ctx.Error(error.NewAppErrorWithErr(http.StatusNotFound, "Seller category not found", err))
+		ctx.Error(err)
 		return
 	}
 
@@ -59,7 +59,7 @@ func (c *SellerCategoryController) GetAllSellerCategoriesBySellerID(ctx *gin.Con
 
 	sellerCategories, err := c.service.GetSellerCategoriesBySellerID(sellerID)
 	if err != nil {
-		ctx.Error(error.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to fetch seller categories", err))
+		ctx.Error(err)
 		return
 	}
 

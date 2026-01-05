@@ -36,7 +36,7 @@ func (c *CategoryController) CreateCategory(ctx *gin.Context) {
 	// Process in service layer
 	category, err := c.service.ProcessCategoryCreate(name, imageFile)
 	if err != nil {
-		ctx.Error(appError.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to create category", err))
+		ctx.Error(err)
 		return
 	}
 
@@ -48,7 +48,7 @@ func (c *CategoryController) GetCategoryByID(ctx *gin.Context) {
 
 	category, err := c.service.GetCategoryByID(id)
 	if err != nil {
-		ctx.Error(appError.NewAppErrorWithErr(http.StatusNotFound, "Category not found", err))
+		ctx.Error(err)
 		return
 	}
 
@@ -71,7 +71,7 @@ func (c *CategoryController) GetAllCategories(ctx *gin.Context) {
 	}
 	
 	if err != nil {
-		ctx.Error(appError.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to fetch categories", err))
+		ctx.Error(err)
 		return
 	}
 
@@ -94,7 +94,7 @@ func (c *CategoryController) UpdateCategory(ctx *gin.Context) {
 	// Process in service layer
 	category, err := c.service.ProcessCategoryUpdate(id, name, imageFile)
 	if err != nil {
-		ctx.Error(appError.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to update category", err))
+		ctx.Error(err)
 		return
 	}
 
@@ -105,7 +105,7 @@ func (c *CategoryController) DeleteCategory(ctx *gin.Context) {
 	id := ctx.Param("id")
 
 	if err := c.service.DeleteCategory(id); err != nil {
-		ctx.Error(appError.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to delete category", err))
+		ctx.Error(err)
 		return
 	}
 

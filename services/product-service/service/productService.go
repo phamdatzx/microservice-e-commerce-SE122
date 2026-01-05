@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"mime/multipart"
 	"product-service/dto"
+	appError "product-service/error"
 	"product-service/model"
 	"product-service/repository"
 	"product-service/utils"
@@ -96,7 +97,7 @@ func (s *productService) ProcessVariantImageUpload(productID string, fileMap map
 	// Get product to verify variants exist
 	product, err := s.repo.FindByID(productID)
 	if err != nil {
-		return nil, err
+		return nil, appError.NewAppErrorWithErr(404, "Error when retrieve product with id:"+productID, err)
 	}
 
 	variantUpdates := make(map[string]string)
@@ -224,4 +225,3 @@ func (s *productService) GetVariantsByIds(variantIDs []string) ([]dto.CartVarian
 
 	return result, nil
 }
-

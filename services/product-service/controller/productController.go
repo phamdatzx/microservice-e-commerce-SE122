@@ -33,7 +33,7 @@ func (c *ProductController) CreateProduct(ctx *gin.Context) {
 	}
 
 	if err := c.service.CreateProduct(&product); err != nil {
-		ctx.Error(error.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to create product", err))
+		ctx.Error(err)
 		return
 	}
 
@@ -45,7 +45,7 @@ func (c *ProductController) GetProductByID(ctx *gin.Context) {
 
 	product, err := c.service.GetProductByID(id)
 	if err != nil {
-		ctx.Error(error.NewAppErrorWithErr(http.StatusNotFound, "Product not found", err))
+		ctx.Error(err)
 		return
 	}
 
@@ -55,7 +55,7 @@ func (c *ProductController) GetProductByID(ctx *gin.Context) {
 func (c *ProductController) GetAllProducts(ctx *gin.Context) {
 	products, err := c.service.GetAllProducts()
 	if err != nil {
-		ctx.Error(error.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to fetch products", err))
+		ctx.Error(err)
 		return
 	}
 
@@ -79,7 +79,7 @@ func (c *ProductController) UpdateProduct(ctx *gin.Context) {
 	}
 
 	if err := c.service.UpdateProduct(&product); err != nil {
-		ctx.Error(error.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to update product", err))
+		ctx.Error(err)
 		return
 	}
 
@@ -90,7 +90,7 @@ func (c *ProductController) DeleteProduct(ctx *gin.Context) {
 	id := ctx.Param("id")
 
 	if err := c.service.DeleteProduct(id); err != nil {
-		ctx.Error(error.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to delete product", err))
+		ctx.Error(err)
 		return
 	}
 
@@ -117,7 +117,7 @@ func (c *ProductController) UploadProductImages(ctx *gin.Context) {
 	// Process upload in service layer
 	productImages, err := c.service.ProcessProductImageUpload(productID, files)
 	if err != nil {
-		ctx.Error(error.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to upload images", err))
+		ctx.Error(err)
 		return
 	}
 
@@ -145,7 +145,7 @@ func (c *ProductController) UploadVariantImages(ctx *gin.Context) {
 	// Process upload in service layer
 	uploadedVariants, err := c.service.ProcessVariantImageUpload(productID, form.File)
 	if err != nil {
-		ctx.Error(error.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to upload variant images", err))
+		ctx.Error(err)
 		return
 	}
 
@@ -176,7 +176,7 @@ func (c *ProductController) GetProductsBySeller(ctx *gin.Context) {
 	// Get products from service
 	response, err := c.service.GetProductsBySeller(sellerID, params)
 	if err != nil {
-		ctx.Error(error.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to fetch products", err))
+		ctx.Error(err)
 		return
 	}
 
@@ -194,7 +194,7 @@ func (c *ProductController) GetVariantsByIds(ctx *gin.Context) {
 	// Get variants from service
 	variants, err := c.service.GetVariantsByIds(request.VariantIDs)
 	if err != nil {
-		ctx.Error(error.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to fetch variants", err))
+		ctx.Error(err)
 		return
 	}
 
