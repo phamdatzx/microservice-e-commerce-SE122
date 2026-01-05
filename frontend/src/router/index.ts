@@ -74,7 +74,7 @@ const router = createRouter({
       component: CustomerHomeView,
     },
     {
-      path: '/product',
+      path: '/product/:id?',
       component: ProductDetailView,
     },
     {
