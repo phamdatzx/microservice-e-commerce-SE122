@@ -3,8 +3,10 @@ package dto
 import "product-service/model"
 
 type CartVariantDto struct {
-	ProductName string        `json:"product_name"`
-	Variant     model.Variant `json:"variant"`
+	ProductName       string        `json:"product_name"`
+	SellerID          string        `json:"seller_id"`
+	SellerCategoryIds []string      `json:"seller_category_ids"`
+	Variant           model.Variant `json:"variant"`
 }
 
 // GetVariantsByIdsRequest represents the request body for getting variants by IDs
