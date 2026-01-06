@@ -1,6 +1,10 @@
 package model
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type Order struct {
 	ID              string        `bson:"_id" json:"id"`
@@ -54,4 +58,19 @@ type OrderVoucher struct {
 	MinOrderValue          int      `bson:"min_order_value" json:"min_order_value"`
 	ApplyScope             string   `bson:"apply_scope" json:"apply_scope"`
 	ApplySellerCategoryIds []string `bson:"apply_seller_category_ids" json:"apply_seller_category_ids"`
+}
+
+func (o *Order) BeforeCreate() {
+	if o.ID == "" {
+		o.ID = uuid.New().String()
+	}
+	if o.CreatedAt.IsZero() {
+		o.CreatedAt = time.Now()
+	}
+	if o.UpdatedAt.IsZero() {
+		o.UpdatedAt = time.Now()
+	}
+	if o.Status == "" {
+		o.Status = "pending"
+	}
 }

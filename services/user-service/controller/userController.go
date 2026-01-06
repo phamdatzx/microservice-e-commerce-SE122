@@ -210,3 +210,21 @@ func (c *UserController) CheckUsernameExists(ctx *gin.Context) {
 	utils.SuccessResponse(ctx, 200, "Check username successfully", response)
 }
 
+func (c *UserController) GetUserByID(ctx *gin.Context) {
+	userId := ctx.Param("id")
+	if userId == "" {
+		ctx.Error(appError.NewAppError(400, "User ID is required"))
+		ctx.Abort()
+		return
+	}
+
+	response, err := c.service.GetUserByID(userId)
+	if err != nil {
+		_ = ctx.Error(err)
+		ctx.Abort()
+		return
+	}
+
+	utils.SuccessResponse(ctx, 200, "Get user successfully", response)
+}
+

@@ -16,6 +16,7 @@ type UserService interface {
 	ResetPassword(token string, request dto.ResetPasswordRequest) error
 	GetMyInfo(userId string) (dto.MyInfoResponse, error)
 	CheckUsernameExists(request dto.CheckUsernameRequest) (dto.CheckUsernameResponse, error)
+	GetUserByID(userId string) (dto.UserResponse, error)
 }
 
 type userService struct {
@@ -49,7 +50,11 @@ func (s *userService) RegisterUser(request dto.RegisterRequest) (dto.UserRespons
 	}
 
 	//map to dto
-	resultDto := dto.UserResponse{user.ID.String(), user.Username, user.Name}
+	resultDto := dto.UserResponse{
+		ID:       user.ID.String(),
+		Username: user.Username,
+		Name:     user.Name,
+	}
 
 	return resultDto, err
 }
@@ -145,5 +150,18 @@ func (s *userService) CheckUsernameExists(request dto.CheckUsernameRequest) (dto
 	}
 
 	return dto.CheckUsernameResponse{Exists: exists}, nil
+}
+
+func (s *userService) GetUserByID(userId string) (dto.UserResponse, error) {
+	user, err := s.repo.GetUserByID(userId)
+	if err != nil {
+		return dto.UserResponse{}, err
+	}
+
+	return dto.UserResponse{
+		ID:       user.ID.String(),
+		Username: user.Username,
+		Name:     user.Name,
+	}, nil
 }
 

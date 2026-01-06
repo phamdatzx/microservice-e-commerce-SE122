@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"order-service/client"
 	"order-service/config"
 	"order-service/controller"
 	"order-service/repository"
@@ -23,13 +24,18 @@ func main() {
 
 	//wiring dependencies
 	// Cart dependencies
-	cartRepo := repository.NewCartRepository(config.DB)
-	cartService := service.NewCartService(cartRepo)
-	cartController := controller.NewCartController(cartService)
+	// Initialize clients
+	productClient := client.NewProductServiceClient()
+	userClient := client.NewUserServiceClient()
 
-	// Order dependencies
+	// Initialize layers
+	cartRepo := repository.NewCartRepository(config.DB)
 	orderRepo := repository.NewOrderRepository(config.DB)
-	orderService := service.NewOrderService(orderRepo)
+
+	cartService := service.NewCartService(cartRepo, productClient)
+	orderService := service.NewOrderService(orderRepo, cartRepo, productClient, userClient)
+
+	cartController := controller.NewCartController(cartService)
 	orderController := controller.NewOrderController(orderService)
 
 	r := gin.Default()

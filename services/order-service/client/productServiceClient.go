@@ -88,3 +88,28 @@ func (c *ProductServiceClient) GetVariantsByIds(variantIDs []string) ([]dto.Prod
 	return response.Variants, nil
 }
 
+func (c *ProductServiceClient) GetVoucherByID(voucherID string) (*dto.VoucherResponse, error) {
+	url := fmt.Sprintf("%s/api/product/vouchers/%s", c.baseURL, voucherID)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to call product-service: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("product-service returned status %d", resp.StatusCode)
+	}
+
+	var response dto.VoucherResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return &response, nil
+}
+

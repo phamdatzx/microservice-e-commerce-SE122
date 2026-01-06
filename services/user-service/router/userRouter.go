@@ -18,6 +18,7 @@ func RegisterUserRoutes(rg *gin.RouterGroup, c controller.UserController) {
 		user.POST("/public/check-username", c.CheckUsernameExists)
 		user.GET("/test-private", c.TestPrivate)
 		user.GET("/my-info", c.GetMyInfo)
+		user.GET("/public/:id", c.GetUserByID)
 	}
 }
 

@@ -1,11 +1,14 @@
 package repository
 
 import (
+	"context"
+	"order-service/model"
+
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type OrderRepository interface {
-	// TODO: Add order repository methods
+	CreateOrder(order *model.Order) error
 }
 
 type orderRepository struct {
@@ -20,4 +23,8 @@ func NewOrderRepository(db *mongo.Database) OrderRepository {
 	}
 }
 
-// TODO: Implement order repository methods
+func (r *orderRepository) CreateOrder(order *model.Order) error {
+	order.BeforeCreate()
+	_, err := r.collection.InsertOne(context.Background(), order)
+	return err
+}

@@ -7,8 +7,8 @@ import (
 )
 
 func RegisterOrderRoutes(rg *gin.RouterGroup, c controller.OrderController) {
-	_ = rg.Group("")
+	order := rg.Group("/orders")
 	{
-		// TODO: Add order routes
+		order.POST("/checkout", c.Checkout)
 	}
 }

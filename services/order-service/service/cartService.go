@@ -21,10 +21,10 @@ type cartService struct {
 	productClient *client.ProductServiceClient
 }
 
-func NewCartService(cartRepo repository.CartRepository) CartService {
+func NewCartService(cartRepo repository.CartRepository, productClient *client.ProductServiceClient) CartService {
 	return &cartService{
 		repo:          cartRepo,
-		productClient: client.NewProductServiceClient(),
+		productClient: productClient,
 	}
 }
 
