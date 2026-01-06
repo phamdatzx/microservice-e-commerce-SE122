@@ -17,6 +17,7 @@ type User struct {
 	IsActive bool      `json:"is_active" gorm:"column:is_active;default:false"`
 	IsVerify bool      `json:"is_verify" gorm:"column:is_verify;default:false"`
 	IsBanned bool      `json:"is_banned" gorm:"column:is_banned;default:false"`
+	Addresses []Address `json:"addresses" gorm:"foreignKey:UserID"`
 }
 
 // Hook tự động sinh UUID trước khi tạo record
@@ -34,3 +35,4 @@ func NewUser(request dto.RegisterRequest) *User {
 		Role:     request.Role,
 	}
 }
+
