@@ -10,12 +10,18 @@ import (
 type CartItem struct {
 	ID        string    `bson:"_id" json:"id"`
 	UserID    string    `bson:"user_id" json:"user_id"`
-	SellerID  string    `bson:"seller_id" json:"seller_id"`
+	Seller    CartSeller `bson:"seller" json:"seller"`
 	Product   CartProduct `bson:"product" json:"product"`
 	Variant   CartVariant `bson:"variant" json:"variant"`
 	Quantity  int         `bson:"quantity" json:"quantity"`
 	CreatedAt time.Time   `bson:"created_at" json:"created_at"`
 	UpdatedAt time.Time   `bson:"updated_at" json:"updated_at"`
+}
+
+type CartSeller struct {
+	ID       string `bson:"id" json:"id"`
+	Name     string `bson:"name" json:"name"`
+	Username string `bson:"username" json:"username"`
 }
 
 type CartProduct struct {
@@ -57,7 +63,7 @@ func (c *CartItem) Validate() error {
 	if c.UserID == "" {
 		return &ValidationError{Field: "user_id", Message: "user_id is required"}
 	}
-	if c.SellerID == "" {
+	if c.Seller.ID == "" {
 		return &ValidationError{Field: "seller_id", Message: "seller_id is required"}
 	}
 	if c.Product.ID == "" {

@@ -32,7 +32,7 @@ func main() {
 	cartRepo := repository.NewCartRepository(config.DB)
 	orderRepo := repository.NewOrderRepository(config.DB)
 
-	cartService := service.NewCartService(cartRepo, productClient)
+	cartService := service.NewCartService(cartRepo, productClient, userClient)
 	orderService := service.NewOrderService(orderRepo, cartRepo, productClient, userClient)
 
 	cartController := controller.NewCartController(cartService)

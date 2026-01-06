@@ -20,14 +20,14 @@ type UpdateCartItemQuantityRequest struct {
 
 // CartItemResponse represents the response format for a cart item
 type CartItemResponse struct {
-	ID        string    `json:"id"`
-	UserID    string    `json:"user_id"`
-	SellerID  string    `json:"seller_id"`
-	ProductID string    `json:"product_id"`
-	VariantID string    `json:"variant_id"`
-	Quantity  int       `json:"quantity"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID        string           `json:"id"`
+	UserID    string           `json:"user_id"`
+	Seller    model.CartSeller `json:"seller"`
+	ProductID string           `json:"product_id"`
+	VariantID string           `json:"variant_id"`
+	Quantity  int              `json:"quantity"`
+	CreatedAt time.Time        `json:"created_at"`
+	UpdatedAt time.Time        `json:"updated_at"`
 }
 
 // ToCartItemResponse converts a CartItem model to CartItemResponse DTO
@@ -35,7 +35,7 @@ func ToCartItemResponse(item *model.CartItem) *CartItemResponse {
 	return &CartItemResponse{
 		ID:        item.ID,
 		UserID:    item.UserID,
-		SellerID:  item.SellerID,
+		Seller:    item.Seller,
 		ProductID: item.Product.ID,
 		VariantID: item.Variant.ID,
 		Quantity:  item.Quantity,

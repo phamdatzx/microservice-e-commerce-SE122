@@ -56,9 +56,9 @@ func (s *orderService) Checkout(userID string, request dto.CheckoutRequest) (*dt
 	}
 
 	// 2. Validate all items from same seller
-	sellerID := cartItems[0].SellerID
+	sellerID := cartItems[0].Seller.ID
 	for _, item := range cartItems {
-		if item.SellerID != sellerID {
+		if item.Seller.ID != sellerID {
 			return nil, appError.NewAppError(400, "all items must be from the same seller")
 		}
 	}

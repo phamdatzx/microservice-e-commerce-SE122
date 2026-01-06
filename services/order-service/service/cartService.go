@@ -19,12 +19,18 @@ type CartService interface {
 type cartService struct {
 	repo          repository.CartRepository
 	productClient *client.ProductServiceClient
+	userClient    *client.UserServiceClient
 }
 
-func NewCartService(cartRepo repository.CartRepository, productClient *client.ProductServiceClient) CartService {
+func NewCartService(
+	cartRepo repository.CartRepository,
+	productClient *client.ProductServiceClient,
+	userClient *client.UserServiceClient,
+) CartService {
 	return &cartService{
 		repo:          cartRepo,
 		productClient: productClient,
+		userClient:    userClient,
 	}
 }
 
@@ -68,10 +74,20 @@ func (s *cartService) AddCartItem(userID string, request dto.AddCartItemRequest)
 		return dto.ToCartItemResponse(existingItem), nil
 	}
 
+	// Fetch seller info
+	seller, err := s.userClient.GetUserByID(request.SellerID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get seller info: %w", err)
+	}
+
 	// If not exists, create new cart item
 	newItem := &model.CartItem{
-		UserID:   userID,
-		SellerID: request.SellerID,
+		UserID: userID,
+		Seller: model.CartSeller{
+			ID:       seller.ID,
+			Name:     seller.Name,
+			Username: seller.Username,
+		},
 		Product: model.CartProduct{
 			ID:                request.ProductID,
 			Name:              productVariants[0].ProductName,
@@ -191,7 +207,7 @@ func (s *cartService) GetCartItems(userID string) ([]dto.CartItemDetailDto, erro
 		cartItemDetail := dto.CartItemDetailDto{
 			ID:       item.ID,
 			UserID:   item.UserID,
-			SellerID: item.SellerID,
+			Seller:   item.Seller,
 			Product: dto.CartProductDto{
 				ID:                item.Product.ID,
 				Name:              item.Product.Name,

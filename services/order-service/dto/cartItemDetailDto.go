@@ -1,6 +1,9 @@
 package dto
 
-import "time"
+import (
+	"order-service/model"
+	"time"
+)
 
 // VariantDto represents variant details from product-service
 type VariantDto struct {
@@ -22,10 +25,10 @@ type ProductVariantDto struct {
 
 // CartItemDetailDto represents enriched cart item with product info
 type CartItemDetailDto struct {
-	ID        string     `json:"id"`
-	UserID    string     `json:"user_id"`
-	SellerID  string     `json:"seller_id"`
-	Product   CartProductDto `json:"product"`
+	ID        string           `json:"id"`
+	UserID    string           `json:"user_id"`
+	Seller    model.CartSeller `json:"seller"`
+	Product   CartProductDto   `json:"product"`
 	VariantID string     `json:"variant_id"`
 	Quantity  int        `json:"quantity"`
 	Variant   VariantDto `json:"variant"`
