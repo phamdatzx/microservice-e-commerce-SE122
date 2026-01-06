@@ -1,191 +1,125 @@
 <script setup lang="ts">
 import Header from '@/components/Header.vue'
 import type { CheckboxValueType } from 'element-plus'
-import { ref, useTemplateRef, watch } from 'vue'
+import { ref, useTemplateRef, watch, onMounted, computed } from 'vue'
 import CartSellerProductWrapper from './components/CartSellerProductWrapper.vue'
-import { Ticket } from '@element-plus/icons-vue'
+import { Ticket, Loading, ShoppingCart } from '@element-plus/icons-vue'
+import { ElNotification, ElMessageBox } from 'element-plus'
 
 import { Splide, SplideSlide } from '@splidejs/vue-splide'
+import axios from 'axios'
 
-export interface CartSeller {
-  sellerName: string
-  products: Product[]
+export interface VariantAPI {
+  id: string
+  sku: string
+  options: Record<string, string>
+  price: number
+  stock: number
+  image: string
+}
+
+export interface CartItemAPI {
+  id: string
+  user_id: string
+  seller_id: string
+  product_id: string
+  variant_id: string
+  quantity: number
+  product_name: string
+  variant: VariantAPI
+  created_at: string
+  updated_at: string
 }
 
 export interface Product {
-  id: number
+  id: string
   imageUrl: string
   productName: string
   productOption: string
   price: number
-  quantity?: number
-  isSoldOut?: boolean
+  quantity: number
   sellerName: string
+  sellerId: string
+  variantId: string
+  stock: number
+  isSoldOut?: boolean
 }
 
-const productList = [
-  {
-    imageUrl: '/src/assets/product-imgs/product1.png',
-    name: 'Laptop Dell 15 DC15250 71071928 (Core i5-1334U/16GB/512GB/Intel Graphics/15.6 inch FHD IPS/Win 11/Bạc) - Chính hãng',
-    price: 16090000,
-    rating: 5.0,
-    location: 'Ha Noi',
-    discount: 37,
-  },
-  {
-    imageUrl: '/src/assets/product-imgs/product1.png',
-    name: 'Laptop Dell 15 DC15250 71071928 (Core i5-1334U/16GB/512GB/Intel Graphics/15.6 inch FHD IPS/Win 11/Bạc) - Chính hãng',
-    price: 16090000,
-    rating: 5.0,
-    location: 'Ha Noi',
-    discount: 37,
-  },
-  {
-    imageUrl: '/src/assets/product-imgs/product1.png',
-    name: 'Laptop Dell 15 DC15250 71071928 (Core i5-1334U/16GB/512GB/Intel Graphics/15.6 inch FHD IPS/Win 11/Bạc) - Chính hãng',
-    price: 16090000,
-    rating: 5.0,
-    location: 'Ha Noi',
-    discount: 37,
-  },
-  {
-    imageUrl: '/src/assets/product-imgs/product1.png',
-    name: 'Laptop Dell 15 DC15250 71071928 (Core i5-1334U/16GB/512GB/Intel Graphics/15.6 inch FHD IPS/Win 11/Bạc) - Chính hãng',
-    price: 16090000,
-    rating: 5.0,
-    location: 'Ha Noi',
-    discount: 37,
-  },
-  {
-    imageUrl: '/src/assets/product-imgs/product1.png',
-    name: 'Laptop Dell 15 DC15250 71071928 (Core i5-1334U/16GB/512GB/Intel Graphics/15.6 inch FHD IPS/Win 11/Bạc) - Chính hãng',
-    price: 16090000,
-    rating: 5.0,
-    location: 'Ha Noi',
-    discount: 37,
-  },
-  {
-    imageUrl: '/src/assets/product-imgs/product1.png',
-    name: 'Laptop Dell 15 DC15250 71071928 (Core i5-1334U/16GB/512GB/Intel Graphics/15.6 inch FHD IPS/Win 11/Bạc) - Chính hãng',
-    price: 16090000,
-    rating: 5.0,
-    location: 'Ha Noi',
-    discount: 37,
-  },
-  {
-    imageUrl: '/src/assets/product-imgs/product1.png',
-    name: 'Laptop Dell 15 DC15250 71071928 (Core i5-1334U/16GB/512GB/Intel Graphics/15.6 inch FHD IPS/Win 11/Bạc) - Chính hãng',
-    price: 16090000,
-    rating: 5.0,
-    location: 'Ha Noi',
-    discount: 37,
-  },
-  {
-    imageUrl: '/src/assets/product-imgs/product1.png',
-    name: 'Laptop Dell 15 DC15250 71071928 (Core i5-1334U/16GB/512GB/Intel Graphics/15.6 inch FHD IPS/Win 11/Bạc) - Chính hãng',
-    price: 16090000,
-    rating: 5.0,
-    location: 'Ha Noi',
-    discount: 37,
-  },
-  {
-    imageUrl: '/src/assets/product-imgs/product1.png',
-    name: 'Laptop Dell 15 DC15250 71071928 (Core i5-1334U/16GB/512GB/Intel Graphics/15.6 inch FHD IPS/Win 11/Bạc) - Chính hãng',
-    price: 16090000,
-    rating: 5.0,
-    location: 'Ha Noi',
-    discount: 37,
-  },
-  {
-    imageUrl: '/src/assets/product-imgs/product1.png',
-    name: 'Laptop Dell 15 DC15250 71071928 (Core i5-1334U/16GB/512GB/Intel Graphics/15.6 inch FHD IPS/Win 11/Bạc) - Chính hãng',
-    price: 16090000,
-    rating: 5.0,
-    location: 'Ha Noi',
-    discount: 37,
-  },
-  {
-    imageUrl: '/src/assets/product-imgs/product1.png',
-    name: 'Laptop Dell 15 DC15250 71071928 (Core i5-1334U/16GB/512GB/Intel Graphics/15.6 inch FHD IPS/Win 11/Bạc) - Chính hãng',
-    price: 16090000,
-    rating: 5.0,
-    location: 'Ha Noi',
-    discount: 37,
-  },
-  {
-    imageUrl: '/src/assets/product-imgs/product1.png',
-    name: 'Laptop Dell 15 DC15250 71071928 (Core i5-1334U/16GB/512GB/Intel Graphics/15.6 inch FHD IPS/Win 11/Bạc) - Chính hãng',
-    price: 16090000,
-    rating: 5.0,
-    location: 'Ha Noi',
-    discount: 37,
-  },
-  {
-    imageUrl: '/src/assets/product-imgs/product1.png',
-    name: 'Laptop Dell 15 DC15250 71071928 (Core i5-1334U/16GB/512GB/Intel Graphics/15.6 inch FHD IPS/Win 11/Bạc) - Chính hãng',
-    price: 16090000,
-    rating: 5.0,
-    location: 'Ha Noi',
-    discount: 37,
-  },
-]
+export interface CartSeller {
+  sellerName: string
+  sellerId: string
+  products: Product[]
+}
+
+const productList = ref<any[]>([]) // Recently viewed
 
 const checkAll = ref(false)
 const checkedProducts = ref<Product[]>([])
 const CartSellerProductWrapperRefs = ref<InstanceType<typeof CartSellerProductWrapper>[]>([])
-const cartData: CartSeller[] = [
-  {
-    sellerName: 'LOVITO OFFICIAL STORE',
-    products: [
-      {
-        id: 1,
-        imageUrl: '/src/assets/product-imgs/product1.png',
-        productName:
-          'Lovito Áo Nỉ Thường Ngày Trơn Có Khóa Kéo Mùa Xuân Và Mùa Hè Dành Cho Nữ L102AD477',
-        productOption: 'Gray, XL',
-        price: 23.99,
-        quantity: 1,
-        sellerName: 'LOVITO OFFICIAL STORE',
+const cartData = ref<CartSeller[]>([])
+const isLoading = ref(false)
+
+const fetchCart = async () => {
+  const token = localStorage.getItem('access_token')
+  if (!token) return
+
+  isLoading.value = true
+  try {
+    const response = await axios.get('http://localhost:81/api/order/cart', {
+      headers: {
+        Authorization: `Bearer ${token}`,
       },
-      {
-        id: 2,
-        imageUrl: '/src/assets/product-imgs/product1.png',
-        productName:
-          'Lovito Áo Nỉ Thường Ngày Trơn Có Khóa Kéo Mùa Xuân Và Mùa Hè Dành Cho Nữ L102AD477',
-        productOption: 'Gray, XL',
-        price: 23.99,
-        quantity: 2,
-        sellerName: 'LOVITO OFFICIAL STORE',
-      },
-    ],
-  },
-  {
-    sellerName: 'LOVITO OFFICIAL STORE2',
-    products: [
-      {
-        id: 1,
-        imageUrl: '/src/assets/product-imgs/product1.png',
-        productName:
-          'Lovito Áo Nỉ Thường Ngày Trơn Có Khóa Kéo Mùa Xuân Và Mùa Hè Dành Cho Nữ L102AD477',
-        productOption: 'Gray, XL',
-        price: 23.99,
-        quantity: 1,
-        sellerName: 'LOVITO OFFICIAL STORE2',
-      },
-      {
-        id: 2,
-        imageUrl: '/src/assets/product-imgs/product1.png',
-        productName:
-          'Lovito Áo Nỉ Thường Ngày Trơn Có Khóa Kéo Mùa Xuân Và Mùa Hè Dành Cho Nữ L102AD477',
-        productOption: 'Gray, XL',
-        price: 23.99,
-        quantity: 2,
-        sellerName: 'LOVITO OFFICIAL STORE2',
-      },
-    ],
-  },
-]
-const allProducts = cartData.map((seller) => seller.products).flat()
+    })
+
+    const items: CartItemAPI[] = response.data.cart_items
+
+    // Group by seller_id
+    const grouped = items.reduce((acc: Record<string, CartSeller>, item) => {
+      if (!acc[item.seller_id]) {
+        acc[item.seller_id] = {
+          sellerId: item.seller_id,
+          sellerName: 'Official Store', // Using placeholder since API doesn't return name yet
+          products: [],
+        }
+      }
+
+      acc[item.seller_id].products.push({
+        id: item.id,
+        imageUrl: item.variant.image || 'https://placehold.co/100x100?text=No+Image',
+        productName: item.product_name,
+        productOption: Object.values(item.variant.options).join(', '),
+        price: item.variant.price,
+        quantity: item.quantity,
+        stock: item.variant.stock,
+        sellerName: 'Official Store',
+        sellerId: item.seller_id,
+        variantId: item.variant_id,
+      })
+
+      return acc
+    }, {})
+
+    cartData.value = Object.values(grouped)
+  } catch (error) {
+    console.error('Error fetching cart:', error)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const loadRecentlyViewed = () => {
+  const stored = localStorage.getItem('recently_viewed')
+  if (stored) {
+    productList.value = JSON.parse(stored)
+  }
+}
+
+const allProducts = computed(() => cartData.value.map((seller) => seller.products).flat())
+
+onMounted(() => {
+  fetchCart()
+  loadRecentlyViewed()
+})
 
 const handleCheckAll = () => {
   CartSellerProductWrapperRefs.value.forEach((ref) => {
@@ -200,7 +134,7 @@ const handleUncheckAll = () => {
 }
 
 const handleCheckAllChange = (val: CheckboxValueType) => {
-  checkedProducts.value = val ? allProducts : []
+  checkedProducts.value = val ? allProducts.value : []
 
   if (val) {
     handleCheckAll()
@@ -218,7 +152,101 @@ const handleCheckedProductsChange = (checkedSellerProducts: Product[], sellerNam
     checkedProducts.value.push(...checkedSellerProducts)
   }
 
-  checkAll.value = checkedProducts.value.length === allProducts.length
+  checkAll.value = checkedProducts.value.length === allProducts.value.length
+}
+
+const removeFromCart = async (cartItemId: string, showNotification = true) => {
+  const token = localStorage.getItem('access_token')
+  if (!token) return
+
+  if (showNotification) {
+    try {
+      await ElMessageBox.confirm(
+        'Are you sure you want to remove this item from your cart?',
+        'Confirm Remove',
+        {
+          confirmButtonText: 'Remove',
+          cancelButtonText: 'Cancel',
+          type: 'warning',
+        },
+      )
+    } catch (error) {
+      return // User cancelled
+    }
+  }
+
+  try {
+    await axios.delete(`http://localhost:81/api/order/cart/${cartItemId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+
+    // Remove from cartData
+    cartData.value = cartData.value
+      .map((seller) => ({
+        ...seller,
+        products: seller.products.filter((p) => p.id !== cartItemId),
+      }))
+      .filter((seller) => seller.products.length > 0)
+
+    // Remove from checkedProducts
+    checkedProducts.value = checkedProducts.value.filter((p) => p.id !== cartItemId)
+
+    if (showNotification) {
+      ElNotification({
+        title: 'Success',
+        message: 'Item removed from cart',
+        type: 'success',
+      })
+    }
+  } catch (error) {
+    console.error('Error removing from cart:', error)
+    if (showNotification) {
+      ElNotification({
+        title: 'Error',
+        message: 'Failed to remove item from cart',
+        type: 'error',
+      })
+    }
+  }
+}
+
+const handleFooterSelectAll = () => {
+  checkAll.value = !checkAll.value
+  handleCheckAllChange(checkAll.value)
+}
+
+const handleDeleteSelected = async () => {
+  if (checkedProducts.value.length === 0) return
+
+  try {
+    await ElMessageBox.confirm(
+      `Are you sure you want to delete ${checkedProducts.value.length} items?`,
+      'Confirm Delete',
+      {
+        confirmButtonText: 'Delete',
+        cancelButtonText: 'Cancel',
+        type: 'warning',
+      },
+    )
+
+    const idsToDelete = checkedProducts.value.map((p) => p.id)
+
+    // Using Promise.all to delete each item
+    // Note: If backend supports batch delete, it would be better to use that.
+    await Promise.all(idsToDelete.map((id) => removeFromCart(id, false)))
+
+    ElNotification({
+      title: 'Success',
+      message: `Successfully removed ${idsToDelete.length} items from cart.`,
+      type: 'success',
+    })
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('Error in bulk delete:', error)
+    }
+  }
 }
 </script>
 
@@ -251,13 +279,31 @@ const handleCheckedProductsChange = (checkedSellerProducts: Product[], sellerNam
       <h3 style="width: 139px; text-align: center">Operation</h3>
     </div>
 
-    <CartSellerProductWrapper
-      v-for="seller in cartData"
-      :key="seller.sellerName"
-      ref="CartSellerProductWrapperRefs"
-      :seller="seller"
-      @checked-products-change="handleCheckedProductsChange"
-    />
+    <div v-if="isLoading" style="padding: 100px; text-align: center">
+      <el-icon class="is-loading" size="40"><Loading /></el-icon>
+    </div>
+
+    <template v-else-if="cartData.length > 0">
+      <CartSellerProductWrapper
+        v-for="seller in cartData"
+        :key="seller.sellerId"
+        ref="CartSellerProductWrapperRefs"
+        :seller="seller"
+        @checked-products-change="handleCheckedProductsChange"
+        @delete-product="removeFromCart"
+      />
+    </template>
+
+    <div v-else style="padding: 100px; text-align: center; background: #fff" class="border-radius">
+      <el-icon size="64" style="margin-bottom: 20px; opacity: 0.2"><ShoppingCart /></el-icon>
+      <h3>Your shopping cart is empty</h3>
+      <p style="color: #999; margin: 12px 0 24px">
+        Adding items to your cart that you like to buy!
+      </p>
+      <el-button type="primary" color="var(--main-color)" size="large" @click="$router.push('/')">
+        Go Shopping Now
+      </el-button>
+    </div>
 
     <div
       class="border-radius"
@@ -271,8 +317,10 @@ const handleCheckedProductsChange = (checkedSellerProducts: Product[], sellerNam
       "
     >
       <div style="display: flex; padding-bottom: 12px">
-        <button class="btn">Select All ({{ allProducts.length }})</button>
-        <button class="btn">Delete</button>
+        <button class="btn" @click="handleFooterSelectAll">
+          {{ checkAll ? 'Unselect All' : 'Select All' }} ({{ allProducts.length }})
+        </button>
+        <button class="btn" @click="handleDeleteSelected">Delete</button>
         <button class="btn">Remove Unactive Products</button>
         <button class="btn">Add To Favorites</button>
       </div>
@@ -318,6 +366,7 @@ const handleCheckedProductsChange = (checkedSellerProducts: Product[], sellerNam
       </div>
 
       <Splide
+        v-if="productList.length"
         :options="{
           rewind: true,
           perPage: 5,
@@ -329,7 +378,7 @@ const handleCheckedProductsChange = (checkedSellerProducts: Product[], sellerNam
           },
         }"
       >
-        <SplideSlide v-for="item in productList" :key="item.name">
+        <SplideSlide v-for="item in productList" :key="item.id">
           <ProductItem
             :image-url="item.imageUrl"
             :name="item.name"
@@ -337,9 +386,14 @@ const handleCheckedProductsChange = (checkedSellerProducts: Product[], sellerNam
             :rating="item.rating"
             :location="item.location"
             :discount="item.discount"
+            :id="item.id"
           />
         </SplideSlide>
       </Splide>
+      <div v-else style="text-align: center; color: #999; padding: 40px">
+        <el-icon size="40" style="margin-bottom: 12px; opacity: 0.5"><ShoppingCart /></el-icon>
+        <p style="font-size: 14px">Your recently viewed list is empty.</p>
+      </div>
     </div>
   </div>
 </template>

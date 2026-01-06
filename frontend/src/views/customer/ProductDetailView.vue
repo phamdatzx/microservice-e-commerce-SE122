@@ -15,8 +15,9 @@ import HeartFilledIcon from '@/components/icons/HeartFilledIcon.vue'
 import ShippingIcon from '@/components/icons/ShippingIcon.vue'
 import UserComment from '../../components/UserComment.vue'
 import ProductItem from '@/components/ProductItem.vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
+import { ElNotification } from 'element-plus'
 
 interface ProductImage {
   id: string
@@ -62,9 +63,11 @@ interface Product {
 }
 
 const route = useRoute()
+const router = useRouter()
 const productId = ref(route.params.id as string)
 const product = ref<Product | null>(null)
 const isLoading = ref(true)
+const isAddingToCart = ref(false)
 const productList = ref<any[]>([]) // For related products
 const recentlyViewedProducts = ref<any[]>([])
 
@@ -273,6 +276,53 @@ watch(selectedVariant, (newVariant) => {
 const selectOption = (key: string, value: string) => {
   selectedOptions[key] = value
 }
+
+const addToCart = async () => {
+  if (!product.value || !selectedVariant.value) return
+
+  const token = localStorage.getItem('access_token')
+  if (!token) {
+    ElNotification({
+      title: 'Authentication Required',
+      message: 'Please login to add items to your cart.',
+      type: 'warning',
+    })
+    return
+  }
+
+  isAddingToCart.value = true
+  try {
+    await axios.post(
+      'http://localhost:81/api/order/cart',
+      {
+        seller_id: product.value.seller_id,
+        product_id: product.value.id,
+        variant_id: selectedVariant.value.id,
+        quantity: buyQuantity.value,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    )
+
+    ElNotification({
+      title: 'Success',
+      message: 'Product added to cart successfully!',
+      type: 'success',
+    })
+  } catch (error: any) {
+    console.error('Error adding to cart:', error)
+    ElNotification({
+      title: 'Error',
+      message: error.response?.data?.message || 'Failed to add product to cart.',
+      type: 'error',
+    })
+  } finally {
+    isAddingToCart.value = false
+  }
+}
 </script>
 
 <template>
@@ -436,7 +486,9 @@ const selectOption = (key: string, value: string) => {
               color="#1aba1a"
               size="large"
               :disabled="currentStock <= 0"
+              :loading="isAddingToCart"
               style="width: 100%; margin: 20px 0"
+              @click="addToCart"
             >
               <el-icon size="large" style="margin-right: 6px"><ShoppingCart /></el-icon>
               Add to Cart
