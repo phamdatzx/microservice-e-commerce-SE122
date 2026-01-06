@@ -12,6 +12,7 @@ type AppRouter struct {
 	ProductController        *controller.ProductController
 	CategoryController       *controller.CategoryController
 	SellerCategoryController *controller.SellerCategoryController
+	VoucherController        *controller.VoucherController
 }
 
 // SetupRouter builds the main Gin router and registers all module routes
@@ -33,6 +34,9 @@ func SetupRouter(engine *gin.Engine, appRouter *AppRouter) *gin.Engine {
 
 		// Seller Category routes
 		RegisterSellerCategoryRoutes(productGroup, *appRouter.SellerCategoryController)
+
+		// Voucher routes
+		RegisterVoucherRoutes(productGroup, appRouter.VoucherController)
 	}
 
 	return engine
