@@ -38,6 +38,11 @@ func main() {
 	sellerCategoryService := service.NewSellerCategoryService(sellerCategoryRepo)
 	sellerCategoryController := controller.NewSellerCategoryController(sellerCategoryService)
 
+	// Wiring dependencies - Voucher
+	voucherRepo := repository.NewVoucherRepository(config.DB)
+	voucherService := service.NewVoucherService(voucherRepo)
+	voucherController := controller.NewVoucherController(voucherService)
+
 	r := gin.Default()
 	r.Use(cors.Default())
 
@@ -46,6 +51,7 @@ func main() {
 		ProductController:        productController,
 		CategoryController:       categoryController,
 		SellerCategoryController: sellerCategoryController,
+		VoucherController:        voucherController,
 	})
 
 	r.Run(":8081") // chạy server ở port 8081 để tránh conflict với user-service

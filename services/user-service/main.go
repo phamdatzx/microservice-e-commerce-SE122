@@ -20,19 +20,25 @@ func main() {
 	config.ConnectDatabase()
 
 	// Auto migrate
-	config.DB.AutoMigrate(&model.User{})
+	config.DB.AutoMigrate(&model.User{}, &model.Address{})
 
 	//wiring dependencies
 	userRepo := repository.NewUserRepository(config.DB)
+	addressRepo := repository.NewAddressRepository(config.DB)
+
 	userService := service.NewUserService(userRepo)
+	addressService := service.NewAddressService(addressRepo)
+
 	userController := controller.NewUserController(userService)
+	addressController := controller.NewAddressController(addressService)
 
 	r := gin.Default()
 	//r.Use(cors.Default())
 
 	// Setup routes
 	router.SetupRouter(r, &router.AppRouter{
-		UserController: userController,
+		UserController:    userController,
+		AddressController: addressController,
 	})
 
 	r.Run(":8080") // chạy server ở port 8080

@@ -70,11 +70,23 @@ func (s *cartService) AddCartItem(userID string, request dto.AddCartItemRequest)
 
 	// If not exists, create new cart item
 	newItem := &model.CartItem{
-		UserID:    userID,
-		SellerID:  request.SellerID,
-		ProductID: request.ProductID,
-		VariantID: request.VariantID,
-		Quantity:  request.Quantity,
+		UserID:   userID,
+		SellerID: request.SellerID,
+		Product: model.CartProduct{
+			ID:                request.ProductID,
+			Name:              productVariants[0].ProductName,
+			SellerID:          productVariants[0].SellerID,
+			SellerCategoryIDs: productVariants[0].SellerCategoryIds,
+		},
+		Variant: model.CartVariant{
+			ID:      request.VariantID,
+			SKU:     productVariants[0].Variant.SKU,
+			Options: productVariants[0].Variant.Options,
+			Price:   productVariants[0].Variant.Price,
+			Stock:   productVariants[0].Variant.Stock,
+			Image:   productVariants[0].Variant.Image,
+		},
+		Quantity: request.Quantity,
 	}
 
 	// Validate the cart item
@@ -155,7 +167,7 @@ func (s *cartService) GetCartItems(userID string) ([]dto.CartItemDetailDto, erro
 	// Extract variant IDs
 	variantIDs := make([]string, len(cartItems))
 	for i, item := range cartItems {
-		variantIDs[i] = item.VariantID
+		variantIDs[i] = item.Variant.ID
 	}
 
 	// Get variant details from product-service
@@ -173,15 +185,20 @@ func (s *cartService) GetCartItems(userID string) ([]dto.CartItemDetailDto, erro
 	// Build enriched cart item details
 	result := make([]dto.CartItemDetailDto, 0, len(cartItems))
 	for _, item := range cartItems {
-		productVariant, exists := variantMap[item.VariantID]
-		
+		productVariant, exists := variantMap[item.Variant.ID]
+
 		// Create cart item detail
 		cartItemDetail := dto.CartItemDetailDto{
-			ID:        item.ID,
-			UserID:    item.UserID,
-			SellerID:  item.SellerID,
-			ProductID: item.ProductID,
-			VariantID: item.VariantID,
+			ID:       item.ID,
+			UserID:   item.UserID,
+			SellerID: item.SellerID,
+			Product: dto.CartProductDto{
+				ID:                item.Product.ID,
+				Name:              item.Product.Name,
+				SellerID:          item.Product.SellerID,
+				SellerCategoryIDs: item.Product.SellerCategoryIDs,
+			},
+			VariantID: item.Variant.ID,
 			Quantity:  item.Quantity,
 			CreatedAt: item.CreatedAt,
 			UpdatedAt: item.UpdatedAt,
@@ -189,7 +206,6 @@ func (s *cartService) GetCartItems(userID string) ([]dto.CartItemDetailDto, erro
 
 		// Add product info if available
 		if exists {
-			cartItemDetail.ProductName = productVariant.ProductName
 			cartItemDetail.Variant = productVariant.Variant
 		}
 

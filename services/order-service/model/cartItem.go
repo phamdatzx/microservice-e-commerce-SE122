@@ -11,11 +11,27 @@ type CartItem struct {
 	ID        string    `bson:"_id" json:"id"`
 	UserID    string    `bson:"user_id" json:"user_id"`
 	SellerID  string    `bson:"seller_id" json:"seller_id"`
-	ProductID string    `bson:"product_id" json:"product_id"`
-	VariantID string    `bson:"variant_id" json:"variant_id"`
-	Quantity  int       `bson:"quantity" json:"quantity"`
-	CreatedAt time.Time `bson:"created_at" json:"created_at"`
-	UpdatedAt time.Time `bson:"updated_at" json:"updated_at"`
+	Product   CartProduct `bson:"product" json:"product"`
+	Variant   CartVariant `bson:"variant" json:"variant"`
+	Quantity  int         `bson:"quantity" json:"quantity"`
+	CreatedAt time.Time   `bson:"created_at" json:"created_at"`
+	UpdatedAt time.Time   `bson:"updated_at" json:"updated_at"`
+}
+
+type CartProduct struct {
+	ID                string   `bson:"id" json:"id"`
+	Name              string   `bson:"name" json:"name"`
+	SellerID          string   `bson:"seller_id" json:"seller_id"`
+	SellerCategoryIDs []string `bson:"seller_category_ids" json:"seller_category_ids"`
+}
+
+type CartVariant struct {
+	ID      string            `bson:"id" json:"id"`
+	SKU     string            `bson:"sku" json:"sku"`
+	Options map[string]string `bson:"options" json:"options"`
+	Price   int               `bson:"price" json:"price"`
+	Stock   int               `bson:"stock" json:"stock"`
+	Image   string            `bson:"image" json:"image"`
 }
 
 // BeforeCreate generates a new UUID for the ID field if not set and initializes timestamps
@@ -44,10 +60,10 @@ func (c *CartItem) Validate() error {
 	if c.SellerID == "" {
 		return &ValidationError{Field: "seller_id", Message: "seller_id is required"}
 	}
-	if c.ProductID == "" {
+	if c.Product.ID == "" {
 		return &ValidationError{Field: "product_id", Message: "product_id is required"}
 	}
-	if c.VariantID == "" {
+	if c.Variant.ID == "" {
 		return &ValidationError{Field: "variant_id", Message: "variant_id is required"}
 	}
 	if c.Quantity <= 0 {

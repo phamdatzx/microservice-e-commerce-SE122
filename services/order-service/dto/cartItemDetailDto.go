@@ -14,22 +14,30 @@ type VariantDto struct {
 
 // ProductVariantDto mirrors product-service's CartVariantDto
 type ProductVariantDto struct {
-	ProductName string     `json:"product_name"`
-	Variant     VariantDto `json:"variant"`
+	ProductName       string     `json:"product_name"`
+	SellerID          string     `json:"seller_id"`
+	SellerCategoryIds []string   `json:"seller_category_ids"`
+	Variant           VariantDto `json:"variant"`
 }
 
 // CartItemDetailDto represents enriched cart item with product info
 type CartItemDetailDto struct {
-	ID          string    `json:"id"`
-	UserID      string    `json:"user_id"`
-	SellerID    string    `json:"seller_id"`
-	ProductID   string    `json:"product_id"`
-	VariantID   string    `json:"variant_id"`
-	Quantity    int       `json:"quantity"`
-	ProductName string    `json:"product_name"`
-	Variant     VariantDto `json:"variant"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID        string     `json:"id"`
+	UserID    string     `json:"user_id"`
+	SellerID  string     `json:"seller_id"`
+	Product   CartProductDto `json:"product"`
+	VariantID string     `json:"variant_id"`
+	Quantity  int        `json:"quantity"`
+	Variant   VariantDto `json:"variant"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
+}
+
+type CartProductDto struct {
+	ID                string   `json:"id"`
+	Name              string   `json:"name"`
+	SellerID          string   `json:"seller_id"`
+	SellerCategoryIDs []string `json:"seller_category_ids"`
 }
 
 // GetCartItemsResponse represents the response for getting cart items

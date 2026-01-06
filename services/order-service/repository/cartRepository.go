@@ -37,7 +37,7 @@ func (r *cartRepository) FindCartItemByUserAndVariant(userID, variantID string) 
 
 	filter := bson.M{
 		"user_id":    userID,
-		"variant_id": variantID,
+		"variant.id": variantID,
 	}
 
 	err := r.collection.FindOne(ctx, filter).Decode(&cartItem)
