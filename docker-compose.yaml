@@ -3,7 +3,7 @@ version: "3.9"
 services:
   # Traefik reverse proxy
   traefik:
-    image: traefik:v2.10
+    image: traefik:v3.6.2
     container_name: traefik
     command:
       # Enable Docker provider
