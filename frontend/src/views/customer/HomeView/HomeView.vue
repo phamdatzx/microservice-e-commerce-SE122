@@ -4,7 +4,8 @@ import ProductItem from '@/components/ProductItem.vue'
 
 import { Splide, SplideSlide } from '@splidejs/vue-splide'
 import '@splidejs/vue-splide/css'
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { ShoppingCart } from '@element-plus/icons-vue'
 import CategoryItem from './components/CategoryItem.vue'
 
 const categories = [
@@ -203,6 +204,19 @@ const productList = [
   },
 ]
 
+const recentlyViewedProducts = ref<any[]>([])
+
+const loadRecentlyViewed = () => {
+  const stored = localStorage.getItem('recently_viewed')
+  if (stored) {
+    recentlyViewedProducts.value = JSON.parse(stored)
+  }
+}
+
+onMounted(() => {
+  loadRecentlyViewed()
+})
+
 const activeTab = ref('best-seller')
 </script>
 
@@ -315,6 +329,7 @@ const activeTab = ref('best-seller')
       </div>
 
       <Splide
+        v-if="recentlyViewedProducts.length"
         :options="{
           rewind: true,
           perPage: 5,
@@ -326,7 +341,7 @@ const activeTab = ref('best-seller')
           },
         }"
       >
-        <SplideSlide v-for="item in productList" :key="item.name">
+        <SplideSlide v-for="item in recentlyViewedProducts" :key="item.id">
           <ProductItem
             :image-url="item.imageUrl"
             :name="item.name"
@@ -334,9 +349,17 @@ const activeTab = ref('best-seller')
             :rating="item.rating"
             :location="item.location"
             :discount="item.discount"
+            :id="item.id"
           />
         </SplideSlide>
       </Splide>
+      <div v-else style="text-align: center; color: #999; padding: 40px">
+        <el-icon size="40" style="margin-bottom: 12px; opacity: 0.5"><ShoppingCart /></el-icon>
+        <p style="font-size: 14px">Your recently viewed list is empty.</p>
+        <p style="font-size: 13px; color: #bbb">
+          Products you visit will appear here for easy access.
+        </p>
+      </div>
     </div>
   </main>
 </template>

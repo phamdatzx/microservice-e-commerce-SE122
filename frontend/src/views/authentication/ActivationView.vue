@@ -3,7 +3,7 @@ import axios from 'axios'
 import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 
-const USER_API_URL = import.meta.env.VITE_USER_API_URL
+const USER_API_URL = import.meta.env.VITE_BE_API_URL + '/user/public'
 
 const route = useRoute()
 const token = route.query.token

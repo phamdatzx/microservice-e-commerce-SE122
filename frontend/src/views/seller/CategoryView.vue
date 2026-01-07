@@ -14,13 +14,11 @@ interface SellerCategory {
   id: string
   seller_id?: string
   name: string
-  productCount: number
+  product_count: number
 }
 
-const userId = ref('7d27d61d-8cb3-4ef9-a9ff-0a92f217855b')
-// const token = localStorage.getItem('access_token')
-const token =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjY4Mjc1MDYsImlhdCI6MTc2Njc0MTEwNiwicm9sZSI6InNlbGxlciIsInVzZXJJZCI6IjdkMjdkNjFkLThjYjMtNGVmOS1hOWZmLTBhOTJmMjE3ODU1YiIsInVzZXJuYW1lIjoidGVzdDEifQ.cCs5gwsDkDVZZrnHHmeTFGmuleu9RR2Ieke8pYaRH_s'
+const userId = localStorage.getItem('user_id')
+const token = localStorage.getItem('access_token')
 
 const categoryData = ref<SellerCategory[]>([])
 const dialogVisible = ref(false)
@@ -41,19 +39,16 @@ onMounted(() => {
 const fetchCategories = () => {
   isLoading.value = true
   axios
-    .get(import.meta.env.VITE_GET_SELLER_CATEGORY_API_URL + '/' + userId.value + '/category')
+    .get(import.meta.env.VITE_BE_API_URL + '/product/public/seller/' + userId + '/category')
     .then((response) => {
-      // Map response to SellerCategory with Mock Data for missing fields to match Layout
-      categoryData.value = response.data.map((item: any, index: number) => ({
-        id: item.id,
-        seller_id: item.seller_id,
-        name: item.name,
-        // Mock Product Count
-        productCount: Math.floor(Math.random() * 50) + 1,
-      }))
+      categoryData.value = response.data
     })
     .catch((error) => {
-      console.error(error)
+      ElNotification({
+        title: 'Error!',
+        message: 'Fetch categories failed: ' + error.message,
+        type: 'error',
+      })
     })
     .finally(() => {
       isLoading.value = false
@@ -82,8 +77,6 @@ const handleSizeChange = (val: number) => {
 const handleCurrentChange = (val: number) => {
   currentPage.value = val
 }
-// #endregion
-
 // #endregion
 
 // #region Modal
@@ -117,7 +110,7 @@ const handleAddCategory = () => {
   })
   axios
     .post(
-      import.meta.env.VITE_MANAGE_SELLER_CATEGORY_API_URL,
+      import.meta.env.VITE_BE_API_URL + '/product/seller-category',
       {
         name: ruleForm.category,
       },
@@ -156,7 +149,7 @@ const handleEditCategory = () => {
   })
   axios
     .put(
-      import.meta.env.VITE_MANAGE_SELLER_CATEGORY_API_URL + '/' + ruleForm.id,
+      import.meta.env.VITE_BE_API_URL + '/product/seller-category/' + ruleForm.id,
       {
         name: ruleForm.category,
       },
@@ -189,7 +182,7 @@ const handleEditCategory = () => {
 
 const handleDeleteBtnClick = (row: SellerCategory) => {
   ElMessageBox.confirm(
-    `Delete category "${row.name}" with ${row.productCount} products?`,
+    `Delete category "${row.name}" with ${row.product_count} products?`,
     'Confirm Delete',
     {
       type: 'warning',
@@ -209,7 +202,7 @@ const handleDeleteCategory = (categoryId: string, categoryName: string) => {
   })
 
   axios
-    .delete(import.meta.env.VITE_MANAGE_SELLER_CATEGORY_API_URL + '/' + categoryId, {
+    .delete(import.meta.env.VITE_BE_API_URL + '/product/seller-category/' + categoryId, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -293,46 +286,44 @@ const clearRuleForm = () => {
           style="width: 240px"
           clearable
         />
-        <el-button
-          type="primary"
-          size="large"
-          :icon="Plus"
-          color="#1aae51"
-          @click="openModal('add')"
-        >
+        <el-button size="large" :icon="Plus" color="var(--main-color)" @click="openModal('add')">
           Add New Category
         </el-button>
       </div>
     </div>
 
-    <el-table v-loading="isLoading" :data="paginatedData" border style="width: 100%">
-      <el-table-column type="index" label="#" width="60" align="center" />
+    <div class="table-container">
+      <el-table
+        v-loading="isLoading"
+        :data="paginatedData"
+        border
+        style="width: 100%; height: 100%"
+      >
+        <el-table-column type="index" label="#" width="60" align="center" />
 
-      <el-table-column prop="name" label="Category Name" min-width="200" />
+        <el-table-column prop="name" label="Category Name" min-width="200" />
 
-      <el-table-column prop="productCount" label="Products" width="120" align="center" sortable>
-        <template #default="{ row }">
-          <el-tag type="info" effect="plain" round>{{ row.productCount }}</el-tag>
-        </template>
-      </el-table-column>
+        <el-table-column prop="product_count" label="Products" width="120" align="center" sortable>
+          <template #default="{ row }">
+            <el-tag type="info" effect="plain" round>{{ row.product_count }}</el-tag>
+          </template>
+        </el-table-column>
 
-      <el-table-column align="center" label="Actions" width="180">
-        <template #default="{ row }">
-          <el-button type="primary" link :icon="Edit" @click="openModal('edit', row)"
-            >Edit</el-button
-          >
-          <el-button type="danger" link :icon="Delete" @click="handleDeleteBtnClick(row)"
-            >Delete</el-button
-          >
-        </template>
-      </el-table-column>
-    </el-table>
+        <el-table-column align="center" label="Operations" width="140">
+          <template #default="{ row }">
+            <el-button type="primary" :icon="Edit" @click="openModal('edit', row)" />
+            <el-button type="danger" :icon="Delete" @click="handleDeleteBtnClick(row)" />
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
 
     <div class="pagination-container">
       <el-pagination
         v-model:current-page="currentPage"
         v-model:page-size="pageSize"
         :page-sizes="[10, 20, 50, 100]"
+        size="large"
         layout="total, sizes, prev, pager, next, jumper"
         :total="filteredData.length"
         @size-change="handleSizeChange"
@@ -382,6 +373,11 @@ const clearRuleForm = () => {
   background: white;
   border-radius: 8px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .toolbar {
@@ -389,6 +385,7 @@ const clearRuleForm = () => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  flex-shrink: 0;
 }
 
 .toolbar h2 {
@@ -397,9 +394,15 @@ const clearRuleForm = () => {
   color: #1e293b;
 }
 
+.table-container {
+  flex: 1;
+  overflow: hidden;
+}
+
 .pagination-container {
   margin-top: 20px;
   display: flex;
   justify-content: flex-end;
+  flex-shrink: 0;
 }
 </style>

@@ -8,7 +8,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   product: () => ({
-    id: -1,
+    id: '',
     imageUrl: '',
     productName: '',
     productOption: '',
@@ -16,10 +16,17 @@ const props = withDefaults(defineProps<Props>(), {
     quantity: 0,
     isSoldOut: false,
     sellerName: '',
+    sellerId: '',
+    variantId: '',
+    stock: 0,
   }),
 })
 
-const quantity = defineModel<number>()
+const emits = defineEmits(['delete'])
+
+const handleDelete = () => {
+  emits('delete', props.product.id)
+}
 </script>
 
 <template>
@@ -48,7 +55,7 @@ const quantity = defineModel<number>()
       <el-input-number
         v-model="props.product.quantity"
         :min="1"
-        :max="10"
+        :max="props.product.stock"
         size="large"
         style="width: 140px"
       />
@@ -57,7 +64,7 @@ const quantity = defineModel<number>()
       >{{ props.product.price * (props.product.quantity ?? 0) }}$</span
     >
     <span style="width: 139px; text-align: center">
-      <el-button type="danger" plain :icon="Delete" />
+      <el-button type="danger" plain :icon="Delete" @click="handleDelete" />
     </span>
   </div>
 </template>

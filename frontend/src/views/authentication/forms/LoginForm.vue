@@ -6,7 +6,7 @@ import { ref } from 'vue'
 import PasswordToggleBtn from '../components/PasswordToggleBtn.vue'
 import './assets/formStyle.css'
 
-const USER_API_URL = import.meta.env.VITE_USER_API_URL
+const USER_API_URL = import.meta.env.VITE_BE_API_URL + '/user/public'
 
 const username = ref('')
 const password = ref('')
@@ -27,12 +27,11 @@ const handleFormSent = () => {
     })
     .then((loginRes) => {
       if (loginRes.data.status === 200) {
-        ElNotification({
-          title: 'Login successful!',
-          type: 'success',
-        })
         localStorage.setItem('access_token', loginRes.data.data.access_token)
-        // window.location.href = '/'
+        if (loginRes.data.data.role === 'seller') {
+          localStorage.setItem('user_id', loginRes.data.data.user_id)
+        }
+        emits('success', loginRes.data.data)
       } else {
         ElNotification({
           title: 'Login failed!',
