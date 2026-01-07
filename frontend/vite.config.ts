@@ -11,7 +11,13 @@ import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 // https://vite.dev/config/
 export default defineConfig({
   server: {
-    port: 24000, // Or any other suitable port
+    port: 24000,
+    proxy: {
+      '/address-kit': {
+        target: 'https://production.cas.so',
+        changeOrigin: true,
+      },
+    },
   },
   plugins: [
     vue(),

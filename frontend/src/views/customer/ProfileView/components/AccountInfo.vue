@@ -53,7 +53,11 @@ const handleSave = () => {
           </el-form-item>
 
           <el-form-item>
-            <el-button type="success" size="large" class="save-btn" @click="handleSave"
+            <el-button
+              type="primary"
+              size="large"
+              @click="handleSave"
+              style="padding: 22px 40px; font-size: 16px"
               >SAVE</el-button
             >
           </el-form-item>
@@ -108,22 +112,6 @@ const handleSave = () => {
 
 :deep(.el-input__inner) {
   height: 48px;
-}
-
-.save-btn {
-  background-color: var(--main-color);
-  border-color: var(--main-color);
-  padding: 0 40px;
-  height: 50px;
-  font-size: 16px;
-  font-weight: 700;
-  border-radius: 8px;
-  margin-top: 20px;
-}
-
-.save-btn:hover {
-  background-color: #16a34a;
-  border-color: #16a34a;
 }
 
 .avatar-upload-container {

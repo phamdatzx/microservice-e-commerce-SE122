@@ -148,12 +148,12 @@ const orderTabs = [
           </div>
           <div class="order-actions">
             <template v-if="order.status === 'TO_RECEIVE'">
-              <el-button type="success" size="large">Order Received</el-button>
+              <el-button type="primary" size="large">Order Received</el-button>
               <el-button size="large">Return/Refund</el-button>
               <el-button size="large">Contact Seller</el-button>
             </template>
             <template v-else-if="order.status === 'COMPLETED'">
-              <el-button type="success" size="large">Buy Again</el-button>
+              <el-button type="primary" size="large">Buy Again</el-button>
               <el-button size="large">Rate</el-button>
               <el-button size="large">Contact Seller</el-button>
             </template>

@@ -152,6 +152,7 @@ const menuItems = [
 .content-area {
   background-color: #fff;
   padding: 20px;
+  margin-bottom: 40px;
 }
 
 .section-title {
