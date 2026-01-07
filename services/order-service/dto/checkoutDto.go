@@ -1,14 +1,21 @@
 package dto
 
 type CheckoutRequest struct {
-	CartItemIDs     []string `json:"cart_item_ids" binding:"required,min=1"`
-	VoucherID       string   `json:"voucher_id"`
-	ShippingAddress struct {
-		Name    string `json:"name" binding:"required"`
-		Phone   string `json:"phone" binding:"required"`
-		Address string `json:"address" binding:"required"`
-		City    string `json:"city" binding:"required"`
-	} `json:"shipping_address" binding:"required"`
+	CartItemIDs     []string           `json:"cart_item_ids" binding:"required,min=1"`
+	VoucherID       string             `json:"voucher_id"`
+	ShippingAddress ShippingAddressDto `json:"shipping_address" binding:"required"`
+}
+
+type ShippingAddressDto struct {
+	FullName    string  `json:"full_name" binding:"required"`
+	Phone       string  `json:"phone" binding:"required"`
+	AddressLine string  `json:"address_line" binding:"required"`
+	Ward        string  `json:"ward"`
+	District    string  `json:"district"`
+	Province    string  `json:"province" binding:"required"`
+	Country     string  `json:"country" binding:"required"`
+	Latitude    float64 `json:"latitude"`
+	Longitude   float64 `json:"longitude"`
 }
 
 type CheckoutResponse struct {

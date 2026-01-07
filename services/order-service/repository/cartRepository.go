@@ -16,6 +16,7 @@ type CartRepository interface {
 	FindCartItemByID(id string) (*model.CartItem, error)
 	DeleteCartItem(id string) error
 	FindCartItemsByUser(userID string) ([]model.CartItem, error)
+	GetCartItemCount(userID string) (int64, error)
 }
 
 type cartRepository struct {
@@ -120,4 +121,43 @@ func (r *cartRepository) FindCartItemsByUser(userID string) ([]model.CartItem, e
 	}
 
 	return cartItems, nil
+}
+
+func (r *cartRepository) GetCartItemCount(userID string) (int64, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	pipeline := mongo.Pipeline{
+		{{Key: "$match", Value: bson.D{{Key: "user_id", Value: userID}}}},
+		{{Key: "$group", Value: bson.D{
+			{Key: "_id", Value: nil},
+			{Key: "total", Value: bson.D{{Key: "$sum", Value: "$quantity"}}},
+		}}},
+	}
+
+	cursor, err := r.collection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return 0, err
+	}
+	defer cursor.Close(ctx)
+
+	var result []bson.M
+	if err = cursor.All(ctx, &result); err != nil {
+		return 0, err
+	}
+
+	if len(result) > 0 {
+		// Extract total from result
+		total, ok := result[0]["total"].(int32)
+		if ok {
+			return int64(total), nil
+		}
+		// Handle if it's int64 or other number type just in case, though mongo driver usually decodes to int32/int64
+		total64, ok := result[0]["total"].(int64)
+		if ok {
+			return total64, nil
+		}
+	}
+
+	return 0, nil
 }

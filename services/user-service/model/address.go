@@ -17,6 +17,7 @@ type Address struct {
 	Country     string    `json:"country" gorm:"column:country"`
 	Latitude    float64   `json:"latitude" gorm:"column:latitude"`
 	Longitude   float64   `json:"longitude" gorm:"column:longitude"`
+	Default     bool      `json:"default" gorm:"column:is_default;default:false"`
 }
 
 func (a *Address) BeforeCreate(tx *gorm.DB) (err error) {

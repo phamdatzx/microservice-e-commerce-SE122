@@ -12,6 +12,7 @@ type AddressRequest struct {
 	Country     string  `json:"country" validate:"required"`
 	Latitude    float64 `json:"latitude"`
 	Longitude   float64 `json:"longitude"`
+	Default     bool    `json:"default"`
 }
 
 type AddressResponse struct {
@@ -26,4 +27,5 @@ type AddressResponse struct {
 	Country     string    `json:"country"`
 	Latitude    float64   `json:"latitude"`
 	Longitude   float64   `json:"longitude"`
+	Default     bool      `json:"default"`
 }

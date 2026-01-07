@@ -12,6 +12,7 @@ func RegisterCartRoutes(rg *gin.RouterGroup, c controller.CartController) {
 	{
 		// Protected route - require customer authentication
 		cart.GET("/cart", middleware.RequireCustomer(), c.GetCartItems)
+		cart.GET("/cart/count", middleware.RequireCustomer(), c.GetCartItemCount)
 		cart.POST("/cart", middleware.RequireCustomer(), c.AddCartItem)
 		cart.PUT("/cart/:id", middleware.RequireCustomer(), c.UpdateCartItemQuantity)
 		cart.DELETE("/cart/:id", middleware.RequireCustomer(), c.DeleteCartItem)
