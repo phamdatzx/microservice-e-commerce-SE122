@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { Plus, Edit, Delete, Check } from '@element-plus/icons-vue'
+import { ref, onMounted, nextTick, watch } from 'vue'
+import { Plus, Edit, Delete, Check, Search } from '@element-plus/icons-vue'
 import axios from 'axios'
 import ProvinceSelect from './ProvinceSelect.vue'
 import CommuneSelect from './CommuneSelect.vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 
 interface Address {
   id: string
@@ -53,6 +55,135 @@ const addressForm = ref({
   communeName: '',
   addressDetail: '',
   isDefault: false,
+  latitude: 10.762622,
+  longitude: 106.660172,
+})
+
+const mapContainer = ref<HTMLElement | null>(null)
+let map: L.Map | null = null
+let marker: L.Marker | null = null
+const searchQuery = ref('')
+
+const searchLocation = async () => {
+  if (!searchQuery.value) return
+
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+        searchQuery.value,
+      )}&countrycodes=vn`,
+    )
+    const data = await response.json()
+
+    if (data && data.length > 0) {
+      const { lat, lon } = data[0]
+      const newLat = parseFloat(lat)
+      const newLng = parseFloat(lon)
+
+      addressForm.value.latitude = newLat
+      addressForm.value.longitude = newLng
+
+      if (map && marker) {
+        map.setView([newLat, newLng], 16)
+        marker.setLatLng([newLat, newLng])
+      }
+      ElMessage.success('Location found')
+    } else {
+      ElMessage.warning('Location not found')
+    }
+  } catch (error) {
+    console.error('Search failed:', error)
+    ElMessage.error('Failed to search location')
+  }
+}
+
+const querySearchAsync = async (queryString: string, cb: (arg: any) => void) => {
+  if (!queryString) {
+    cb([])
+    return
+  }
+
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+        queryString,
+      )}&limit=5&countrycodes=vn`,
+    )
+    const data = await response.json()
+    const results = data.map((item: any) => ({
+      value: item.display_name,
+      lat: item.lat,
+      lon: item.lon,
+    }))
+    cb(results)
+  } catch (error) {
+    console.error('Autocomplete search failed:', error)
+    cb([])
+  }
+}
+
+const handleSelect = (item: any) => {
+  const newLat = parseFloat(item.lat)
+  const newLng = parseFloat(item.lon)
+
+  addressForm.value.latitude = newLat
+  addressForm.value.longitude = newLng
+
+  if (map && marker) {
+    map.setView([newLat, newLng], 16)
+    marker.setLatLng([newLat, newLng])
+  }
+}
+
+const initMap = () => {
+  if (!mapContainer.value) return
+
+  if (map) {
+    map.remove()
+  }
+
+  const lat = addressForm.value.latitude || 10.762622
+  const lng = addressForm.value.longitude || 106.660172
+
+  map = L.map(mapContainer.value).setView([lat, lng], 13)
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  }).addTo(map)
+
+  // Fix marker icon issue in Webpack/Vite
+  const icon = L.icon({
+    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+  })
+
+  marker = L.marker([lat, lng], { draggable: true, icon }).addTo(map)
+
+  marker.on('dragend', () => {
+    if (marker) {
+      const position = marker.getLatLng()
+      addressForm.value.latitude = position.lat
+      addressForm.value.longitude = position.lng
+    }
+  })
+
+  map.on('click', (e) => {
+    if (marker) {
+      marker.setLatLng(e.latlng)
+      addressForm.value.latitude = e.latlng.lat
+      addressForm.value.longitude = e.latlng.lng
+    }
+  })
+}
+
+watch(addressDialogVisible, (newVal) => {
+  if (newVal) {
+    nextTick(() => {
+      initMap()
+    })
+  }
 })
 
 const openAddAddress = () => {
@@ -67,7 +198,10 @@ const openAddAddress = () => {
     communeName: '',
     addressDetail: '',
     isDefault: false,
+    latitude: 10.762622,
+    longitude: 106.660172,
   }
+  searchQuery.value = ''
   addressDialogVisible.value = true
 }
 
@@ -83,7 +217,10 @@ const editAddress = (address: Address) => {
     communeCode: address.ward,
     communeName: address.ward,
     isDefault: address.default,
+    latitude: address.latitude || 10.762622,
+    longitude: address.longitude || 106.660172,
   }
+  searchQuery.value = ''
   addressDialogVisible.value = true
 }
 
@@ -129,8 +266,8 @@ const handleSaveAddress = async () => {
     district: 'quan',
     ward: addressForm.value.communeName,
     country: 'viet nam',
-    latitude: 1,
-    longitude: 1,
+    latitude: addressForm.value.latitude,
+    longitude: addressForm.value.longitude,
     default: addressForm.value.isDefault,
   }
 
@@ -142,8 +279,10 @@ const handleSaveAddress = async () => {
       await axios.put(`http://localhost:81/api/user/addresses/${addressForm.value.id}`, payload, {
         headers,
       })
+      ElMessage.success('Address updated successfully')
     } else {
       await axios.post('http://localhost:81/api/user/addresses', payload, { headers })
+      ElMessage.success('Address added successfully')
     }
     await fetchAddresses()
     addressDialogVisible.value = false
@@ -265,61 +404,82 @@ onMounted(fetchAddresses)
     <el-dialog
       v-model="addressDialogVisible"
       :title="isEditing ? 'Update Address' : 'New Address'"
-      width="500px"
+      width="600px"
+      align-center
       destroy-on-close
     >
-      <el-form :model="addressForm" label-position="top">
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="Full Name" required>
-              <el-input v-model="addressForm.name" placeholder="Mark Cole" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="Phone Number" required>
-              <el-input
-                v-model="addressForm.phone"
-                placeholder="0123456789"
-                @input="handlePhoneInput"
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
+      <div class="dialog-content">
+        <el-form :model="addressForm" label-position="top">
+          <el-row :gutter="20">
+            <el-col :span="12">
+              <el-form-item label="Full Name" required>
+                <el-input v-model="addressForm.name" placeholder="Mark Cole" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="Phone Number" required>
+                <el-input
+                  v-model="addressForm.phone"
+                  placeholder="0123456789"
+                  @input="handlePhoneInput"
+                />
+              </el-form-item>
+            </el-col>
+          </el-row>
 
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="City/Province" required>
-              <ProvinceSelect
-                v-model="addressForm.provinceCode"
-                :initial-name="addressForm.provinceName"
-                @change="handleProvinceChange"
-              />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="Commune/Ward" required>
-              <CommuneSelect
-                v-model="addressForm.communeCode"
-                :province-code="addressForm.provinceCode"
-                :initial-name="addressForm.communeName"
-                @change="handleCommuneChange"
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
+          <el-row :gutter="20">
+            <el-col :span="12">
+              <el-form-item label="City/Province" required>
+                <ProvinceSelect
+                  v-model="addressForm.provinceCode"
+                  :initial-name="addressForm.provinceName"
+                  @change="handleProvinceChange"
+                />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="Commune/Ward" required>
+                <CommuneSelect
+                  v-model="addressForm.communeCode"
+                  :province-code="addressForm.provinceCode"
+                  :initial-name="addressForm.communeName"
+                  @change="handleCommuneChange"
+                />
+              </el-form-item>
+            </el-col>
+          </el-row>
 
-        <el-form-item label="Specific Address" required>
-          <el-input
-            v-model="addressForm.addressDetail"
-            type="textarea"
-            rows="2"
-            placeholder="House number, street name..."
-          />
-        </el-form-item>
-        <el-form-item v-if="!isEditing">
-          <el-checkbox v-model="addressForm.isDefault">Set as default address</el-checkbox>
-        </el-form-item>
-      </el-form>
+          <el-form-item label="Specific Address" required>
+            <el-input
+              v-model="addressForm.addressDetail"
+              type="textarea"
+              rows="2"
+              placeholder="House number, street name..."
+            />
+          </el-form-item>
+
+          <el-form-item label="Location" required>
+            <div style="margin-bottom: 10px; width: 100%">
+              <el-autocomplete
+                v-model="searchQuery"
+                :fetch-suggestions="querySearchAsync"
+                placeholder="Search for a location..."
+                @select="handleSelect"
+                :trigger-on-focus="false"
+                style="width: 100%"
+              />
+            </div>
+            <div ref="mapContainer" style="height: 300px; width: 100%"></div>
+            <div style="margin-top: 10px; font-size: 12px; color: #666">
+              Click on map or drag marker to select location
+            </div>
+          </el-form-item>
+
+          <el-form-item v-if="!isEditing">
+            <el-checkbox v-model="addressForm.isDefault">Set as default address</el-checkbox>
+          </el-form-item>
+        </el-form>
+      </div>
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="addressDialogVisible = false" size="large">Cancel</el-button>
@@ -388,12 +548,6 @@ onMounted(fetchAddresses)
   margin-bottom: 8px !important;
 }
 
-:deep(.el-input__wrapper) {
-  padding: 8px 15px;
-  border-radius: 8px;
-  box-shadow: 0 0 0 1px #dcdfe6 inset;
-}
-
 :deep(.el-input__inner) {
   height: 48px;
 }
@@ -406,5 +560,13 @@ onMounted(fetchAddresses)
 .set-default-btn:not(:disabled):hover {
   background-color: #f5f5f5;
   border-color: #c0c4cc;
+}
+
+.dialog-content {
+  max-height: 64vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-left: 25px;
+  padding-right: 30px;
 }
 </style>
