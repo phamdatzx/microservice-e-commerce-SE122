@@ -21,11 +21,19 @@ export interface VariantAPI {
 export interface CartItemAPI {
   id: string
   user_id: string
-  seller_id: string
-  product_id: string
+  seller: {
+    id: string
+    name: string
+    username: string
+  }
+  product: {
+    id: string
+    name: string
+    seller_id: string
+    seller_category_ids: string[]
+  }
   variant_id: string
   quantity: number
-  product_name: string
   variant: VariantAPI
   created_at: string
   updated_at: string
@@ -73,26 +81,27 @@ const fetchCart = async () => {
 
     const items: CartItemAPI[] = response.data.cart_items
 
-    // Group by seller_id
+    // Group by seller.id
     const grouped = items.reduce((acc: Record<string, CartSeller>, item) => {
-      if (!acc[item.seller_id]) {
-        acc[item.seller_id] = {
-          sellerId: item.seller_id,
-          sellerName: 'Official Store', // Using placeholder since API doesn't return name yet
+      const sellerId = item.seller.id
+      if (!acc[sellerId]) {
+        acc[sellerId] = {
+          sellerId: sellerId,
+          sellerName: item.seller.name,
           products: [],
         }
       }
 
-      acc[item.seller_id].products.push({
+      acc[sellerId].products.push({
         id: item.id,
         imageUrl: item.variant.image || 'https://placehold.co/100x100?text=No+Image',
-        productName: item.product_name,
+        productName: item.product.name,
         productOption: Object.values(item.variant.options).join(', '),
         price: item.variant.price,
         quantity: item.quantity,
         stock: item.variant.stock,
-        sellerName: 'Official Store',
-        sellerId: item.seller_id,
+        sellerName: item.seller.name,
+        sellerId: sellerId,
         variantId: item.variant_id,
       })
 
