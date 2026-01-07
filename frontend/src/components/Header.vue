@@ -1,5 +1,20 @@
 <script setup lang="ts">
 import CustomerChat from './CustomerChat.vue'
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+const isLoggedIn = ref(false)
+
+onMounted(() => {
+  isLoggedIn.value = !!localStorage.getItem('access_token')
+})
+
+const handleLogout = () => {
+  localStorage.removeItem('access_token')
+  isLoggedIn.value = false
+  router.push('/')
+}
 </script>
 
 <template>
@@ -67,28 +82,139 @@ import CustomerChat from './CustomerChat.vue'
           </nav>
 
           <div class="header-actions">
-            <button class="wishlist-btn">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <button class="wishlist-btn" title="Wishlist">
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
                 <path
-                  d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"
-                  stroke="currentColor"
-                  stroke-width="1.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
+                  d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+                ></path>
               </svg>
             </button>
 
-            <div class="user-section">
-              <span class="welcome">WELCOME</span>
-              <a href="#" class="login-register">LOG IN / REGISTER</a>
+            <!-- Cart Section on the Left of User -->
+            <div class="action-item cart-section" @click="$router.push('/cart')">
+              <div class="icon-wrapper">
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <circle cx="9" cy="21" r="1"></circle>
+                  <circle cx="20" cy="21" r="1"></circle>
+                  <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                </svg>
+                <span class="badge">5</span>
+              </div>
             </div>
 
-            <div class="cart">
-              <span class="cart-label">CART</span>
-              <div class="cart-info">
-                <span class="cart-count">5</span>
-                <span class="cart-total">$1,689.00</span>
+            <!-- User Section -->
+            <div v-if="!isLoggedIn" class="action-item user-section">
+              <div class="icon-wrapper">
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+              </div>
+              <div class="text-content">
+                <span class="label">WELCOME</span>
+                <div class="auth-links">
+                  <RouterLink to="/login" class="main-text">LOG IN</RouterLink>
+                  <span class="separator">/</span>
+                  <RouterLink to="/register" class="main-text">REGISTER</RouterLink>
+                </div>
+              </div>
+            </div>
+
+            <div v-else class="user-container">
+              <div class="action-item user-profile">
+                <div class="avatar-wrapper">
+                  <img
+                    src="https://ui-avatars.com/api/?name=User&background=22c55e&color=fff"
+                    alt="Avatar"
+                    class="avatar"
+                  />
+                </div>
+                <div class="text-content">
+                  <span class="label">MY ACCOUNT</span>
+                  <span class="main-text">Hello, User</span>
+                </div>
+              </div>
+
+              <!-- Dropdown Menu -->
+              <div class="user-dropdown">
+                <RouterLink to="/profile" class="dropdown-item">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                  My Profile
+                </RouterLink>
+                <RouterLink to="/orders" class="dropdown-item">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+                    <path d="M3 6h18" />
+                    <path d="M16 10a4 4 0 0 1-8 0" />
+                  </svg>
+                  My Orders
+                </RouterLink>
+                <div class="dropdown-divider"></div>
+                <button @click="handleLogout" class="dropdown-item logout-btn">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                    <polyline points="16 17 21 12 16 7" />
+                    <line x1="21" y1="12" x2="9" y2="12" />
+                  </svg>
+                  Logout
+                </button>
               </div>
             </div>
           </div>
@@ -148,8 +274,8 @@ import CustomerChat from './CustomerChat.vue'
 
 .header-main {
   background-color: white;
-  padding: 15px 0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 20px 0;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
 .header-content {
@@ -162,16 +288,18 @@ import CustomerChat from './CustomerChat.vue'
   display: flex;
   align-items: center;
   gap: 12px;
+  text-decoration: none;
 }
 
 .logo-icon {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   background: linear-gradient(135deg, #22c55e, #16a34a);
-  border-radius: 50%;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
 }
 
 .logo-text {
@@ -180,33 +308,36 @@ import CustomerChat from './CustomerChat.vue'
 }
 
 .logo-name {
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 800;
-  color: #333;
+  color: #1a1a1a;
   line-height: 1;
+  letter-spacing: -0.5px;
 }
 
 .logo-tagline {
-  font-size: 12px;
-  color: #666;
-  letter-spacing: 1px;
+  font-size: 11px;
+  color: #71717a;
+  letter-spacing: 2px;
+  font-weight: 600;
 }
 
 .nav {
   display: flex;
-  gap: 40px;
+  gap: 32px;
   align-items: center;
 }
 
 .nav-link {
-  color: #333;
+  color: #3f3f46;
   text-decoration: none;
   font-weight: 600;
   font-size: 14px;
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 10px 0;
+  gap: 6px;
+  padding: 8px 0;
+  transition: all 0.2s ease;
 }
 
 .nav-link:hover {
@@ -216,146 +347,299 @@ import CustomerChat from './CustomerChat.vue'
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 30px;
+  gap: 24px;
 }
 
 .wishlist-btn {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 8px;
-  color: #666;
-}
-
-.wishlist-btn:hover {
-  color: #22c55e;
-}
-
-.user-section {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-}
-
-.welcome {
-  font-size: 12px;
-  color: #666;
-  margin-bottom: 2px;
-}
-
-.login-register {
-  color: #333;
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 14px;
-}
-
-.login-register:hover {
-  color: #22c55e;
-}
-
-.cart {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-}
-
-.cart-label {
-  font-size: 12px;
-  color: #666;
-  margin-bottom: 2px;
-}
-
-.cart-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.cart-count {
-  background-color: #22c55e;
-  color: white;
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
+  padding: 10px;
+  color: #71717a;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  font-weight: 600;
+  border-radius: 12px;
+  transition: all 0.2s ease;
 }
 
-.cart-total {
-  font-weight: 600;
-  color: #333;
+.wishlist-btn:hover {
+  color: #ef4444;
+  background-color: #fef2f2;
+}
+
+.action-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 12px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.action-item:hover {
+  background-color: #f4f4f5;
+}
+
+.user-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar-wrapper {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid #e4e4e7;
+  transition: border-color 0.2s ease;
+}
+
+.user-container:hover .avatar-wrapper {
+  border-color: #22c55e;
+}
+
+.avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* User Dropdown */
+.user-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  width: 200px;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  border: 1px solid #f4f4f5;
+  padding: 8px;
+  margin-top: 8px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(10px);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1000;
+}
+
+.user-container:hover .user-dropdown {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  color: #3f3f46;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  width: 100%;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.dropdown-item:hover {
+  background-color: #f0fdf4;
+  color: #22c55e;
+}
+
+.dropdown-item svg {
+  color: #a1a1aa;
+  transition: color 0.2s ease;
+}
+
+.dropdown-item:hover svg {
+  color: #22c55e;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background-color: #f4f4f5;
+  margin: 6px 0;
+}
+
+.logout-btn:hover {
+  background-color: #fef2f2;
+  color: #ef4444;
+}
+
+.logout-btn:hover svg {
+  color: #ef4444;
+}
+
+.icon-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #18181b;
+}
+
+.badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background-color: #22c55e;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+}
+
+.text-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #a1a1aa;
+  letter-spacing: 0.5px;
+}
+
+.main-text {
+  font-size: 14px;
+  font-weight: 700;
+  color: #18181b;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.auth-links .main-text {
+  padding: 4px 6px;
+  border-radius: 8px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.auth-links .main-text:hover {
+  color: #22c55e;
+}
+
+.auth-links {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: -6px; /* Offset padding to keep alignment */
+}
+
+.auth-links .separator {
+  font-size: 12px;
+  color: #e4e4e7;
+  font-weight: 400;
+  user-select: none;
+}
+
+.cart-section .main-text {
+  color: #22c55e;
 }
 
 /* Search Section */
 .search-section {
   background: linear-gradient(135deg, #22c55e, #16a34a);
-  padding: 20px 0;
+  padding: 24px 0;
 }
 
 .search-bar {
   display: flex;
-  max-width: 600px;
+  max-width: 700px;
   margin: 0 auto;
   background: white;
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  transition: transform 0.2s ease;
+}
+
+.search-bar:focus-within {
+  transform: translateY(-2px);
 }
 
 .category-select {
-  padding: 15px 20px;
+  padding: 0 24px;
   border: none;
+  border-right: 1px solid #e4e4e7;
   background: white;
   font-size: 14px;
-  color: #333;
+  font-weight: 600;
+  color: #3f3f46;
   cursor: pointer;
-  min-width: 140px;
+  outline: none;
 }
 
 .search-input {
   flex: 1;
-  padding: 15px 20px;
+  padding: 16px 24px;
   border: none;
   font-size: 14px;
   outline: none;
+  color: #18181b;
 }
 
 .search-input::placeholder {
-  color: #999;
+  color: #a1a1aa;
 }
 
 .search-btn {
-  background: #333;
+  background: #18181b;
   border: none;
-  padding: 15px 20px;
+  padding: 0 28px;
   cursor: pointer;
-  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
 }
 
 .search-btn:hover {
-  background: #555;
+  background: #27272a;
 }
 
 /* Breadcrumb */
 .breadcrumb {
-  padding: 20px 0;
-  background: white;
+  padding: 16px 0;
+  background: #fafafa;
+  border-bottom: 1px solid #f4f4f5;
 }
 
 .breadcrumb .container {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
+  gap: 10px;
+  font-size: 13px;
 }
 
 .breadcrumb-link {
-  color: #666;
+  color: #71717a;
   text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s ease;
 }
 
 .breadcrumb-link:hover {
@@ -363,11 +647,11 @@ import CustomerChat from './CustomerChat.vue'
 }
 
 .breadcrumb-separator {
-  color: #999;
+  color: #d4d4d8;
 }
 
 .breadcrumb-current {
-  color: #333;
+  color: #18181b;
   font-weight: 600;
 }
 </style>

@@ -33,6 +33,22 @@ watch(
 
 <template>
   <main class="main-content">
+    <RouterLink to="/" class="back-home-link">
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+        <polyline points="9 22 9 12 15 12 15 22" />
+      </svg>
+      Back to Home
+    </RouterLink>
     <div class="container">
       <div class="auth-container">
         <div class="illustration">
@@ -72,11 +88,13 @@ watch(
                 {{ propsData.mainBtnText }}
               </button>
 
-              <div style="text-align: center; font-size: 14px">
-                <span style="color: #9ca3af; margin-right: 8px">{{ propsData.switchText }}</span>
-                <RouterLink :to="propsData.switchLinkUrl ?? ''" class="switch-link">{{
-                  propsData.switchLinkText
-                }}</RouterLink>
+              <div class="auth-footer">
+                <div class="switch-container">
+                  <span class="switch-label">{{ propsData.switchText }}</span>
+                  <RouterLink :to="propsData.switchLinkUrl ?? ''" class="switch-link">
+                    {{ propsData.switchLinkText }}
+                  </RouterLink>
+                </div>
               </div>
             </form>
           </div>
@@ -154,6 +172,65 @@ watch(
 
 .switch-link:hover {
   text-decoration: underline;
+}
+
+.auth-footer {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.switch-container {
+  font-size: 14px;
+}
+
+.switch-label {
+  color: #9ca3af;
+  margin-right: 8px;
+}
+
+.divider {
+  width: 100%;
+  height: 1px;
+  background-color: #f3f4f6;
+}
+
+.back-home-link {
+  position: fixed;
+  top: 40px;
+  left: 40px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #6b7280;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  padding: 10px 20px;
+  border-radius: 12px;
+  background-color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid #f4f4f5;
+  z-index: 100;
+}
+
+.back-home-link:hover {
+  color: #22c55e;
+  border-color: #22c55e;
+  transform: translateX(-4px);
+  box-shadow: 0 4px 15px rgba(34, 197, 94, 0.15);
+}
+
+.back-home-link svg {
+  color: #9ca3af;
+  transition: color 0.2s ease;
+}
+
+.back-home-link:hover svg {
+  color: #22c55e;
 }
 
 /* Responsive Design */

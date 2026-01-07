@@ -86,7 +86,7 @@ defineExpose({
     </div>
   </div>
 
-  <div style="text-align: right; margin-bottom: 32px">
+  <div style="text-align: right; margin-bottom: 20px">
     <RouterLink class="forgot-link" to="/forgot-password">Forget Password ?</RouterLink>
   </div>
 </template>
