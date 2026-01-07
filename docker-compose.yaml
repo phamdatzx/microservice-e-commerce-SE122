@@ -3,7 +3,7 @@ version: "3.9"
 services:
   # Traefik reverse proxy
   traefik:
-    image: traefik:v2.10
+    image: traefik:v3.6.2
     container_name: traefik
     command:
       # Enable Docker provider
@@ -68,12 +68,12 @@ services:
       - "traefik.http.routers.user-service-private.priority=90"
 
       # Forward Auth Middleware
-      - "traefik.http.middlewares.forward-auth.forwardauth.address=http://user-service:8080/api/user/public/verify"
+      - "traefik.http.middlewares.forward-auth.forwardauth.address=http://user-service:8085/api/user/public/verify"
       - "traefik.http.middlewares.forward-auth.forwardauth.trustForwardHeader=true"
       - "traefik.http.middlewares.forward-auth.forwardauth.authResponseHeaders=X-User-Id,X-User-Role,X-Username"
 
       # Service definition
-      - "traefik.http.services.user-service.loadbalancer.server.port=8080"
+      - "traefik.http.services.user-service.loadbalancer.server.port=8085"
     restart: unless-stopped
 
   # Product service
@@ -102,7 +102,7 @@ services:
       - "traefik.http.routers.product-service-private.priority=90"
 
       # Service definition
-      - "traefik.http.services.product-service.loadbalancer.server.port=8081"
+      - "traefik.http.services.product-service.loadbalancer.server.port=8085"
     restart: unless-stopped
 
   # Order service
@@ -131,7 +131,7 @@ services:
       - "traefik.http.routers.order-service-private.priority=90"
 
       # Service definition
-      - "traefik.http.services.order-service.loadbalancer.server.port=8082"
+      - "traefik.http.services.order-service.loadbalancer.server.port=8085"
     restart: unless-stopped
 
 networks:

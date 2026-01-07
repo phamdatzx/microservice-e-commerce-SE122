@@ -32,6 +32,6 @@ COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 # Copy binary
 COPY --from=builder /app/server /server
 
-EXPOSE 8080
+EXPOSE 8085
 
 ENTRYPOINT ["/server"]

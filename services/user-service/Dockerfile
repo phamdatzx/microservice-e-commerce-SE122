@@ -35,7 +35,7 @@ WORKDIR /root/
 COPY --from=builder /app/server .
 
 # Expose port (ví dụ Gin chạy cổng 8080)
-EXPOSE 8080
+EXPOSE 8085
 
 # Lệnh chạy ứng dụng
 CMD ["./server"]
