@@ -42,6 +42,13 @@ func (s *addressService) CreateAddress(userID string, request dto.AddressRequest
 		Country:     request.Country,
 		Latitude:    request.Latitude,
 		Longitude:   request.Longitude,
+		Default:     request.Default,
+	}
+
+	if address.Default {
+		if err := s.repo.ResetDefaultAddress(userID); err != nil {
+			return dto.AddressResponse{}, err
+		}
 	}
 
 	if err := s.repo.Create(address); err != nil {
@@ -91,6 +98,13 @@ func (s *addressService) UpdateAddress(id string, userID string, request dto.Add
 	address.Country = request.Country
 	address.Latitude = request.Latitude
 	address.Longitude = request.Longitude
+	address.Default = request.Default
+
+	if address.Default {
+		if err := s.repo.ResetDefaultAddress(userID); err != nil {
+			return dto.AddressResponse{}, err
+		}
+	}
 
 	if err := s.repo.Update(address); err != nil {
 		return dto.AddressResponse{}, err
@@ -109,7 +123,20 @@ func (s *addressService) DeleteAddress(id string, userID string) error {
 		return appError.NewAppError(403, "permission denied")
 	}
 
-	return s.repo.Delete(id)
+	if err := s.repo.Delete(id); err != nil {
+		return err
+	}
+
+	// If the deleted address was default, set another address as default
+	if address.Default {
+		newDefault, err := s.repo.GetFirstAddressByUserID(userID)
+		if err == nil && newDefault != nil {
+			newDefault.Default = true
+			_ = s.repo.Update(newDefault)
+		}
+	}
+
+	return nil
 }
 
 func (s *addressService) mapToResponse(address *model.Address) dto.AddressResponse {
@@ -125,5 +152,6 @@ func (s *addressService) mapToResponse(address *model.Address) dto.AddressRespon
 		Country:     address.Country,
 		Latitude:    address.Latitude,
 		Longitude:   address.Longitude,
+		Default:     address.Default,
 	}
 }

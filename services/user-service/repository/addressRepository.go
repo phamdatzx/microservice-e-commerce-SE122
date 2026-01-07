@@ -12,6 +12,8 @@ type AddressRepository interface {
 	GetByUserID(userID string) ([]model.Address, error)
 	Update(address *model.Address) error
 	Delete(id string) error
+	ResetDefaultAddress(userID string) error
+	GetFirstAddressByUserID(userID string) (*model.Address, error)
 }
 
 type addressRepository struct {
@@ -50,4 +52,19 @@ func (r *addressRepository) Update(address *model.Address) error {
 
 func (r *addressRepository) Delete(id string) error {
 	return r.db.Delete(&model.Address{}, "id = ?", id).Error
+}
+
+func (r *addressRepository) ResetDefaultAddress(userID string) error {
+	return r.db.Model(&model.Address{}).
+		Where("user_id = ?", userID).
+		Update("is_default", false).Error
+}
+
+func (r *addressRepository) GetFirstAddressByUserID(userID string) (*model.Address, error) {
+	var address model.Address
+	err := r.db.Where("user_id = ?", userID).First(&address).Error
+	if err != nil {
+		return nil, err
+	}
+	return &address, nil
 }
