@@ -14,6 +14,7 @@ type CartService interface {
 	DeleteCartItem(userID, cartItemID string) error
 	UpdateCartItemQuantity(userID, cartItemID string, quantity int) (*dto.CartItemResponse, error)
 	GetCartItems(userID string) ([]dto.CartItemDetailDto, error)
+	GetCartItemCount(userID string) (int64, error)
 }
 
 type cartService struct {
@@ -229,5 +230,9 @@ func (s *cartService) GetCartItems(userID string) ([]dto.CartItemDetailDto, erro
 	}
 
 	return result, nil
+}
+
+func (s *cartService) GetCartItemCount(userID string) (int64, error) {
+	return s.repo.GetCartItemCount(userID)
 }
 

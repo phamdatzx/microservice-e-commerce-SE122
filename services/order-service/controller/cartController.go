@@ -137,3 +137,21 @@ func (c *CartController) GetCartItems(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+func (c *CartController) GetCartItemCount(ctx *gin.Context) {
+	// Get user ID from header
+	userID := ctx.GetHeader("X-User-Id")
+	if userID == "" {
+		ctx.Error(appError.NewAppError(http.StatusUnauthorized, "User ID not found"))
+		return
+	}
+
+	// Get cart item count from service
+	count, err := c.service.GetCartItemCount(userID)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"count": count})
+}
+
