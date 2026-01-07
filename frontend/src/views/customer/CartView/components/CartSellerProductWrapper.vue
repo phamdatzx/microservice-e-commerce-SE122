@@ -15,7 +15,7 @@ const props = withDefaults(defineProps<Props>(), {
   }),
 })
 
-const emits = defineEmits(['checkedProductsChange'])
+const emits = defineEmits(['checkedProductsChange', 'deleteProduct'])
 
 const checkAll = ref(false)
 const checkedProducts = ref<Product[]>([])
@@ -62,7 +62,12 @@ defineExpose({ checkedProducts, handleCheckAll, handleUncheckAll })
     </div>
     <el-divider style="margin: 0 0 15px 0" />
     <el-checkbox-group v-model="checkedProducts" @change="handleCheckedProductsChange">
-      <CartProduct v-for="product in props.seller.products" :key="product.id" :product="product" />
+      <CartProduct
+        v-for="product in props.seller.products"
+        :key="product.id"
+        :product="product"
+        @delete="(id) => emits('deleteProduct', id)"
+      />
     </el-checkbox-group>
   </div>
 </template>

@@ -37,8 +37,8 @@ type Price struct {
 }
 
 type OptionGroup struct {
-	Key    string   `bson:"key"`   // size, color
-	Values []string `bson:"values"`
+	Key    string   `bson:"key" json:"key"`   // size, color
+	Values []string `bson:"values" json:"values"`
 }
 
 type Variant struct {

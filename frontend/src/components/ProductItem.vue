@@ -7,7 +7,7 @@ const props = defineProps(['imageUrl', 'name', 'price', 'rating', 'location', 'd
 </script>
 
 <template>
-  <RouterLink :to="`/product`" class="wrapper" style="display: block">
+  <RouterLink :to="`/product/${props.id}`" class="wrapper" style="display: block">
     <div
       :style="{
         background: `url(${props.imageUrl}) no-repeat center`,

@@ -95,7 +95,7 @@ const rules = reactive<FormRules>({
 const VOUCHER_API_URL =
   import.meta.env.VITE_MANAGE_SELLER_VOUCHER_API_URL || 'http://localhost:8000/api/vouchers'
 const CATEGORY_API_URL =
-  import.meta.env.VITE_GET_SELLER_CATEGORY_API_URL || 'http://localhost:8000/api/categories'
+  import.meta.env.VITE_BE_API_URL + '/product/public/seller/seller-1/category'
 
 // --- Computed ---
 const isPercentage = computed(() => ruleForm.discount_type === 'PERCENTAGE')

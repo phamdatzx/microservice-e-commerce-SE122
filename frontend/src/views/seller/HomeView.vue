@@ -76,23 +76,6 @@ const handleClose = (key: string, keyPath: string[]) => {
       <el-container style="height: calc(100vh - 64px)">
         <el-aside width="200px" style="margin-top: 3px">
           <el-menu default-active="0" @open="handleOpen" @close="handleClose" style="height: 100%">
-            <el-sub-menu index="1">
-              <template #title>
-                <el-icon><location /></el-icon>
-                <span>Navigator One</span>
-              </template>
-              <el-menu-item-group title="Group One">
-                <el-menu-item index="1-1">item one</el-menu-item>
-                <el-menu-item index="1-2">item two</el-menu-item>
-              </el-menu-item-group>
-              <el-menu-item-group title="Group Two">
-                <el-menu-item index="1-3">item three</el-menu-item>
-              </el-menu-item-group>
-              <el-sub-menu index="1-4">
-                <template #title>item four</template>
-                <el-menu-item index="1-4-1">item one</el-menu-item>
-              </el-sub-menu>
-            </el-sub-menu>
             <RouterLink to="/seller/statistic">
               <el-menu-item index="8">
                 <el-icon><TrendCharts /></el-icon>

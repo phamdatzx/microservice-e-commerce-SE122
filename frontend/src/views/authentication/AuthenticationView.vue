@@ -1,13 +1,26 @@
 <script setup lang="ts">
 import Header from '@/components/Header.vue'
 import { computed, ref, watch } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
+const router = useRouter()
 const propsData = computed(() => route.meta)
 
 const formComponent = ref()
 const mainBtn = ref()
+
+const handleSuccess = (userData: any) => {
+  if (route.path === '/login' || route.path === '/') {
+    if (userData?.role === 'seller') {
+      router.push('/seller')
+    } else if (userData?.role === 'admin') {
+      router.push('/admin')
+    } else {
+      router.push('/')
+    }
+  }
+}
 
 // Fix: Main btn still hidden when back to other Forms
 watch(
@@ -46,7 +59,12 @@ watch(
                 <component
                   :is="Component"
                   ref="formComponent"
-                  @success="mainBtn.style.display = 'none'"
+                  @success="
+                    (userData: any) => {
+                      mainBtn.style.display = 'none'
+                      handleSuccess(userData)
+                    }
+                  "
                 />
               </RouterView>
 
