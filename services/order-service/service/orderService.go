@@ -193,10 +193,15 @@ func (s *orderService) Checkout(userID string, request dto.CheckoutRequest) (*dt
 		Voucher: orderVoucher,
 		Total:   totalAmount,
 		ShippingAddress: model.OrderAddress{
-			FullName:    request.ShippingAddress.Name,
+			FullName:    request.ShippingAddress.FullName,
 			Phone:       request.ShippingAddress.Phone,
-			AddressLine: request.ShippingAddress.Address,
-			Province:    request.ShippingAddress.City,
+			AddressLine: request.ShippingAddress.AddressLine,
+			Ward:        request.ShippingAddress.Ward,
+			District:    request.ShippingAddress.District,
+			Province:    request.ShippingAddress.Province,
+			Country:     request.ShippingAddress.Country,
+			Latitude:    request.ShippingAddress.Latitude,
+			Longitude:   request.ShippingAddress.Longitude,
 		},
 	}
 
@@ -205,9 +210,9 @@ func (s *orderService) Checkout(userID string, request dto.CheckoutRequest) (*dt
 	}
 
 	// 7. Delete purchased cart items
-	// for _, item := range cartItems {
-	// 	_ = s.cartRepo.DeleteCartItem(item.ID)
-	// }
+	for _, item := range cartItems {
+		_ = s.cartRepo.DeleteCartItem(item.ID)
+	}
 
 	return &dto.CheckoutResponse{
 		OrderID:     order.ID,
