@@ -8,11 +8,12 @@ import {
   type FormInstance,
   type FormRules,
 } from 'element-plus'
-import { onMounted, reactive, ref, computed } from 'vue'
+import { onMounted, reactive, ref, computed, watch } from 'vue'
 
 // --- Interfaces ---
 interface Voucher {
-  _id: string
+  id: string
+  seller_id: string
   code: string
   name: string
   description: string
@@ -20,15 +21,16 @@ interface Voucher {
   discount_value: number
   max_discount_value: number | null
   min_order_value: number
-  apply_scope: 'ALL' | 'CATEGORY' | 'PRODUCT'
-  apply_product_ids: string[]
-  apply_category_ids: string[]
+  apply_scope: 'ALL' | 'CATEGORY'
+  apply_seller_category_ids: string[]
   total_quantity: number
   used_quantity: number
   usage_limit_per_user: number
   start_time: string
   end_time: string
-  status: 'ACTIVE' | 'INACTIVE' | 'EXPIRED'
+  status: 'ACTIVE' | 'INACTIVE'
+  created_at?: string
+  updated_at?: string
 }
 
 interface SellerCategory {
@@ -43,9 +45,8 @@ const categoryList = ref<SellerCategory[]>([])
 const isLoading = ref(false)
 const dialogVisible = ref(false)
 const dialogMode = ref<'add' | 'edit'>('add')
-const userId = ref('7d27d61d-8cb3-4ef9-a9ff-0a92f217855b') // Hardcoded for now as per CategoryView
-const token =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjY4Mjc1MDYsImlhdCI6MTc2Njc0MTEwNiwicm9sZSI6InNlbGxlciIsInVzZXJJZCI6IjdkMjdkNjFkLThjYjMtNGVmOS1hOWZmLTBhOTJmMjE3ODU1YiIsInVzZXJuYW1lIjoidGVzdDEifQ.cCs5gwsDkDVZZrnHHmeTFGmuleu9RR2Ieke8pYaRH_s'
+const userId = ref(localStorage.getItem('user_id') || '')
+const token = localStorage.getItem('access_token') || ''
 
 // --- Form State ---
 const ruleFormRef = ref<FormInstance>()
@@ -59,8 +60,7 @@ const ruleForm = reactive({
   max_discount_value: null as number | null,
   min_order_value: 0,
   apply_scope: 'ALL',
-  apply_category_ids: [] as string[],
-  apply_product_ids: [] as string[],
+  apply_seller_category_ids: [] as string[],
   total_quantity: 1,
   usage_limit_per_user: 1,
   dateRange: null as [Date, Date] | null,
@@ -72,11 +72,25 @@ const ruleForm = reactive({
 const rules = reactive<FormRules>({
   code: [{ required: true, message: 'Please input code', trigger: 'blur' }],
   name: [{ required: true, message: 'Please input name', trigger: 'blur' }],
-  discount_value: [{ required: true, message: 'Required', trigger: 'blur' }],
+  discount_value: [
+    { required: true, message: 'Required', trigger: 'blur' },
+    {
+      validator: (rule: any, value: any, callback: any) => {
+        if (value <= 0) {
+          callback(new Error('Must be > 0'))
+        } else if (ruleForm.discount_type === 'PERCENTAGE' && value > 100) {
+          callback(new Error('Percentage must be <= 100'))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'blur',
+    },
+  ],
   min_order_value: [{ required: true, message: 'Required', trigger: 'blur' }],
   total_quantity: [{ required: true, message: 'Required', trigger: 'blur' }],
   dateRange: [{ required: true, message: 'Please select date range', trigger: 'change' }],
-  apply_category_ids: [
+  apply_seller_category_ids: [
     {
       validator: (rule: any, value: any, callback: any) => {
         if (ruleForm.apply_scope === 'CATEGORY' && (!value || value.length === 0)) {
@@ -90,97 +104,43 @@ const rules = reactive<FormRules>({
   ],
 })
 
-// --- API URLs (using placeholders based on convention) ---
-// Adjust these if you have specific env vars for voucher service
-const VOUCHER_API_URL =
-  import.meta.env.VITE_MANAGE_SELLER_VOUCHER_API_URL || 'http://localhost:8000/api/vouchers'
-const CATEGORY_API_URL =
-  import.meta.env.VITE_BE_API_URL + '/product/public/seller/seller-1/category'
+// --- API URLs ---
+const VOUCHER_API_URL = 'http://localhost:81/api/product/vouchers'
 
 // --- Computed ---
 const isPercentage = computed(() => ruleForm.discount_type === 'PERCENTAGE')
+
+watch(
+  () => ruleForm.discount_type,
+  () => {
+    if (ruleFormRef.value) {
+      ruleFormRef.value.validateField('discount_value')
+    }
+  },
+)
 
 // --- Methods ---
 
 const fetchVouchers = async () => {
   isLoading.value = true
   try {
-    // Assuming GET /api/vouchers/seller/:sellerId or similar to list vouchers
-    // Using a broader query or specific endpoint for testing
-    const response = await axios.get(`${VOUCHER_API_URL}/seller/${userId.value}`, {
+    const response = await axios.get(VOUCHER_API_URL, {
       headers: { Authorization: `Bearer ${token}` },
     })
     voucherData.value = response.data
   } catch (error) {
     console.error('Error fetching vouchers:', error)
-    // Mock data for display if API fails
-    voucherData.value = [
-      {
-        _id: '1',
-        code: 'WELCOME50',
-        name: 'Welcome Discount',
-        description: 'Discount for new users',
-        discount_type: 'FIXED',
-        discount_value: 50000,
-        max_discount_value: null,
-        min_order_value: 200000,
-        apply_scope: 'ALL',
-        apply_product_ids: [],
-        apply_category_ids: [],
-        total_quantity: 1000,
-        used_quantity: 150,
-        usage_limit_per_user: 1,
-        start_time: '2025-01-01T00:00:00Z',
-        end_time: '2025-12-31T23:59:59Z',
-        status: 'ACTIVE',
-      },
-      {
-        _id: '2',
-        code: 'SUMMER25',
-        name: 'Summer Sale',
-        description: '25% off for summer items',
-        discount_type: 'PERCENTAGE',
-        discount_value: 25,
-        max_discount_value: 100000,
-        min_order_value: 0,
-        apply_scope: 'CATEGORY',
-        apply_product_ids: [],
-        apply_category_ids: ['cat_1', 'cat_2'],
-        total_quantity: 500,
-        used_quantity: 45,
-        usage_limit_per_user: 2,
-        start_time: '2025-06-01T00:00:00Z',
-        end_time: '2025-08-31T23:59:59Z',
-        status: 'ACTIVE',
-      },
-      {
-        _id: '3',
-        code: 'FLASH10',
-        name: 'Flash Deal',
-        description: 'Quick 10k off',
-        discount_type: 'FIXED',
-        discount_value: 10000,
-        max_discount_value: null,
-        min_order_value: 50000,
-        apply_scope: 'ALL',
-        apply_product_ids: [],
-        apply_category_ids: [],
-        total_quantity: 100,
-        used_quantity: 100,
-        usage_limit_per_user: 1,
-        start_time: '2025-01-10T00:00:00Z',
-        end_time: '2025-01-11T00:00:00Z',
-        status: 'EXPIRED',
-      },
-    ]
+    ElNotification.error('Failed to load vouchers')
   } finally {
     isLoading.value = false
   }
 }
 
 const fetchCategories = async () => {
+  if (!userId.value) return
+  const url = `${import.meta.env.VITE_BE_API_URL}/product/public/seller/${userId.value}/category`
   try {
-    const response = await axios.get(`${CATEGORY_API_URL}/${userId.value}/category`)
+    const response = await axios.get(url)
     categoryList.value = response.data
   } catch (error) {
     console.error('Error fetching categories:', error)
@@ -200,7 +160,7 @@ const openDialog = (mode: 'add' | 'edit', row?: Voucher) => {
     resetForm()
   } else if (row) {
     // Populate form
-    ruleForm.id = row._id
+    ruleForm.id = row.id
     ruleForm.code = row.code
     ruleForm.name = row.name
     ruleForm.description = row.description
@@ -209,8 +169,7 @@ const openDialog = (mode: 'add' | 'edit', row?: Voucher) => {
     ruleForm.max_discount_value = row.max_discount_value
     ruleForm.min_order_value = row.min_order_value
     ruleForm.apply_scope = row.apply_scope
-    ruleForm.apply_category_ids = row.apply_category_ids || []
-    ruleForm.apply_product_ids = row.apply_product_ids || []
+    ruleForm.apply_seller_category_ids = row.apply_seller_category_ids || []
     ruleForm.total_quantity = row.total_quantity
     ruleForm.usage_limit_per_user = row.usage_limit_per_user
     ruleForm.status = row.status
@@ -235,7 +194,7 @@ const resetForm = () => {
   ruleForm.max_discount_value = null
   ruleForm.min_order_value = 0
   ruleForm.apply_scope = 'ALL'
-  ruleForm.apply_category_ids = []
+  ruleForm.apply_seller_category_ids = []
   ruleForm.total_quantity = 100
   ruleForm.usage_limit_per_user = 1
   ruleForm.dateRange = null
@@ -262,9 +221,8 @@ const handleSubmit = async (formEl: FormInstance | undefined) => {
           max_discount_value: ruleForm.max_discount_value,
           min_order_value: ruleForm.min_order_value,
           apply_scope: ruleForm.apply_scope,
-          apply_category_ids:
-            ruleForm.apply_scope === 'CATEGORY' ? ruleForm.apply_category_ids : [],
-          apply_product_ids: [], // Not implemented yet
+          apply_seller_category_ids:
+            ruleForm.apply_scope === 'CATEGORY' ? ruleForm.apply_seller_category_ids : [],
           total_quantity: ruleForm.total_quantity,
           usage_limit_per_user: ruleForm.usage_limit_per_user,
           start_time: ruleForm.dateRange ? ruleForm.dateRange[0].toISOString() : null,
@@ -317,7 +275,12 @@ const deleteVoucher = (id: string) => {
   <div class="voucher-manager">
     <div class="header">
       <h2>Voucher Management</h2>
-      <el-button type="primary" :icon="Plus" color="var(--main-color)" @click="openDialog('add')"
+      <el-button
+        size="large"
+        type="primary"
+        :icon="Plus"
+        color="var(--main-color)"
+        @click="openDialog('add')"
         >Create Voucher</el-button
       >
     </div>
@@ -335,7 +298,9 @@ const deleteVoucher = (id: string) => {
           <span v-if="row.discount_type === 'FIXED'"
             >{{ row.discount_value.toLocaleString() }}đ</span
           >
-          <span v-else>{{ row.discount_value }}% (Max: {{ row.max_discount_value }})</span>
+          <span v-else
+            >{{ row.discount_value }}% (Max: {{ row.max_discount_value?.toLocaleString() }}đ)</span
+          >
         </template>
       </el-table-column>
       <el-table-column label="Scope" width="150">
@@ -350,11 +315,12 @@ const deleteVoucher = (id: string) => {
           >
             <template #reference>
               <el-tag type="warning" style="cursor: pointer">
-                {{ row.apply_category_ids.length }} Categories
+                {{ row.apply_seller_category_ids ? row.apply_seller_category_ids.length : 0 }}
+                {{ (row.apply_seller_category_ids?.length || 0) === 1 ? 'Category' : 'Categories' }}
               </el-tag>
             </template>
             <ul style="padding-left: 20px; margin: 0">
-              <li v-for="id in row.apply_category_ids" :key="id">
+              <li v-for="id in row.apply_seller_category_ids" :key="id">
                 {{ categoryList.find((c) => c.id === id)?.name || 'Unknown' }}
               </li>
             </ul>
@@ -378,16 +344,10 @@ const deleteVoucher = (id: string) => {
           <el-tag :type="row.status === 'ACTIVE' ? 'success' : 'info'">{{ row.status }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="Actions" width="150" fixed="right">
+      <el-table-column label="Actions" width="150" fixed="right" align="center">
         <template #default="{ row }">
-          <el-button
-            type="primary"
-            link
-            :icon="Edit"
-            style="color: var(--main-color)"
-            @click="openDialog('edit', row)"
-          ></el-button>
-          <el-button type="danger" link :icon="Delete" @click="deleteVoucher(row._id)"></el-button>
+          <el-button type="primary" :icon="Edit" @click="openDialog('edit', row)" />
+          <el-button type="danger" :icon="Delete" @click="deleteVoucher(row.id)" />
         </template>
       </el-table-column>
     </el-table>
@@ -395,7 +355,7 @@ const deleteVoucher = (id: string) => {
     <el-dialog
       v-model="dialogVisible"
       :title="dialogMode === 'add' ? 'Create Voucher' : 'Edit Voucher'"
-      width="600px"
+      width="820px"
       destroy-on-close
       align-center
       class="voucher-dialog"
@@ -480,10 +440,10 @@ const deleteVoucher = (id: string) => {
         <el-form-item
           v-if="ruleForm.apply_scope === 'CATEGORY'"
           label="Select Categories"
-          prop="apply_category_ids"
+          prop="apply_seller_category_ids"
         >
           <el-select
-            v-model="ruleForm.apply_category_ids"
+            v-model="ruleForm.apply_seller_category_ids"
             multiple
             placeholder="Select categories"
             style="width: 100%"
