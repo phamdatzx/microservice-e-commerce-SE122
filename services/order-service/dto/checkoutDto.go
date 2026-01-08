@@ -4,6 +4,7 @@ type CheckoutRequest struct {
 	CartItemIDs     []string           `json:"cart_item_ids" binding:"required,min=1"`
 	VoucherID       string             `json:"voucher_id"`
 	ShippingAddress ShippingAddressDto `json:"shipping_address" binding:"required"`
+	PaymentMethod   string             `json:"payment_method" binding:"required,oneof=COD STRIPE"`
 }
 
 type ShippingAddressDto struct {

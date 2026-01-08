@@ -181,6 +181,8 @@ func (s *orderService) Checkout(userID string, request dto.CheckoutRequest) (*dt
 	// 6. Create Order record
 	order := &model.Order{
 		Status: "TO_CONFIRM",
+		PaymentMethod: request.PaymentMethod,
+		PaymentStatus: "PENDING",
 		User: model.User{
 			ID:   user.ID,
 			Name: user.Name,
