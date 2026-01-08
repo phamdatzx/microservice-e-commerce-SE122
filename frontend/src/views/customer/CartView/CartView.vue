@@ -61,6 +61,8 @@ export interface CartSeller {
 
 const productList = ref<any[]>([]) // Recently viewed
 
+const headerRef = ref<InstanceType<typeof Header> | null>(null)
+
 const checkAll = ref(false)
 const checkedProducts = ref<Product[]>([])
 const CartSellerProductWrapperRefs = ref<InstanceType<typeof CartSellerProductWrapper>[]>([])
@@ -209,6 +211,7 @@ const removeFromCart = async (cartItemId: string, showNotification = true) => {
         type: 'success',
       })
     }
+    headerRef.value?.fetchCartCount()
   } catch (error) {
     console.error('Error removing from cart:', error)
     if (showNotification) {
@@ -260,7 +263,7 @@ const handleDeleteSelected = async () => {
 </script>
 
 <template>
-  <Header />
+  <Header ref="headerRef" />
 
   <div class="main-container">
     <div

@@ -2,12 +2,32 @@
 import CustomerChat from './CustomerChat.vue'
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import axios from 'axios'
 
 const router = useRouter()
 const isLoggedIn = ref(false)
+const cartCount = ref(0)
+const API_URL = 'http://localhost:81/api/order/cart/count'
+
+const fetchCartCount = async () => {
+  const token = localStorage.getItem('access_token')
+  if (!token) return
+
+  try {
+    const response = await axios.get(API_URL, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    cartCount.value = response.data.count
+  } catch (error) {
+    console.error('Error fetching cart count:', error)
+  }
+}
 
 onMounted(() => {
   isLoggedIn.value = !!localStorage.getItem('access_token')
+  if (isLoggedIn.value) {
+    fetchCartCount()
+  }
 })
 
 const handleLogout = () => {
@@ -15,6 +35,10 @@ const handleLogout = () => {
   isLoggedIn.value = false
   router.push('/')
 }
+
+defineExpose({
+  fetchCartCount,
+})
 </script>
 
 <template>
@@ -116,7 +140,7 @@ const handleLogout = () => {
                   <circle cx="20" cy="21" r="1"></circle>
                   <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
                 </svg>
-                <span class="badge">5</span>
+                <span class="badge" v-if="cartCount > 0">{{ cartCount }}</span>
               </div>
             </div>
 
