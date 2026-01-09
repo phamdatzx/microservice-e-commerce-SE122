@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"order-service/dto"
 	appError "order-service/error"
 	"order-service/service"
@@ -36,4 +37,12 @@ func (c *OrderController) Checkout(ctx *gin.Context) {
 	}
 
 	ctx.JSON(200, response)
+}
+
+func (c *OrderController) StripeWebhook(ctx *gin.Context) {
+
+	fmt.Println("Stripe Webhook")
+	fmt.Println("body:", ctx.Request.Body)
+	fmt.Println("header:", ctx.Request.Header)
+	ctx.JSON(200, gin.H{"message": "Stripe Webhook"})
 }

@@ -7,8 +7,9 @@ import (
 )
 
 func RegisterOrderRoutes(rg *gin.RouterGroup, c controller.OrderController) {
-	order := rg.Group("/orders")
+	order := rg.Group("")
 	{
 		order.POST("/checkout", c.Checkout)
+		order.POST("/public/webhook/stripe", c.StripeWebhook)
 	}
 }
