@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"order-service/client"
+	stripeclient "order-service/client/payment/stripe"
 	"order-service/config"
 	"order-service/controller"
 	"order-service/repository"
@@ -27,13 +28,15 @@ func main() {
 	// Initialize clients
 	productClient := client.NewProductServiceClient()
 	userClient := client.NewUserServiceClient()
+	stripeConfig := config.NewStripeConfig()
+	stripeClient := stripeclient.NewStripeClient(stripeConfig)
 
 	// Initialize layers
 	cartRepo := repository.NewCartRepository(config.DB)
 	orderRepo := repository.NewOrderRepository(config.DB)
 
 	cartService := service.NewCartService(cartRepo, productClient, userClient)
-	orderService := service.NewOrderService(orderRepo, cartRepo, productClient, userClient)
+	orderService := service.NewOrderService(orderRepo, cartRepo, productClient, userClient, stripeClient)
 
 	cartController := controller.NewCartController(cartService)
 	orderController := controller.NewOrderController(orderService)
@@ -45,6 +48,12 @@ func main() {
 	router.SetupRouter(r, &router.AppRouter{
 		CartController:  cartController,
 		OrderController: orderController,
+	})
+
+	// Webhook handler
+	webhookHandler := stripeclient.NewWebhookHandler(stripeConfig.WebhookSecret, orderService)
+	r.POST("/webhook", func(c *gin.Context) {
+		webhookHandler.Handle(c.Writer, c.Request)
 	})
 
 	r.Run(":8085") 

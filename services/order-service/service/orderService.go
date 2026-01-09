@@ -1,16 +1,23 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"order-service/client"
+	"order-service/client/payment"
 	"order-service/dto"
 	appError "order-service/error"
 	"order-service/model"
 	"order-service/repository"
+
+	"github.com/stripe/stripe-go/v84"
+	"github.com/stripe/stripe-go/v84/checkout/session"
 )
 
 type OrderService interface {
 	Checkout(userID string, request dto.CheckoutRequest) (*dto.CheckoutResponse, error)
+	UpdateOrderPaymentStatus(ctx context.Context, orderID string, status string) error
+	CreateCheckoutSession(order *model.Order, successURL, cancelURL string) (string, error)
 }
 
 type orderService struct {
@@ -18,6 +25,7 @@ type orderService struct {
 	cartRepo      repository.CartRepository
 	productClient *client.ProductServiceClient
 	userClient    *client.UserServiceClient
+	paymentClient payment.PaymentClient
 }
 
 func NewOrderService(
@@ -25,12 +33,14 @@ func NewOrderService(
 	cartRepo repository.CartRepository,
 	productClient *client.ProductServiceClient,
 	userClient *client.UserServiceClient,
+	paymentClient payment.PaymentClient,
 ) OrderService {
 	return &orderService{
 		repo:          orderRepo,
 		cartRepo:      cartRepo,
 		productClient: productClient,
 		userClient:    userClient,
+		paymentClient: paymentClient,
 	}
 }
 
@@ -179,8 +189,14 @@ func (s *orderService) Checkout(userID string, request dto.CheckoutRequest) (*dt
 	}
 
 	// 6. Create Order record
+	orderStatus := "TO_PAY"
+	if request.PaymentMethod == "COD" {
+		orderStatus = "TO_CONFIRM"
+	}
+
+	
 	order := &model.Order{
-		Status: "TO_CONFIRM",
+		Status: orderStatus,
 		PaymentMethod: request.PaymentMethod,
 		PaymentStatus: "PENDING",
 		User: model.User{
@@ -211,14 +227,83 @@ func (s *orderService) Checkout(userID string, request dto.CheckoutRequest) (*dt
 		return nil, err
 	}
 
-	// 7. Delete purchased cart items
+	// 7. Handle Payment if needed
+	var clientSecret string
+	var paymentUrl string
+	if request.PaymentMethod == "STRIPE" {
+		var err error
+		paymentUrl, err = s.CreateCheckoutSession(order, "http://localhost:3000/checkout/success", "http://localhost:3000/checkout/failure")
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// 8. Delete purchased cart items
 	for _, item := range cartItems {
 		_ = s.cartRepo.DeleteCartItem(item.ID)
 	}
 
 	return &dto.CheckoutResponse{
-		OrderID:     order.ID,
-		TotalAmount: order.Total,
-		Status:      order.Status,
+		OrderID:      order.ID,
+		TotalAmount:  order.Total,
+		Status:       order.Status,
+		ClientSecret: clientSecret,
+		PaymentUrl:   paymentUrl,
 	}, nil
+}
+
+func (s *orderService) UpdateOrderPaymentStatus(ctx context.Context, orderID string, status string) error {
+	order, err := s.repo.FindOrderByID(orderID)
+	if err != nil {
+		return err
+	}
+	if order == nil {
+		return fmt.Errorf("order not found: %s", orderID)
+	}
+
+	order.PaymentStatus = status
+	if status == "PAID" {
+		order.Status = "PAID" // Or whatever the next status is, e.g. TO_SHIP
+	} else if status == "FAILED" {
+		order.Status = "CANCELLED"
+	}
+
+	return s.repo.UpdateOrder(order)
+}
+
+func (s *orderService) CreateCheckoutSession(order *model.Order, successURL, cancelURL string) (string, error) {
+	var lineItems []*stripe.CheckoutSessionLineItemParams
+	
+	for _, item := range order.Items {
+		lineItems = append(lineItems, &stripe.CheckoutSessionLineItemParams{
+			PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{
+				Currency: stripe.String("usd"),
+				ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{
+					Name: stripe.String(item.ProductName + " - " + item.VariantName),
+				},
+				UnitAmount: stripe.Int64(int64(item.Price * 100)),
+			},
+			Quantity: stripe.Int64(int64(item.Quantity)),
+		})
+	}
+
+	params := &stripe.CheckoutSessionParams{
+		PaymentMethodTypes: stripe.StringSlice([]string{
+			"card",
+		}),
+		LineItems:  lineItems,
+		Mode:       stripe.String(string(stripe.CheckoutSessionModePayment)),
+		SuccessURL: stripe.String(successURL),
+		CancelURL:  stripe.String(cancelURL),
+		Metadata: map[string]string{
+			"order_id": order.ID,
+		},
+	}
+
+	sess, err := session.New(params)
+	if err != nil {
+		return "", fmt.Errorf("failed to create checkout session: %w", err)
+	}
+
+	return sess.URL, nil
 }

@@ -20,7 +20,9 @@ type ShippingAddressDto struct {
 }
 
 type CheckoutResponse struct {
-	OrderID     string  `json:"order_id"`
-	TotalAmount float64 `json:"total_amount"`
-	Status      string  `json:"status"`
+	OrderID      string  `json:"order_id"`
+	TotalAmount  float64 `json:"total_amount"`
+	Status       string  `json:"status"`
+	ClientSecret string  `json:"client_secret,omitempty"`
+	PaymentUrl   string  `json:"payment_url,omitempty"`
 }
