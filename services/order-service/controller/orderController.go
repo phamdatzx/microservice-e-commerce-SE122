@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"order-service/client"
 	"order-service/client/payment"
 	"order-service/dto"
 	appError "order-service/error"
@@ -14,14 +15,16 @@ import (
 )
 
 type OrderController struct {
-	service service.OrderService
+	service       service.OrderService
 	paymentClient payment.PaymentClient
+	GHNClient     *client.GHNClient
 }
 
 func NewOrderController(service service.OrderService, paymentClient payment.PaymentClient) *OrderController {
 	return &OrderController{
 		service:       service,
 		paymentClient: paymentClient,
+		GHNClient:     client.NewGHNClient(),
 	}
 }
 
@@ -66,7 +69,7 @@ func (c *OrderController) StripeWebhook(ctx *gin.Context) {
 	signature := ctx.GetHeader("Stripe-Signature")
 
 	// Call stripeClient to construct event
-	event, err := c.paymentClient.ConstructEvent(payload, signature) 
+	event, err := c.paymentClient.ConstructEvent(payload, signature)
 	if err != nil {
 		ctx.Error(err)
 		return
@@ -126,6 +129,12 @@ func (c *OrderController) CreatePayment(ctx *gin.Context) {
 		return
 	}
 
+	var request dto.CreatePaymentRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.Error(appError.NewAppErrorWithErr(400, "Invalid request body", err))
+		return
+	}
+
 	response, err := c.service.CreatePaymentForOrder(ctx, orderID)
 	if err != nil {
 		ctx.Error(err)
@@ -133,4 +142,34 @@ func (c *OrderController) CreatePayment(ctx *gin.Context) {
 	}
 
 	ctx.JSON(200, response)
+}
+
+func (c *OrderController) GetOrders(ctx *gin.Context) {
+	userID := ctx.GetHeader("X-User-Id")
+	if userID == "" {
+		ctx.Error(appError.NewAppError(401, "User ID not found in header"))
+		return
+	}
+
+	var request dto.GetOrdersRequest
+	if err := ctx.ShouldBindQuery(&request); err != nil {
+		ctx.Error(appError.NewAppErrorWithErr(400, "Invalid query parameters", err))
+		return
+	}
+
+	response, err := c.service.GetUserOrders(ctx, userID, request)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(200, response)
+}
+
+func (c *OrderController) Test(ctx *gin.Context) {
+	district := ctx.Query("district")
+	province := ctx.Query("province")
+	ward := ctx.Query("forward")
+	result, _ := c.GHNClient.ResolveGHNAddress(province, district, ward)
+	ctx.JSON(200, result)
 }

@@ -21,6 +21,7 @@ type OrderService interface {
 	HandleCheckoutSessionCompleted(ctx context.Context, orderID, sessionID, paymentIntentID string) error
 	HandlePaymentFailed(ctx context.Context, paymentIntentID string) error
 	CreatePaymentForOrder(ctx context.Context, orderID string) (*dto.CreatePaymentResponse, error)
+	GetUserOrders(ctx context.Context, userID string, request dto.GetOrdersRequest) (*dto.GetOrdersResponse, error)
 }
 
 type orderService struct {
@@ -342,5 +343,55 @@ func (s *orderService) CreatePaymentForOrder(ctx context.Context, orderID string
 
 	return &dto.CreatePaymentResponse{
 		PaymentUrl: paymentUrl,
+	}, nil
+}
+
+func (s *orderService) GetUserOrders(ctx context.Context, userID string, request dto.GetOrdersRequest) (*dto.GetOrdersResponse, error) {
+	// Set defaults for pagination
+	page := request.Page
+	if page < 1 {
+		page = 1
+	}
+
+	limit := request.Limit
+	if limit < 1 {
+		limit = 10
+	} else if limit > 100 {
+		limit = 100 // max limit
+	}
+
+	// Query repository
+	orders, totalCount, err := s.repo.FindOrdersByUser(userID, request.Status, page, limit, request.SortBy, request.SortOrder)
+	if err != nil {
+		return nil, err
+	}
+
+	// Map to DTOs
+	orderDtos := make([]dto.OrderDto, len(orders))
+	for i, order := range orders {
+		orderDtos[i] = dto.OrderDto{
+			ID:            order.ID,
+			Status:        order.Status,
+			PaymentMethod: order.PaymentMethod,
+			PaymentStatus: order.PaymentStatus,
+			Total:         order.Total,
+			ItemCount:     len(order.Items),
+			CreatedAt:     order.CreatedAt,
+			UpdatedAt:     order.UpdatedAt,
+		}
+	}
+
+	// Calculate total pages
+	totalPages := int(totalCount) / limit
+	if int(totalCount)%limit > 0 {
+		totalPages++
+	}
+
+	return &dto.GetOrdersResponse{
+		Orders:     orderDtos,
+		TotalCount: totalCount,
+		Page:       page,
+		Limit:      limit,
+		TotalPages: totalPages,
 	}, nil
 }
