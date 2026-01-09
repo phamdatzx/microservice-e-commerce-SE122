@@ -10,6 +10,7 @@ func RegisterOrderRoutes(rg *gin.RouterGroup, c controller.OrderController) {
 	order := rg.Group("")
 	{
 		order.POST("/checkout", c.Checkout)
+		order.POST("/:orderId/payment", c.CreatePayment)
 		order.POST("/public/webhook/stripe", c.StripeWebhook)
 	}
 }

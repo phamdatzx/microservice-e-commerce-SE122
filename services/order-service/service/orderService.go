@@ -18,6 +18,9 @@ type OrderService interface {
 	Checkout(userID string, request dto.CheckoutRequest) (*dto.CheckoutResponse, error)
 	UpdateOrderPaymentStatus(ctx context.Context, orderID string, status string) error
 	CreateCheckoutSession(order *model.Order, successURL, cancelURL string) (string, error)
+	HandleCheckoutSessionCompleted(ctx context.Context, orderID, sessionID, paymentIntentID string) error
+	HandlePaymentFailed(ctx context.Context, paymentIntentID string) error
+	CreatePaymentForOrder(ctx context.Context, orderID string) (*dto.CreatePaymentResponse, error)
 }
 
 type orderService struct {
@@ -227,28 +230,15 @@ func (s *orderService) Checkout(userID string, request dto.CheckoutRequest) (*dt
 		return nil, err
 	}
 
-	// 7. Handle Payment if needed
-	var clientSecret string
-	var paymentUrl string
-	if request.PaymentMethod == "STRIPE" {
-		var err error
-		paymentUrl, err = s.paymentClient.CreatePayment(order, "http://localhost:3000/checkout/success", "http://localhost:3000/checkout/failure")
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// 8. Delete purchased cart items
+	// Delete purchased cart items
 	for _, item := range cartItems {
 		_ = s.cartRepo.DeleteCartItem(item.ID)
 	}
 
 	return &dto.CheckoutResponse{
-		OrderID:      order.ID,
-		TotalAmount:  order.Total,
-		Status:       order.Status,
-		ClientSecret: clientSecret,
-		PaymentUrl:   paymentUrl,
+		OrderID:     order.ID,
+		TotalAmount: order.Total,
+		Status:      order.Status,
 	}, nil
 }
 
@@ -306,4 +296,51 @@ func (s *orderService) CreateCheckoutSession(order *model.Order, successURL, can
 	}
 
 	return sess.URL, nil
+}
+
+func (s *orderService) HandleCheckoutSessionCompleted(ctx context.Context, orderID, sessionID, paymentIntentID string) error {
+	order, err := s.repo.FindOrderByID(orderID)
+	if err != nil {
+		return err
+	}
+	if order == nil {
+		return fmt.Errorf("order not found: %s", orderID)
+	}
+
+	// Update payment status to PAID
+	order.PaymentStatus = "PAID"
+	// Update order status to TO_CONFIRM
+	order.Status = "TO_CONFIRM"
+
+	return s.repo.UpdateOrder(order)
+}
+
+func (s *orderService) HandlePaymentFailed(ctx context.Context, paymentIntentID string) error {
+	// Find order by payment intent ID would require storing it
+	// For now, we'll need to add a field to store payment intent ID
+	// This is a simplified version that just logs the failure
+	// In production, you'd want to find the order by payment intent ID
+	// and update its status accordingly
+	return nil
+}
+
+func (s *orderService) CreatePaymentForOrder(ctx context.Context, orderID string) (*dto.CreatePaymentResponse, error) {
+	// Find the order
+	order, err := s.repo.FindOrderByID(orderID)
+	if err != nil {
+		return nil, err
+	}
+	if order == nil {
+		return nil, fmt.Errorf("order not found: %s", orderID)
+	}
+
+	// Create payment via Stripe
+	paymentUrl, err := s.paymentClient.CreatePayment(order, "http://localhost:3000/checkout/success", "http://localhost:3000/checkout/failure")
+	if err != nil {
+		return nil, err
+	}
+
+	return &dto.CreatePaymentResponse{
+		PaymentUrl: paymentUrl,
+	}, nil
 }

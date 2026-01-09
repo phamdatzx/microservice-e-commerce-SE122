@@ -39,7 +39,7 @@ func main() {
 	orderService := service.NewOrderService(orderRepo, cartRepo, productClient, userClient, stripeClient)
 
 	cartController := controller.NewCartController(cartService)
-	orderController := controller.NewOrderController(orderService)
+	orderController := controller.NewOrderController(orderService, stripeClient)
 
 	r := gin.Default()
 	//r.Use(cors.Default())
@@ -48,12 +48,6 @@ func main() {
 	router.SetupRouter(r, &router.AppRouter{
 		CartController:  cartController,
 		OrderController: orderController,
-	})
-
-	// Webhook handler
-	webhookHandler := stripeclient.NewWebhookHandler(stripeConfig.WebhookSecret, orderService)
-	r.POST("/webhook", func(c *gin.Context) {
-		webhookHandler.Handle(c.Writer, c.Request)
 	})
 
 	r.Run(":8085") 

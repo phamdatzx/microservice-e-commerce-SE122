@@ -5,12 +5,14 @@ import (
 	"fmt"
 
 	"order-service/config"
+	appError "order-service/error"
 	"order-service/model"
 
 	"github.com/stripe/stripe-go/v84"
 	"github.com/stripe/stripe-go/v84/checkout/session"
 	"github.com/stripe/stripe-go/v84/paymentintent"
 	"github.com/stripe/stripe-go/v84/refund"
+	"github.com/stripe/stripe-go/v84/webhook"
 )
 
 type StripeClient struct {
@@ -79,4 +81,22 @@ func (s *StripeClient) RefundPayment(ctx context.Context, paymentID string) erro
 		return fmt.Errorf("failed to refund payment: %w", err)
 	}
 	return nil
+}
+
+func (s *StripeClient) ConstructEvent(payload []byte, signature string) (*stripe.Event, error) {
+	if signature == "" {
+		return nil, appError.NewAppError(400, "Missing Stripe-Signature header")
+	}
+
+	event, err := webhook.ConstructEvent(
+		payload,
+		signature,
+		s.config.WebhookSecret,
+	)
+
+	if err != nil {
+		return nil, appError.NewAppErrorWithErr(400, "Invalid Stripe signature", err)
+	}
+
+	return &event, nil
 }
