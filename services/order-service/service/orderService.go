@@ -232,7 +232,7 @@ func (s *orderService) Checkout(userID string, request dto.CheckoutRequest) (*dt
 	var paymentUrl string
 	if request.PaymentMethod == "STRIPE" {
 		var err error
-		paymentUrl, err = s.CreateCheckoutSession(order, "http://localhost:3000/checkout/success", "http://localhost:3000/checkout/failure")
+		paymentUrl, err = s.paymentClient.CreatePayment(order, "http://localhost:3000/checkout/success", "http://localhost:3000/checkout/failure")
 		if err != nil {
 			return nil, err
 		}

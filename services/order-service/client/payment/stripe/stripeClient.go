@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"order-service/client/payment"
 	"order-service/config"
+	"order-service/model"
 
 	"github.com/stripe/stripe-go/v84"
+	"github.com/stripe/stripe-go/v84/checkout/session"
 	"github.com/stripe/stripe-go/v84/paymentintent"
 	"github.com/stripe/stripe-go/v84/refund"
 )
@@ -21,28 +22,43 @@ func NewStripeClient(cfg *config.StripeConfig) *StripeClient {
 	return &StripeClient{config: cfg}
 }
 
-func (s *StripeClient) CreatePayment(ctx context.Context, amount int64, currency string, orderID string) (*payment.CreatePaymentResult, error) {
-	params := &stripe.PaymentIntentParams{
-		Amount:   stripe.Int64(amount),
-		Currency: stripe.String(currency),
+func (s *StripeClient) CreatePayment(order *model.Order, successURL, cancelURL string) (string, error) {
+	var lineItems []*stripe.CheckoutSessionLineItemParams
+	
+	for _, item := range order.Items {
+		lineItems = append(lineItems, &stripe.CheckoutSessionLineItemParams{
+			PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{
+				Currency: stripe.String("usd"),
+				ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{
+					Name: stripe.String(item.ProductName + " - " + item.VariantName),
+				},
+				UnitAmount: stripe.Int64(int64(item.Price * 100)),
+			},
+			Quantity: stripe.Int64(int64(item.Quantity)),
+		})
+	}
+
+	params := &stripe.CheckoutSessionParams{
+		PaymentMethodTypes: stripe.StringSlice([]string{
+			"card",
+		}),
+		Currency: stripe.String("usd"),
+		LineItems:  lineItems,
+		Mode:       stripe.String(string(stripe.CheckoutSessionModePayment)),
+		SuccessURL: stripe.String(successURL),
+		CancelURL:  stripe.String(cancelURL),
 		Metadata: map[string]string{
-			"order_id": orderID,
-		},
-		AutomaticPaymentMethods: &stripe.PaymentIntentAutomaticPaymentMethodsParams{
-			Enabled: stripe.Bool(true),
+			"order_id": order.ID,
 		},
 	}
 
-	pi, err := paymentintent.New(params)
+
+	sess, err := session.New(params)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create payment intent: %w", err)
+		return "", fmt.Errorf("failed to create checkout session: %w", err)
 	}
 
-	return &payment.CreatePaymentResult{
-		PaymentID:    pi.ID,
-		ClientSecret: pi.ClientSecret,
-		Status:       string(pi.Status),
-	}, nil
+	return sess.URL, nil
 }
 
 func (s *StripeClient) CancelPayment(ctx context.Context, paymentID string) error {

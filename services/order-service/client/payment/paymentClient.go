@@ -1,6 +1,9 @@
 package payment
 
-import "context"
+import (
+	"context"
+	"order-service/model"
+)
 
 type CreatePaymentResult struct {
 	PaymentID    string
@@ -9,7 +12,7 @@ type CreatePaymentResult struct {
 }
 
 type PaymentClient interface {
-	CreatePayment(ctx context.Context, amount int64, currency string, orderID string) (*CreatePaymentResult, error)
+	CreatePayment(order *model.Order, successURL, cancelURL string) (string, error)
 	CancelPayment(ctx context.Context, paymentID string) error
 	RefundPayment(ctx context.Context, paymentID string) error
 }
