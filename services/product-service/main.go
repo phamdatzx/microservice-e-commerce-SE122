@@ -38,10 +38,17 @@ func main() {
 	sellerCategoryService := service.NewSellerCategoryService(sellerCategoryRepo)
 	sellerCategoryController := controller.NewSellerCategoryController(sellerCategoryService)
 
+	// Wiring dependencies - SavedVoucher (initialize repo first)
+	savedVoucherRepo := repository.NewSavedVoucherRepository(config.DB)
+
 	// Wiring dependencies - Voucher
 	voucherRepo := repository.NewVoucherRepository(config.DB)
-	voucherService := service.NewVoucherService(voucherRepo)
+	voucherService := service.NewVoucherService(voucherRepo, savedVoucherRepo)
 	voucherController := controller.NewVoucherController(voucherService)
+
+	// Wiring dependencies - SavedVoucher service
+	savedVoucherService := service.NewSavedVoucherService(savedVoucherRepo, voucherRepo)
+	savedVoucherController := controller.NewSavedVoucherController(savedVoucherService)
 
 	r := gin.Default()
 	r.Use(cors.Default())
@@ -52,6 +59,7 @@ func main() {
 		CategoryController:       categoryController,
 		SellerCategoryController: sellerCategoryController,
 		VoucherController:        voucherController,
+		SavedVoucherController:   savedVoucherController,
 	})
 
 	r.Run(":8085")

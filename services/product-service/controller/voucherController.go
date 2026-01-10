@@ -62,7 +62,10 @@ func (c *VoucherController) Get(ctx *gin.Context) {
 		return
 	}
 
-	response, err := c.service.GetVoucherByID(id)
+	// Get userID from header (optional)
+	userID := ctx.GetHeader("X-User-Id")
+
+	response, err := c.service.GetVoucherByID(id, userID)
 	if err != nil {
 		_ = ctx.Error(err)
 		ctx.Abort()
@@ -80,7 +83,8 @@ func (c *VoucherController) List(ctx *gin.Context) {
 		return
 	}
 
-	response, err := c.service.GetVouchersBySeller(sellerID)
+	// userID is same as sellerID in this context
+	response, err := c.service.GetVouchersBySeller(sellerID, sellerID)
 	if err != nil {
 		_ = ctx.Error(err)
 		ctx.Abort()

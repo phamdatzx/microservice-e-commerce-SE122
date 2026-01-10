@@ -9,18 +9,22 @@ import (
 
 type VoucherService interface {
 	CreateVoucher(sellerID string, request dto.VoucherRequest) (dto.VoucherResponse, error)
-	GetVoucherByID(id string) (dto.VoucherResponse, error)
-	GetVouchersBySeller(sellerID string) ([]dto.VoucherResponse, error)
+	GetVoucherByID(id string, userID string) (dto.VoucherResponse, error)
+	GetVouchersBySeller(sellerID string, userID string) ([]dto.VoucherResponse, error)
 	UpdateVoucher(id string, sellerID string, request dto.VoucherRequest) (dto.VoucherResponse, error)
 	DeleteVoucher(id string, sellerID string) error
 }
 
 type voucherService struct {
-	repo repository.VoucherRepository
+	repo             repository.VoucherRepository
+	savedVoucherRepo repository.SavedVoucherRepository
 }
 
-func NewVoucherService(repo repository.VoucherRepository) VoucherService {
-	return &voucherService{repo: repo}
+func NewVoucherService(repo repository.VoucherRepository, savedVoucherRepo repository.SavedVoucherRepository) VoucherService {
+	return &voucherService{
+		repo:             repo,
+		savedVoucherRepo: savedVoucherRepo,
+	}
 }
 
 func (s *voucherService) CreateVoucher(sellerID string, request dto.VoucherRequest) (dto.VoucherResponse, error) {
@@ -46,18 +50,18 @@ func (s *voucherService) CreateVoucher(sellerID string, request dto.VoucherReque
 		return dto.VoucherResponse{}, err
 	}
 
-	return s.mapToResponse(voucher), nil
+	return s.mapToResponse(voucher, ""), nil
 }
 
-func (s *voucherService) GetVoucherByID(id string) (dto.VoucherResponse, error) {
+func (s *voucherService) GetVoucherByID(id string, userID string) (dto.VoucherResponse, error) {
 	voucher, err := s.repo.FindByID(id)
 	if err != nil {
 		return dto.VoucherResponse{}, appError.NewAppErrorWithErr(404, "voucher not found", err)
 	}
-	return s.mapToResponse(voucher), nil
+	return s.mapToResponse(voucher, userID), nil
 }
 
-func (s *voucherService) GetVouchersBySeller(sellerID string) ([]dto.VoucherResponse, error) {
+func (s *voucherService) GetVouchersBySeller(sellerID string, userID string) ([]dto.VoucherResponse, error) {
 	vouchers, err := s.repo.FindBySellerID(sellerID)
 	if err != nil {
 		return nil, err
@@ -65,7 +69,7 @@ func (s *voucherService) GetVouchersBySeller(sellerID string) ([]dto.VoucherResp
 
 	var responses []dto.VoucherResponse
 	for _, voucher := range vouchers {
-		responses = append(responses, s.mapToResponse(&voucher))
+		responses = append(responses, s.mapToResponse(&voucher, userID))
 	}
 	return responses, nil
 }
@@ -101,7 +105,7 @@ func (s *voucherService) UpdateVoucher(id string, sellerID string, request dto.V
 		return dto.VoucherResponse{}, err
 	}
 
-	return s.mapToResponse(voucher), nil
+	return s.mapToResponse(voucher, ""), nil
 }
 
 func (s *voucherService) DeleteVoucher(id string, sellerID string) error {
@@ -117,8 +121,8 @@ func (s *voucherService) DeleteVoucher(id string, sellerID string) error {
 	return s.repo.Delete(id)
 }
 
-func (s *voucherService) mapToResponse(voucher *model.Voucher) dto.VoucherResponse {
-	return dto.VoucherResponse{
+func (s *voucherService) mapToResponse(voucher *model.Voucher, userID string) dto.VoucherResponse {
+	response := dto.VoucherResponse{
 		ID:                     voucher.ID,
 		SellerID:               voucher.SellerID,
 		Code:                   voucher.Code,
@@ -139,4 +143,20 @@ func (s *voucherService) mapToResponse(voucher *model.Voucher) dto.VoucherRespon
 		CreatedAt:              voucher.CreatedAt,
 		UpdatedAt:              voucher.UpdatedAt,
 	}
+
+	// If userID is provided, check if user has saved this voucher
+	if userID != "" && s.savedVoucherRepo != nil {
+		savedVoucher, err := s.savedVoucherRepo.FindByUserAndVoucher(userID, voucher.ID)
+		if err == nil && savedVoucher.ID != "" {
+			response.SavedVoucher = &dto.SavedVoucherInfo{
+				ID:             savedVoucher.ID,
+				SavedAt:        savedVoucher.SavedAt,
+				UsedCount:      savedVoucher.UsedCount,
+				MaxUsesAllowed: savedVoucher.MaxUsesAllowed,
+				IsDeleted:      savedVoucher.IsDeleted,
+			}
+		}
+	}
+
+	return response
 }
