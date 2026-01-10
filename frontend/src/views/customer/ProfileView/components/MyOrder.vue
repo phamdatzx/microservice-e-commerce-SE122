@@ -8,6 +8,20 @@ const activeOrderTab = ref('all')
 
 const orders = ref<any[]>([])
 
+const statusMapping: Record<string, string> = {
+  all: '',
+  'to-pay': 'TO_STATUS_PAY', // Backend doesn't support 'TO_PAY' filter directly if payment status is separate?
+  // Wait, UserService CreateOrder sets status=TO_PAY for Stripe.
+  // Let's assume backend filters by status field directly.
+  'to-ship': 'TO_CONFIRM',
+  'to-receive': 'SHIPPING', // or TO_PICKUP? User example used TO_CONFIRM. Backend update logic has TO_PICKUP, SHIPPING.
+  // Let's use standard Shopee-like flow: To Ship -> TO_CONFIRM/TO_PICKUP, To Receive -> SHIPPING
+  // For this project, listing "To Ship" usually maps to TO_CONFIRM.
+  completed: 'COMPLETED',
+  cancelled: 'CANCELLED',
+  'return-refund': 'RETURNED',
+}
+
 const fetchOrders = async () => {
   try {
     const params: any = {
@@ -18,8 +32,16 @@ const fetchOrders = async () => {
     }
 
     if (activeOrderTab.value !== 'all') {
-      params.status = activeOrderTab.value.toUpperCase().replace(/-/g, '_')
-      // Custom mapping if needed, e.g. to-ship -> TO_SHIP
+      // Map frontend tab to backend status
+      let status = activeOrderTab.value.toUpperCase().replace(/-/g, '_')
+
+      // Override with specific mapping if needed
+      if (activeOrderTab.value === 'to-ship') status = 'TO_CONFIRM'
+      if (activeOrderTab.value === 'to-receive') status = 'SHIPPING' // or TO_PICKUP
+      if (activeOrderTab.value === 'return-refund') status = 'RETURNED'
+      if (activeOrderTab.value === 'to-pay') status = 'TO_PAY'
+
+      params.status = status
     }
 
     const response = await axios.get('http://localhost:81/api/order', {
@@ -29,10 +51,19 @@ const fetchOrders = async () => {
       },
     })
 
-    if (response.data && response.data.data) {
-      // Map API response to UI model if necessary, or use directly if it matches
-      // Assuming response.data.data is the array of orders
-      orders.value = response.data.data
+    if (response.data && response.data.orders) {
+      orders.value = response.data.orders.map((order: any) => ({
+        ...order,
+        // Since API doesn't return items/shop info, we mock or handle empty for now
+        // UI expects: shopName, shippingUpdate, statusText, items[], totalAmount
+        shopName: 'Official Store', // Placeholder
+        shippingUpdate: 'Updated recently',
+        statusText: order.status,
+        totalAmount: order.total,
+        items: [], // API doesn't return items yet
+      }))
+    } else {
+      orders.value = []
     }
   } catch (error) {
     console.error('Failed to fetch orders:', error)

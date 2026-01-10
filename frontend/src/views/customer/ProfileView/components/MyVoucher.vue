@@ -300,6 +300,7 @@ onMounted(() => {
   color: #888;
   margin: 0;
   display: -webkit-box;
+  line-clamp: 1;
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;

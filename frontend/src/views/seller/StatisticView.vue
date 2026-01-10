@@ -9,6 +9,7 @@ import {
   Title,
   Tooltip,
   Legend,
+  type ChartOptions,
 } from 'chart.js'
 import { Line } from 'vue-chartjs'
 import { InfoFilled, ArrowRight } from '@element-plus/icons-vue'
@@ -55,19 +56,19 @@ const chartData = computed(() => ({
   ],
 }))
 
-const chartOptions = {
+const chartOptions: ChartOptions<'line'> = {
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
     legend: {
-      position: 'bottom' as const,
+      position: 'bottom',
     },
   },
   scales: {
     y: {
       beginAtZero: true,
       grid: {
-        borderDash: [2, 4],
+        // borderDash: [2, 4],
       },
     },
     x: {

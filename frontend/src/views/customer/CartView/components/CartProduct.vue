@@ -44,12 +44,14 @@ const handleDelete = () => {
           color: props.product.isSoldOut ? 'var(--main-color)' : 'rgba(0, 0, 0, 0)',
         }"
       >
-        This product option is sold out, please select another option.
+        This product variant is sold out, please select another option.
       </p>
     </div>
-    <div style="margin-right: 10px">
-      <span style="display: block">Product Option:</span>
-      <span style="display: block">{{ props.product.productOption }}</span>
+    <div style="margin-right: 10px; width: 150px">
+      <template v-if="props.product.productOption">
+        <span style="display: block">Variant:</span>
+        <span style="display: block">{{ props.product.productOption }}</span>
+      </template>
     </div>
     <span style="width: 174px; text-align: center"
       >{{ formatNumberWithDots(props.product.price) }}đ</span

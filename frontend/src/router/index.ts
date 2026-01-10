@@ -25,6 +25,7 @@ import CategoryManagerView from '@/views/admin/CategoryView.vue'
 import UserView from '@/views/admin/UserView.vue'
 import ReportView from '@/views/admin/ReportView.vue'
 import OrderTrackingView from '@/views/customer/OrderTrackingView/OrderTrackingView.vue'
+import MyOrder from '@/views/customer/ProfileView/components/MyOrder.vue'
 
 const loginFormProps = {
   title: 'Welcome Back',
@@ -86,8 +87,20 @@ const router = createRouter({
       component: ProfileView,
     },
     {
+      path: '/orders',
+      component: MyOrder,
+    },
+    {
       path: '/checkout',
       component: CheckoutView,
+    },
+    {
+      path: '/checkout/success',
+      component: () => import('@/views/customer/CheckoutView/PaymentSuccessView.vue'),
+    },
+    {
+      path: '/checkout/failure',
+      component: () => import('@/views/customer/CheckoutView/PaymentFailureView.vue'),
     },
     {
       path: '/order-tracking',

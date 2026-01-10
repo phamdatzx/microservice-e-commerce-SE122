@@ -3,7 +3,15 @@ import { ref, onMounted, computed } from 'vue'
 import Header from '@/components/Header.vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
-import { Location, Money, CreditCard, ArrowRight, Plus, Loading } from '@element-plus/icons-vue'
+import {
+  Location,
+  Money,
+  CreditCard,
+  ArrowRight,
+  Plus,
+  Loading,
+  Ticket,
+} from '@element-plus/icons-vue'
 import { ElMessage, ElLoading } from 'element-plus'
 import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
 
@@ -14,8 +22,13 @@ const checkoutItems = ref<any[]>([])
 const addresses = ref<any[]>([])
 const selectedAddressId = ref('')
 const paymentMethod = ref('COD')
-const voucherCode = ref('') // logic for voucher if needed later
+const voucherCode = ref('') // Keep for display if needed
 const isLoading = ref(false)
+
+// Voucher State
+const vouchers = ref<any[]>([])
+const selectedVoucherId = ref('')
+const showVoucherDialog = ref(false)
 
 // --- Computed ---
 const subtotal = computed(() => {
@@ -23,11 +36,35 @@ const subtotal = computed(() => {
 })
 
 const shippingFee = computed(() => {
-  return 30000 // Fixed for now
+  return 0
+})
+
+const selectedVoucher = computed(() => {
+  return vouchers.value.find((v) => v.id === selectedVoucherId.value)
+})
+
+const discountAmount = computed(() => {
+  if (!selectedVoucher.value) return 0
+  const v = selectedVoucher.value.voucher
+
+  // Check min spend
+  if (subtotal.value < v.min_order_value) return 0
+
+  let discount = 0
+  if (v.discount_type === 'FIXED') {
+    discount = v.discount_value
+  } else {
+    discount = subtotal.value * (v.discount_value / 100)
+    if (v.max_discount_value && discount > v.max_discount_value) {
+      discount = v.max_discount_value
+    }
+  }
+  return discount
 })
 
 const total = computed(() => {
-  return subtotal.value + shippingFee.value
+  const t = subtotal.value + shippingFee.value - discountAmount.value
+  return t > 0 ? t : 0
 })
 
 const selectedAddress = computed(() => {
@@ -36,9 +73,27 @@ const selectedAddress = computed(() => {
 
 // --- Methods ---
 
+const fetchVouchers = async () => {
+  try {
+    const response = await axios.get('http://localhost:81/api/product/saved-vouchers', {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+      },
+    })
+    if (response.data) {
+      vouchers.value = response.data
+    }
+  } catch (error) {
+    console.error('Failed to fetch vouchers:', error)
+  }
+}
+
 const fetchAddresses = async () => {
   isLoading.value = true
   try {
+    // Parallel fetch if possible, but sequential is fine
+    await fetchVouchers()
+
     const response = await axios.get('http://localhost:81/api/user/addresses', {
       headers: {
         Authorization: `Bearer ${localStorage.getItem('access_token')}`,
@@ -79,11 +134,17 @@ const handlePlaceOrder = async () => {
     longitude: selectedAddress.value.longitude || 0,
   }
 
-  const payload = {
+  const payload: any = {
     cart_item_ids: checkoutItems.value.map((item) => item.id), // Assuming item.id is the cart_item_id
     shipping_address: addressPayload,
     payment_method: paymentMethod.value,
   }
+
+  if (selectedVoucherId.value) {
+    payload.voucher_id = selectedVoucherId.value
+  }
+
+  console.log('Checkout Payload:', payload)
 
   const loading = ElLoading.service({
     lock: true,
@@ -100,7 +161,7 @@ const handlePlaceOrder = async () => {
     })
 
     if (response.data) {
-      const orderId = response.data.id // Adjust based on actual response structure
+      const orderId = response.data.order_id
 
       if (paymentMethod.value === 'STRIPE') {
         // 2. Payment Session API
@@ -129,8 +190,8 @@ const handleStripePayment = async (orderId: string) => {
         },
       },
     )
-    if (response.data && response.data.url) {
-      window.location.href = response.data.url
+    if (response.data && response.data.payment_url) {
+      window.location.href = response.data.payment_url
     } else {
       ElMessage.warning('Payment session created but no URL provided')
       router.push('/profile')
@@ -145,6 +206,27 @@ const handleStripePayment = async (orderId: string) => {
 const navigateToAddress = () => {
   router.push('/profile') // Shortcut to manage addresses
 }
+
+const selectVoucher = (voucherId: string) => {
+  if (selectedVoucherId.value === voucherId) {
+    selectedVoucherId.value = '' // Deselect
+  } else {
+    selectedVoucherId.value = voucherId
+  }
+  showVoucherDialog.value = false
+}
+
+// Filter usable vouchers
+const validVouchers = computed(() => {
+  const now = new Date()
+  return vouchers.value.filter((v) => {
+    const isExpired = new Date(v.voucher.end_time) <= now
+    const isFullyUsed = v.used_count >= v.max_uses_allowed
+    // Also check if applicable to current cart value? Optional but good UX
+    // const isApplicable = subtotal.value >= v.voucher.min_order_value
+    return !isExpired && !isFullyUsed
+  })
+})
 
 onMounted(() => {
   // Load checkout items
@@ -215,8 +297,10 @@ onMounted(() => {
               <div v-for="item in checkoutItems" :key="item.id" class="product-item">
                 <img :src="item.imageUrl" alt="Product" class="item-img" />
                 <div class="item-info">
-                  <div class="item-name">{{ item.name }}</div>
-                  <div class="item-variant">Variant: {{ item.productOption }}</div>
+                  <div class="item-name">{{ item.productName }}</div>
+                  <div class="item-variant" v-if="item.productOption">
+                    Variant: {{ item.productOption }}
+                  </div>
                 </div>
                 <div class="item-meta">
                   <div class="item-price">{{ formatNumberWithDots(item.price) }}đ</div>
@@ -247,10 +331,18 @@ onMounted(() => {
               <span>Merchandise Subtotal</span>
               <span>{{ formatNumberWithDots(subtotal) }}đ</span>
             </div>
-            <div class="summary-row">
-              <span>Shipping Total</span>
-              <span>{{ formatNumberWithDots(shippingFee) }}đ</span>
+
+            <!-- Voucher Section -->
+            <div class="summary-row voucher-row" @click="showVoucherDialog = true">
+              <div class="voucher-label">
+                <el-icon><Ticket /></el-icon> <span>Voucher</span>
+              </div>
+              <div class="voucher-value" :class="{ 'has-discount': discountAmount > 0 }">
+                <span v-if="discountAmount > 0">-{{ formatNumberWithDots(discountAmount) }}đ</span>
+                <span v-else class="select-voucher-text">Select Voucher</span>
+              </div>
             </div>
+
             <el-divider />
             <div class="summary-row total-row">
               <span>Total Payment</span>
@@ -269,10 +361,164 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
+    <!-- Voucher Dialog -->
+    <el-dialog
+      v-model="showVoucherDialog"
+      title="Select Voucher"
+      width="500px"
+      class="voucher-dialog"
+    >
+      <div v-if="validVouchers.length === 0" class="no-vouchers">
+        <el-empty description="No usable vouchers found" />
+      </div>
+      <div class="voucher-list-dialog" v-else>
+        <div
+          v-for="v in validVouchers"
+          :key="v.id"
+          class="voucher-item-dialog"
+          :class="{
+            selected: selectedVoucherId === v.id,
+            disabled: subtotal < v.voucher.min_order_value,
+          }"
+          @click="subtotal >= v.voucher.min_order_value && selectVoucher(v.id)"
+        >
+          <div class="v-left">
+            <div class="v-code">{{ v.voucher.code }}</div>
+            <div class="v-name">{{ v.voucher.name }}</div>
+            <div class="v-desc">
+              Min. Spend {{ formatNumberWithDots(v.voucher.min_order_value) }}đ
+            </div>
+          </div>
+          <div class="v-right">
+            <div class="v-discount">
+              <span v-if="v.voucher.discount_type === 'FIXED'"
+                >-{{ formatNumberWithDots(v.voucher.discount_value) }}đ</span
+              >
+              <span v-else>-{{ v.voucher.discount_value }}%</span>
+            </div>
+            <el-radio
+              :model-value="selectedVoucherId"
+              :label="v.id"
+              @change="selectVoucher(v.id)"
+              :disabled="subtotal < v.voucher.min_order_value"
+              >{{ '' }}</el-radio
+            >
+          </div>
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <style scoped>
+.voucher-row {
+  cursor: pointer;
+  padding: 12px 12px;
+  border-top: 1px dashed #eee;
+  border-bottom: 1px dashed #eee;
+  margin: 10px 0;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.voucher-row:hover {
+  background-color: #fafafa;
+}
+
+.voucher-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--main-color);
+  font-weight: 500;
+}
+
+.voucher-value {
+  color: #999;
+  font-size: 14px;
+}
+
+.voucher-value.has-discount {
+  color: #ef4444;
+  font-weight: bold;
+}
+
+.select-voucher-text {
+  color: #22c55e;
+}
+
+/* Dialog Styles */
+.voucher-list-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.voucher-item-dialog {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #eee;
+  padding: 10px 15px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.voucher-item-dialog:hover {
+  border-color: var(--main-color);
+  background: #f0fdf4;
+}
+
+.voucher-item-dialog.selected {
+  border-color: var(--main-color);
+  background: #f0fdf4;
+}
+
+.voucher-item-dialog.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f5f5f5;
+}
+
+.v-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.v-code {
+  font-weight: bold;
+  color: #333;
+}
+
+.v-name {
+  font-size: 13px;
+  color: #666;
+}
+
+.v-desc {
+  font-size: 12px;
+  color: #999;
+}
+
+.v-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.v-discount {
+  font-weight: bold;
+  color: var(--main-color);
+  font-size: 16px;
+}
+
+/* ... Existing styles ... */
+
 .checkout-page {
   background-color: #f5f5f5;
   min-height: 100vh;
