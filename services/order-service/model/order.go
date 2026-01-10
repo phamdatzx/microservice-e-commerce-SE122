@@ -10,6 +10,8 @@ type Order struct {
 	ID              string        `bson:"_id" json:"id"`
 	Status          string        `bson:"status" json:"status"`
 	User            User          `bson:"user" json:"user"`
+	PaymentMethod   string        `bson:"payment_method" json:"payment_method"`      //COD, STRIPE
+	PaymentStatus   string        `bson:"payment_status" json:"payment_status"`      //PENDING, PAID, FAILED
 	Seller          User          `bson:"seller" json:"seller"`
 	Items           []OrderItem   `bson:"items" json:"items"`
 	CreatedAt       time.Time     `bson:"created_at" json:"created_at"`
@@ -18,6 +20,7 @@ type Order struct {
 	Total           float64       `bson:"total" json:"total"`
 	Phone           string        `bson:"phone" json:"phone"`
 	ShippingAddress OrderAddress  `bson:"shipping_address" json:"shipping_address"`
+	DeliveryCode    string        `bson:"delivery_code" json:"delivery_code"`
 }
 
 type OrderItem struct {

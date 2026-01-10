@@ -20,23 +20,47 @@ type VoucherRequest struct {
 }
 
 type VoucherResponse struct {
-	ID                     string    `json:"id"`
-	SellerID               string    `json:"seller_id"`
-	Code                   string    `json:"code"`
-	Name                   string    `json:"name"`
-	Description            string    `json:"description"`
-	DiscountType           string    `json:"discount_type"`
-	DiscountValue          int       `json:"discount_value"`
-	MaxDiscountValue       *int      `json:"max_discount_value"`
-	MinOrderValue          int       `json:"min_order_value"`
-	ApplyScope             string    `json:"apply_scope"`
-	ApplySellerCategoryIds []string  `json:"apply_seller_category_ids"`
-	TotalQuantity          int       `json:"total_quantity"`
-	UsedQuantity           int       `json:"used_quantity"`
-	UsageLimitPerUser      int       `json:"usage_limit_per_user"`
-	StartTime              time.Time `json:"start_time"`
-	EndTime                time.Time `json:"end_time"`
-	Status                 string    `json:"status"`
-	CreatedAt              time.Time `json:"created_at"`
-	UpdatedAt              time.Time `json:"updated_at"`
+	ID                     string               `json:"id"`
+	SellerID               string               `json:"seller_id"`
+	Code                   string               `json:"code"`
+	Name                   string               `json:"name"`
+	Description            string               `json:"description"`
+	DiscountType           string               `json:"discount_type"`
+	DiscountValue          int                  `json:"discount_value"`
+	MaxDiscountValue       *int                 `json:"max_discount_value"`
+	MinOrderValue          int                  `json:"min_order_value"`
+	ApplyScope             string               `json:"apply_scope"`
+	ApplySellerCategoryIds []string             `json:"apply_seller_category_ids"`
+	TotalQuantity          int                  `json:"total_quantity"`
+	UsedQuantity           int                  `json:"used_quantity"`
+	UsageLimitPerUser      int                  `json:"usage_limit_per_user"`
+	StartTime              time.Time            `json:"start_time"`
+	EndTime                time.Time            `json:"end_time"`
+	Status                 string               `json:"status"`
+	CreatedAt              time.Time            `json:"created_at"`
+	UpdatedAt              time.Time            `json:"updated_at"`
+	SavedVoucher           *SavedVoucherInfo    `json:"saved_voucher,omitempty"`
 }
+
+type SavedVoucherInfo struct {
+	ID             string    `json:"id"`
+	SavedAt        time.Time `json:"saved_at"`
+	UsedCount      int       `json:"used_count"`
+	MaxUsesAllowed int       `json:"max_uses_allowed"`
+	IsDeleted      bool      `json:"is_deleted"`
+}
+
+type SaveVoucherRequest struct {
+	VoucherID string `json:"voucher_id" validate:"required"`
+}
+
+type SavedVoucherResponse struct {
+	ID             string          `json:"id"`
+	UserID         string          `json:"user_id"`
+	VoucherID      string          `json:"voucher_id"`
+	SavedAt        time.Time       `json:"saved_at"`
+	UsedCount      int             `json:"used_count"`
+	MaxUsesAllowed int             `json:"max_uses_allowed"`
+	Voucher        VoucherResponse `json:"voucher"`
+}
+

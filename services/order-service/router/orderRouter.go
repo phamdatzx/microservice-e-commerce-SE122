@@ -2,13 +2,20 @@ package router
 
 import (
 	"order-service/controller"
+	"order-service/middleware"
 
 	"github.com/gin-gonic/gin"
 )
 
 func RegisterOrderRoutes(rg *gin.RouterGroup, c controller.OrderController) {
-	order := rg.Group("/orders")
+	order := rg.Group("")
 	{
+		order.GET("", c.GetOrders)
+		order.GET("/seller",middleware.RequireSeller(), c.GetOrdersBySellerId)
+		order.PUT("/:orderId",middleware.RequireSeller(), c.UpdateOrderStatus)
 		order.POST("/checkout", c.Checkout)
+		order.POST("/:orderId/payment", c.CreatePayment)
+		order.POST("/public/webhook/stripe", c.StripeWebhook)
+		order.GET("/test", c.Test)
 	}
 }
