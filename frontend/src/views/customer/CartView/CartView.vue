@@ -4,11 +4,14 @@ import type { CheckboxValueType } from 'element-plus'
 import { ref, useTemplateRef, watch, onMounted, computed } from 'vue'
 import CartSellerProductWrapper from './components/CartSellerProductWrapper.vue'
 import { Ticket, Loading, ShoppingCart } from '@element-plus/icons-vue'
-import { ElNotification, ElMessageBox } from 'element-plus'
+import { ElNotification, ElMessageBox, ElMessage } from 'element-plus'
 
 import { Splide, SplideSlide } from '@splidejs/vue-splide'
 import axios from 'axios'
 import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 export interface VariantAPI {
   id: string
@@ -127,6 +130,15 @@ const loadRecentlyViewed = () => {
 }
 
 const allProducts = computed(() => cartData.value.map((seller) => seller.products).flat())
+
+const handleCheckout = () => {
+  if (checkedProducts.value.length === 0) {
+    ElMessage.warning('Please select products to checkout')
+    return
+  }
+  localStorage.setItem('checkout_items', JSON.stringify(checkedProducts.value))
+  router.push('/checkout')
+}
 
 onMounted(() => {
   fetchCart()
@@ -360,7 +372,9 @@ const handleDeleteSelected = async () => {
               }}đ
             </span>
           </span>
-          <el-button style="font-size: 24px; padding: 32px 40px; color: var(--main-color)"
+          <el-button
+            style="font-size: 24px; padding: 32px 40px; color: var(--main-color)"
+            @click="handleCheckout"
             >Checkout</el-button
           >
         </div>

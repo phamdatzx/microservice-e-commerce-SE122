@@ -1,85 +1,54 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { Search, ChatDotRound, Shop } from '@element-plus/icons-vue'
 import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
+import axios from 'axios'
 
 const activeOrderTab = ref('all')
 
-const orders = ref([
-  {
-    id: 'ORD001',
-    shopName: 'Coolsen store',
-    status: 'TO_RECEIVE',
-    statusText: 'Awaiting Delivery',
-    shippingUpdate: 'Order reached the sorting center',
-    totalAmount: 95.28,
-    items: [
-      {
-        id: 101,
-        name: 'Tempered glass screen protector for iPhone 15 14 13 12 11 Pro Max',
-        variant: 'HD, 12/12Pro',
-        price: 28.8,
-        oldPrice: 50.0,
-        quantity: 1,
-        image: 'https://placehold.co/80x80',
-      },
-      {
-        id: 102,
-        name: 'Hand-woven wrist lanyard for phone case',
-        variant: 'Pink',
-        price: 32.8,
-        oldPrice: 57.8,
-        quantity: 1,
-        image: 'https://placehold.co/80x80',
-      },
-    ],
-  },
-  {
-    id: 'ORD002',
-    shopName: 'CAMY.SHOP',
-    status: 'TO_RECEIVE',
-    statusText: 'Awaiting Delivery',
-    shippingUpdate: 'Delivered successfully',
-    totalAmount: 141.2,
-    items: [
-      {
-        id: 103,
-        name: 'Unisex Wide Leg Jeans CAMY High Waist Black Wash',
-        variant: 'Black, XL:50-60kg',
-        price: 175.0,
-        oldPrice: 250.0,
-        quantity: 1,
-        image: 'https://placehold.co/80x80',
-      },
-    ],
-  },
-  {
-    id: 'ORD003',
-    shopName: 'Havana Vietnam',
-    status: 'COMPLETED',
-    statusText: 'Completed',
-    shippingUpdate: 'Delivered successfully',
-    totalAmount: 228.65,
-    items: [
-      {
-        id: 104,
-        name: 'Judydoll Highlight & Contour Palette 9g',
-        variant: '01 Natural',
-        price: 228.65,
-        oldPrice: 320.0,
-        quantity: 1,
-        image: 'https://placehold.co/80x80',
-      },
-    ],
-  },
-])
+const orders = ref<any[]>([])
 
-const filteredOrders = computed(() => {
-  if (activeOrderTab.value === 'all') return orders.value
-  return orders.value.filter(
-    (order) => order.status.toLowerCase() === activeOrderTab.value.replace(/-/g, '_'),
-  )
+const fetchOrders = async () => {
+  try {
+    const params: any = {
+      page: 1,
+      limit: 10,
+      sort_by: 'created_at',
+      sort_order: 'descending',
+    }
+
+    if (activeOrderTab.value !== 'all') {
+      params.status = activeOrderTab.value.toUpperCase().replace(/-/g, '_')
+      // Custom mapping if needed, e.g. to-ship -> TO_SHIP
+    }
+
+    const response = await axios.get('http://localhost:81/api/order', {
+      params,
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+      },
+    })
+
+    if (response.data && response.data.data) {
+      // Map API response to UI model if necessary, or use directly if it matches
+      // Assuming response.data.data is the array of orders
+      orders.value = response.data.data
+    }
+  } catch (error) {
+    console.error('Failed to fetch orders:', error)
+  }
+}
+
+watch(activeOrderTab, () => {
+  fetchOrders()
 })
+
+onMounted(() => {
+  fetchOrders()
+})
+
+// orders are now fetched filtered
+const filteredOrders = computed(() => orders.value)
 
 const orderTabs = [
   { label: 'All', value: 'all' },
