@@ -129,12 +129,6 @@ func (c *OrderController) CreatePayment(ctx *gin.Context) {
 		return
 	}
 
-	var request dto.CreatePaymentRequest
-	if err := ctx.ShouldBindJSON(&request); err != nil {
-		ctx.Error(appError.NewAppErrorWithErr(400, "Invalid request body", err))
-		return
-	}
-
 	response, err := c.service.CreatePaymentForOrder(ctx, orderID)
 	if err != nil {
 		ctx.Error(err)
