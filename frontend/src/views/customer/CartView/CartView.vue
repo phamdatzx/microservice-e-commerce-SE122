@@ -8,6 +8,7 @@ import { ElNotification, ElMessageBox } from 'element-plus'
 
 import { Splide, SplideSlide } from '@splidejs/vue-splide'
 import axios from 'axios'
+import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
 
 export interface VariantAPI {
   id: string
@@ -351,10 +352,12 @@ const handleDeleteSelected = async () => {
             >Total ({{ checkedProducts.length }} products):
             <span style="font-size: 24px; color: var(--main-color)">
               {{
-                checkedProducts.reduce((sum, product) => {
-                  return sum + product.price * (product.quantity ?? 1)
-                }, 0)
-              }}$
+                formatNumberWithDots(
+                  checkedProducts.reduce((sum, product) => {
+                    return sum + product.price * (product.quantity ?? 1)
+                  }, 0),
+                )
+              }}đ
             </span>
           </span>
           <el-button style="font-size: 24px; padding: 32px 40px; color: var(--main-color)"

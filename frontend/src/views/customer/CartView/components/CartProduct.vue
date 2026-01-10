@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Delete } from '@element-plus/icons-vue'
 import { type Product } from '../CartView.vue'
+import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
 
 interface Props {
   product: Product
@@ -50,7 +51,9 @@ const handleDelete = () => {
       <span style="display: block">Product Option:</span>
       <span style="display: block">{{ props.product.productOption }}</span>
     </div>
-    <span style="width: 174px; text-align: center">{{ props.product.price }}$</span>
+    <span style="width: 174px; text-align: center"
+      >{{ formatNumberWithDots(props.product.price) }}đ</span
+    >
     <span style="width: 169px; text-align: center">
       <el-input-number
         v-model="props.product.quantity"
@@ -61,7 +64,7 @@ const handleDelete = () => {
       />
     </span>
     <span style="width: 114px; text-align: center"
-      >{{ props.product.price * (props.product.quantity ?? 0) }}$</span
+      >{{ formatNumberWithDots(props.product.price * (props.product.quantity ?? 0)) }}đ</span
     >
     <span style="width: 139px; text-align: center">
       <el-button type="danger" plain :icon="Delete" @click="handleDelete" />

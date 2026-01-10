@@ -26,6 +26,7 @@ import {
   type UploadUserFile,
 } from 'element-plus'
 import { onMounted, reactive, ref, watch } from 'vue'
+import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
 
 interface ProductImage {
   id: string
@@ -682,7 +683,7 @@ const download = (images: ProductImage[], index: number) => {
           <el-table-column />
 
           <el-table-column label="Price" width="180">
-            <template #default="scope"> {{ scope.row.price }}$ </template>
+            <template #default="scope"> {{ formatNumberWithDots(scope.row.price) }}đ </template>
           </el-table-column>
 
           <el-table-column prop="stock" label="Stock" width="80" />
@@ -729,12 +730,16 @@ const download = (images: ProductImage[], index: number) => {
       <template #default="scope">
         <p v-if="scope.row.variants?.length > 1">
           {{
-            Math.min(...scope.row.variants.map((x: ProductVariant) => x.price)) +
-            '$ ~ ' +
-            Math.max(...scope.row.variants.map((x: ProductVariant) => x.price))
-          }}$
+            formatNumberWithDots(
+              Math.min(...scope.row.variants.map((x: ProductVariant) => x.price)),
+            ) +
+            'đ ~ ' +
+            formatNumberWithDots(
+              Math.max(...scope.row.variants.map((x: ProductVariant) => x.price)),
+            )
+          }}đ
         </p>
-        <p v-else>{{ scope.row.variants[0].price }}$</p>
+        <p v-else>{{ formatNumberWithDots(scope.row.variants[0].price) }}đ</p>
       </template>
     </el-table-column>
     <el-table-column prop="quantity" label="Stock" width="80">

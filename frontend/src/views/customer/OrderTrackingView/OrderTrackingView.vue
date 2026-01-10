@@ -13,6 +13,7 @@ import {
 } from '@element-plus/icons-vue'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
 
 const router = useRouter()
 
@@ -237,8 +238,8 @@ const handleBack = () => {
               <p class="p-qty">x{{ product.qty }}</p>
             </div>
             <div class="p-prices">
-              <span class="old-price">{{ product.oldPrice.toLocaleString() }}₫</span>
-              <span class="current-price">{{ product.price.toLocaleString() }}₫</span>
+              <span class="old-price">{{ formatNumberWithDots(product.oldPrice) }}₫</span>
+              <span class="current-price">{{ formatNumberWithDots(product.price) }}₫</span>
             </div>
           </div>
         </div>

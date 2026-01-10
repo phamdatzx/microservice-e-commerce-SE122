@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { Search, ChatDotRound, Shop } from '@element-plus/icons-vue'
+import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
 
 const activeOrderTab = ref('all')
 
@@ -135,8 +136,10 @@ const orderTabs = [
               <p class="item-quantity">x{{ item.quantity }}</p>
             </div>
             <div class="item-price">
-              <span v-if="item.oldPrice" class="old-price">${{ item.oldPrice.toFixed(2) }}</span>
-              <span class="current-price">${{ item.price.toFixed(2) }}</span>
+              <span v-if="item.oldPrice" class="old-price"
+                >{{ formatNumberWithDots(item.oldPrice) }}đ</span
+              >
+              <span class="current-price">{{ formatNumberWithDots(item.price) }}đ</span>
             </div>
           </div>
         </div>
@@ -144,7 +147,7 @@ const orderTabs = [
         <div class="order-footer">
           <div class="total-section">
             <span class="total-label">Order Total:</span>
-            <span class="total-amount">${{ order.totalAmount.toFixed(2) }}</span>
+            <span class="total-amount">{{ formatNumberWithDots(order.totalAmount) }}đ</span>
           </div>
           <div class="order-actions">
             <template v-if="order.status === 'TO_RECEIVE'">

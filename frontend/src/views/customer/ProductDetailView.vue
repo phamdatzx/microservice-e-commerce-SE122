@@ -392,7 +392,7 @@ const addToCart = async () => {
             </div>
             <el-button :icon="RedFlagIcon">Report</el-button>
           </div>
-          <div style="font-weight: 600; font-size: 28px">${{ currentPrice }}</div>
+          <div style="font-weight: 600; font-size: 28px">{{ currentPrice }}đ</div>
           <div style="margin-bottom: 16px" v-if="false">
             <!-- Example of special offers if any -->
             <el-divider style="margin: 20px 0" />
@@ -463,7 +463,7 @@ const addToCart = async () => {
             style="background-color: #edeff6; padding: 40px 40px 20px"
           >
             <h4>TOTAL PRICE:</h4>
-            <span style="font-weight: 700; font-size: 30px">${{ totalPrice }}</span>
+            <span style="font-weight: 700; font-size: 30px">{{ totalPrice }}đ</span>
             <div style="display: flex; align-items: center; margin: 12px 0 20px">
               <el-icon
                 style="margin-right: 6px; background-color: green; border-radius: 50%; padding: 2px"

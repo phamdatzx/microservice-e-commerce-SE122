@@ -9,6 +9,7 @@ import {
   type FormRules,
 } from 'element-plus'
 import { onMounted, reactive, ref, computed, watch } from 'vue'
+import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
 
 // --- Interfaces ---
 interface Voucher {
@@ -296,10 +297,11 @@ const deleteVoucher = (id: string) => {
       <el-table-column label="Discount" width="150">
         <template #default="{ row }">
           <span v-if="row.discount_type === 'FIXED'"
-            >{{ row.discount_value.toLocaleString() }}đ</span
+            >{{ formatNumberWithDots(row.discount_value) }}đ</span
           >
           <span v-else
-            >{{ row.discount_value }}% (Max: {{ row.max_discount_value?.toLocaleString() }}đ)</span
+            >{{ row.discount_value }}% (Max:
+            {{ row.max_discount_value ? formatNumberWithDots(row.max_discount_value) : '' }}đ)</span
           >
         </template>
       </el-table-column>

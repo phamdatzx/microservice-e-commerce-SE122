@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
 import { Search, Download, ChatDotRound } from '@element-plus/icons-vue'
+import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
 
 // --- Interfaces ---
 interface Product {
@@ -517,7 +518,7 @@ const handleBatchDelivery = () => {
 
             <!-- Other Columns (Vertical alignment wrapper) -->
             <div class="col-total border-left flex-center-col">
-              <span class="price-text">₫{{ order.totalAmount.toLocaleString() }}</span>
+              <span class="price-text">₫{{ formatNumberWithDots(order.totalAmount) }}</span>
               <span class="sub-text">{{ order.paymentMethod }}</span>
             </div>
 
