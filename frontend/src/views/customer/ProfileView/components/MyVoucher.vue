@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import axios from 'axios'
 import { Ticket, Timer, CopyDocument } from '@element-plus/icons-vue'
 import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
@@ -7,6 +7,8 @@ import { ElMessage } from 'element-plus'
 
 interface SavedVoucher {
   id: string
+  used_count: number
+  max_uses_allowed: number
   voucher: {
     code: string
     name: string
@@ -22,6 +24,7 @@ interface SavedVoucher {
 
 const vouchers = ref<SavedVoucher[]>([])
 const loading = ref(false)
+const activeTab = ref('all') // 'all' | 'available'
 
 const fetchSavedVouchers = async () => {
   loading.value = true
@@ -32,7 +35,6 @@ const fetchSavedVouchers = async () => {
       },
     })
     if (response.data) {
-      // The API returns an array directly as per the user's data example
       vouchers.value = response.data
     }
   } catch (error) {
@@ -41,6 +43,21 @@ const fetchSavedVouchers = async () => {
     loading.value = false
   }
 }
+
+const filteredVouchers = computed(() => {
+  const now = new Date()
+  return vouchers.value.filter((item) => {
+    const isExpired = new Date(item.voucher.end_time) <= now
+    const isFullyUsed = item.used_count >= item.max_uses_allowed
+
+    if (activeTab.value === 'all') {
+      return true
+    } else {
+      // available/usable
+      return !isExpired && !isFullyUsed
+    }
+  })
+})
 
 const copyCode = (code: string) => {
   navigator.clipboard
@@ -54,7 +71,7 @@ const copyCode = (code: string) => {
 }
 
 const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('vi-VN', {
+  return new Date(dateString).toLocaleDateString('en-US', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -72,12 +89,35 @@ onMounted(() => {
       <h3>My Saved Vouchers</h3>
     </div>
 
+    <!-- Filter Tabs -->
+    <div class="tabs">
+      <div class="tab-item" :class="{ active: activeTab === 'all' }" @click="activeTab = 'all'">
+        All
+      </div>
+      <div
+        class="tab-item"
+        :class="{ active: activeTab === 'available' }"
+        @click="activeTab = 'available'"
+      >
+        Usable
+      </div>
+    </div>
+
     <div v-loading="loading" class="voucher-list">
-      <div v-if="vouchers.length === 0 && !loading" class="no-vouchers">
-        <el-empty description="No saved vouchers found" />
+      <div v-if="filteredVouchers.length === 0 && !loading" class="no-vouchers">
+        <el-empty description="No vouchers found in this category" />
       </div>
 
-      <div v-for="item in vouchers" :key="item.id" class="voucher-card">
+      <div
+        v-for="item in filteredVouchers"
+        :key="item.id"
+        class="voucher-card"
+        :class="{
+          'is-used':
+            item.used_count >= item.max_uses_allowed ||
+            new Date(item.voucher.end_time) <= new Date(),
+        }"
+      >
         <div class="voucher-left">
           <div class="icon-box">
             <el-icon :size="24"><Ticket /></el-icon>
@@ -91,6 +131,15 @@ onMounted(() => {
               /></el-icon>
             </div>
             <p class="voucher-desc">{{ item.voucher.description }}</p>
+            <div class="usage-info">
+              Used: {{ item.used_count }} / {{ item.max_uses_allowed }}
+              <span v-if="item.used_count >= item.max_uses_allowed" class="used-badge"
+                >(Fully Used)</span
+              >
+              <span v-else-if="new Date(item.voucher.end_time) <= new Date()" class="used-badge"
+                >(Expired)</span
+              >
+            </div>
           </div>
         </div>
 
@@ -131,6 +180,41 @@ onMounted(() => {
   font-size: 20px;
   color: #333;
   margin: 0;
+}
+
+.tabs {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.tab-item {
+  padding: 10px 5px;
+  cursor: pointer;
+  font-weight: 500;
+  color: #666;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.tab-item:hover {
+  color: var(--main-color);
+}
+
+.tab-item.active {
+  color: var(--main-color);
+  font-weight: 700;
+}
+
+.tab-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: var(--main-color);
 }
 
 .voucher-list {
@@ -255,5 +339,30 @@ onMounted(() => {
   gap: 4px;
   font-size: 12px;
   color: #999;
+}
+
+.voucher-card.is-used {
+  filter: grayscale(1);
+  opacity: 0.7;
+}
+
+.voucher-card.is-used:hover {
+  border-color: #e0e0e0;
+  box-shadow: none;
+}
+
+.usage-info {
+  font-size: 13px;
+  color: #666;
+  margin-top: 5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.used-badge {
+  color: #ef4444;
+  font-weight: bold;
+  font-size: 12px;
 }
 </style>
