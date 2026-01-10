@@ -6,16 +6,31 @@ import AccountInfo from './components/AccountInfo.vue'
 import ChangePassword from './components/ChangePassword.vue'
 import MyAddress from './components/MyAddress.vue'
 import MyOrder from './components/MyOrder.vue'
+import MyVoucher from './components/MyVoucher.vue'
 
 const name = ref('Mark Cole')
 const email = ref('swoo@gmail.com')
 const phone = ref('+1 0231 4554 452')
 
-const activeMenu = ref('account-info')
+import { useRoute } from 'vue-router'
+import { watch } from 'vue'
+
+const route = useRoute()
+const activeMenu = ref(route.query.tab ? String(route.query.tab) : 'account-info')
+
+watch(
+  () => route.query.tab,
+  (newTab) => {
+    if (newTab) {
+      activeMenu.value = String(newTab)
+    }
+  },
+)
 
 const menuItems = [
   { id: 'account-info', label: 'Account info' },
   { id: 'my-order', label: 'My order' },
+  { id: 'my-voucher', label: 'My vouchers' },
   { id: 'my-address', label: 'My address' },
   { id: 'change-password', label: 'Change password' },
 ]
@@ -67,6 +82,8 @@ const menuItems = [
           <MyAddress v-else-if="activeMenu === 'my-address'" />
 
           <MyOrder v-else-if="activeMenu === 'my-order'" />
+
+          <MyVoucher v-else-if="activeMenu === 'my-voucher'" />
 
           <!-- Fallback -->
           <div v-else>
