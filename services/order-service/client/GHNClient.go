@@ -1,18 +1,24 @@
 package client
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"order-service/dto"
+	"order-service/model"
 	"os"
 	"strings"
 	"time"
 )
 
-
 type GHNClient struct {
-	baseURL    string
-	token      string
+	baseURL string
+	token   string
+}
+
+type NoData struct {
 }
 
 type GHNAddressCode struct {
@@ -40,12 +46,22 @@ type Ward struct {
 	WardName   string `json:"WardName"`
 }
 
+type CreateOrderData struct {
+	OrderCode string `json:"order_code"`
+	SortCode  string `json:"sort_code"`
+}
+
+type CreateOrderResponse struct {
+	Code    int             `json:"code"`
+	Message string          `json:"message"`
+	Data    CreateOrderData `json:"data"`
+}
+
 type GHNResponse[T any] struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 	Data    []T    `json:"data"`
 }
-
 
 func NewGHNClient() *GHNClient {
 	baseURL := os.Getenv("GHN_URL")
@@ -57,13 +73,13 @@ func NewGHNClient() *GHNClient {
 
 	return &GHNClient{
 		baseURL: baseURL,
-		token: token,
+		token:   token,
 	}
 }
 
 func callGHN[T any](url string, token string) ([]T, error) {
 	req, _ := http.NewRequest("GET", url, nil)
-	req.Header.Set("Token", token)
+	req.Header.Set("token", token)
 
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
@@ -84,7 +100,57 @@ func callGHN[T any](url string, token string) ([]T, error) {
 	return res.Data, nil
 }
 
-func (c *GHNClient)ResolveGHNAddress(
+func callGHNWithBody[T any](
+	method string,
+	url string,
+	token string,
+	body any,
+) (T, error) {
+	var zero T
+
+	var reqBody io.Reader
+	if body != nil {
+		b, err := json.Marshal(body)
+		if err != nil {
+			return zero, err
+		}
+		reqBody = bytes.NewBuffer(b)
+	}
+
+	req, err := http.NewRequest(method, url, reqBody)
+	if err != nil {
+		return zero, err
+	}
+
+	req.Header.Set("token", token)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return zero, err
+	}
+	defer resp.Body.Close()
+
+	// Wrapper response từ GHN
+	var ghnResp struct {
+		Code    int    `json:"code"`
+		Message string `json:"message"`
+		Data    T      `json:"data"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&ghnResp); err != nil {
+		return zero, err
+	}
+
+	if ghnResp.Code != 200 {
+		return zero, fmt.Errorf("GHN error: %s", ghnResp.Message)
+	}
+
+	return ghnResp.Data, nil
+}
+
+func (c *GHNClient) ResolveGHNAddress(
 	provinceName string,
 	districtName string,
 	wardName string,
@@ -161,4 +227,45 @@ func (c *GHNClient)ResolveGHNAddress(
 		DistrictID: districtID,
 		WardCode:   wardCode,
 	}, nil
+}
+
+func (c *GHNClient) CreateOrder(request dto.GHNCreateOrderRequest) (string, error) {
+	data, err := callGHNWithBody[CreateOrderData]("POST", fmt.Sprintf("%s/shiip/public-api/v2/shipping-order/create", c.baseURL), c.token, request)
+	if err != nil {
+		return "", err
+	}
+	return data.OrderCode, nil
+}
+
+func (c *GHNClient) CreateRequest(order model.Order) (dto.GHNCreateOrderRequest, error) {
+	seller := order.Seller
+
+	shippingAddress := order.ShippingAddress
+
+	request := dto.NewGHNCreateOrderRequest()
+
+	//map address, receiver info
+	request.FromName = shippingAddress.FullName
+	request.FromPhone = shippingAddress.Phone
+	request.FromAddress = shippingAddress.AddressLine
+
+	//map sender
+	request.ToName = seller.Name
+
+	//map items
+	for _, item := range order.Items {
+		request.Items = append(request.Items, dto.GHNItem{
+			Name:     item.ProductName,
+			Code:     item.SKU,
+			Quantity: item.Quantity,
+			Price:    item.Price,
+		})
+	}
+
+	//map cod if needed
+	if order.PaymentMethod == "COD" {
+		request.CodAmount = int(order.Total)
+	}
+
+	return request, nil
 }

@@ -32,6 +32,7 @@ type orderService struct {
 	productClient *client.ProductServiceClient
 	userClient    *client.UserServiceClient
 	paymentClient payment.PaymentClient
+	GHNClient     *client.GHNClient
 }
 
 func NewOrderService(
@@ -40,6 +41,7 @@ func NewOrderService(
 	productClient *client.ProductServiceClient,
 	userClient *client.UserServiceClient,
 	paymentClient payment.PaymentClient,
+	GHNClient *client.GHNClient,
 ) OrderService {
 	return &orderService{
 		repo:          orderRepo,
@@ -47,6 +49,7 @@ func NewOrderService(
 		productClient: productClient,
 		userClient:    userClient,
 		paymentClient: paymentClient,
+		GHNClient:     GHNClient,
 	}
 }
 
@@ -477,6 +480,17 @@ func (s *orderService) UpdateOrderStatus(ctx context.Context,userID string, orde
 	case "TO_CONFIRM":
 		if request.Status != "TO_PICKUP" && request.Status != "CANCELLED" {
 			return appError.NewAppError(400, "Invalid status")
+		}
+		if request.Status == "TO_PICKUP" {
+			request,err := s.GHNClient.CreateRequest(*oldOrder)
+			if err != nil {
+				return err
+			}
+			deliveryCode , err := s.GHNClient.CreateOrder(request)
+			if err != nil {
+				return err
+			}
+			oldOrder.DeliveryCode = deliveryCode
 		}
 	case "TO_PICKUP":
 		if request.Status != "SHIPPING" && request.Status != "CANCELLED" {

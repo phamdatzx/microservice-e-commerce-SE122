@@ -20,6 +20,7 @@ type Order struct {
 	Total           float64       `bson:"total" json:"total"`
 	Phone           string        `bson:"phone" json:"phone"`
 	ShippingAddress OrderAddress  `bson:"shipping_address" json:"shipping_address"`
+	DeliveryCode    string        `bson:"delivery_code" json:"delivery_code"`
 }
 
 type OrderItem struct {
