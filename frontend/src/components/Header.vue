@@ -47,7 +47,7 @@ defineExpose({
     <div class="header-main">
       <div class="container">
         <div class="header-content">
-          <div class="logo">
+          <RouterLink to="/" class="logo">
             <div class="logo-icon">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                 <path
@@ -63,7 +63,7 @@ defineExpose({
               <span class="logo-name">SWOO</span>
               <span class="logo-tagline">TECH MART</span>
             </div>
-          </div>
+          </RouterLink>
 
           <nav class="nav">
             <a href="#" class="nav-link">
