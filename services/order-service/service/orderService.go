@@ -22,6 +22,8 @@ type OrderService interface {
 	HandlePaymentFailed(ctx context.Context, paymentIntentID string) error
 	CreatePaymentForOrder(ctx context.Context, orderID string) (*dto.CreatePaymentResponse, error)
 	GetUserOrders(ctx context.Context, userID string, request dto.GetOrdersRequest) (*dto.GetOrdersResponse, error)
+	GetSellerOrders(ctx context.Context, sellerID string, request dto.GetOrdersBySellerRequest) (*dto.GetOrdersResponse, error)
+	UpdateOrderStatus(ctx context.Context, userID string, orderID string, request dto.UpdateOrderStatusRequest) error
 }
 
 type orderService struct {
@@ -394,4 +396,101 @@ func (s *orderService) GetUserOrders(ctx context.Context, userID string, request
 		Limit:      limit,
 		TotalPages: totalPages,
 	}, nil
+}
+
+func (s *orderService) GetSellerOrders(ctx context.Context, sellerID string, request dto.GetOrdersBySellerRequest) (*dto.GetOrdersResponse, error) {
+	// Set defaults for pagination
+	page := request.Page
+	if page < 1 {
+		page = 1
+	}
+
+	limit := request.Limit
+	if limit < 1 {
+		limit = 10
+	} else if limit > 100 {
+		limit = 100 // max limit
+	}
+
+	// Query repository with filters and search
+	orders, totalCount, err := s.repo.FindOrdersBySeller(
+		sellerID,
+		request.Status,
+		request.PaymentMethod,
+		request.PaymentStatus,
+		request.Search,
+		page,
+		limit,
+		request.SortBy,
+		request.SortOrder,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Map to DTOs
+	orderDtos := make([]dto.OrderDto, len(orders))
+	for i, order := range orders {
+		orderDtos[i] = dto.OrderDto{
+			ID:            order.ID,
+			Status:        order.Status,
+			PaymentMethod: order.PaymentMethod,
+			PaymentStatus: order.PaymentStatus,
+			Total:         order.Total,
+			ItemCount:     len(order.Items),
+			CreatedAt:     order.CreatedAt,
+			UpdatedAt:     order.UpdatedAt,
+		}
+	}
+
+	// Calculate total pages
+	totalPages := int(totalCount) / limit
+	if int(totalCount)%limit > 0 {
+		totalPages++
+	}
+
+	return &dto.GetOrdersResponse{
+		Orders:     orderDtos,
+		TotalCount: totalCount,
+		Page:       page,
+		Limit:      limit,
+		TotalPages: totalPages,
+	}, nil
+}
+
+func (s *orderService) UpdateOrderStatus(ctx context.Context,userID string, orderID string, request dto.UpdateOrderStatusRequest) error {
+
+	//get old order
+	oldOrder,err := s.repo.FindOrderByID(orderID)
+	if err != nil {
+		return err
+	}
+	if oldOrder == nil {
+		return appError.NewAppError(404, "Order not found")
+	}
+	if oldOrder.Seller.ID !=  userID{
+		return appError.NewAppError(403, "You are not authorized to update this order")
+	}
+
+	//validate current status
+	switch oldOrder.Status {
+	case "TO_CONFIRM":
+		if request.Status != "TO_PICKUP" && request.Status != "CANCELLED" {
+			return appError.NewAppError(400, "Invalid status")
+		}
+	case "TO_PICKUP":
+		if request.Status != "SHIPPING" && request.Status != "CANCELLED" {
+			return appError.NewAppError(400, "Invalid status")
+		}
+	case "SHIPPING":
+		if request.Status != "COMPLETED" && request.Status != "RETURNED" {
+			return appError.NewAppError(400, "Invalid status")
+		}
+	default:
+		return appError.NewAppError(409, "Current status of this order can't be updated"+ oldOrder.Status)
+	}
+
+	//update in database
+	oldOrder.Status = request.Status
+	return s.repo.UpdateOrder(oldOrder)
 }

@@ -166,10 +166,61 @@ func (c *OrderController) GetOrders(ctx *gin.Context) {
 	ctx.JSON(200, response)
 }
 
+func (c *OrderController) GetOrdersBySellerId(ctx *gin.Context) {
+	sellerID := ctx.GetHeader("X-User-Id")
+	if sellerID == "" {
+		ctx.Error(appError.NewAppError(401, "Seller ID not found in header"))
+		return
+	}
+
+	var request dto.GetOrdersBySellerRequest
+	if err := ctx.ShouldBindQuery(&request); err != nil {
+		ctx.Error(appError.NewAppErrorWithErr(400, "Invalid query parameters", err))
+		return
+	}
+
+	response, err := c.service.GetSellerOrders(ctx, sellerID, request)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(200, response)
+}
+
+func (c *OrderController) UpdateOrderStatus(ctx *gin.Context) {
+	orderID := ctx.Param("orderId")
+	if orderID == "" {
+		ctx.Error(appError.NewAppError(400, "Order ID is required"))
+		return
+	}
+
+	userID := ctx.GetHeader("X-User-Id")
+	if userID == "" {
+		ctx.Error(appError.NewAppError(401, "User ID not found in header"))
+		return
+	}
+
+	var request dto.UpdateOrderStatusRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.Error(appError.NewAppErrorWithErr(400, "Invalid request body", err))
+		return
+	}
+
+	err := c.service.UpdateOrderStatus(ctx,userID, orderID, request)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(200, "Updated order status successfully")
+}
+
 func (c *OrderController) Test(ctx *gin.Context) {
+
 	district := ctx.Query("district")
 	province := ctx.Query("province")
-	ward := ctx.Query("forward")
+	ward := ctx.Query("ward")
 	result, _ := c.GHNClient.ResolveGHNAddress(province, district, ward)
 	ctx.JSON(200, result)
 }
