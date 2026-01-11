@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { Close, House, RefreshRight } from '@element-plus/icons-vue'
+import { Close, House, List } from '@element-plus/icons-vue'
 
 const router = useRouter()
 
-const retryPayment = () => {
-  router.push('/checkout')
-}
-
 const goHome = () => {
   router.push('/')
+}
+
+const goToOrders = () => {
+  router.push('/profile/orders')
 }
 </script>
 
@@ -19,15 +19,15 @@ const goHome = () => {
       <div class="icon-wrapper">
         <el-icon class="failure-icon"><Close /></el-icon>
       </div>
-      <h2>Payment Failed</h2>
+      <h2>Payment Cancelled</h2>
       <p>
-        Something went wrong with your payment. Please try again or contact support if the issue
-        persists.
+        You have cancelled the payment process. If this was a mistake, you can re-pay through your
+        order page.
       </p>
 
       <div class="actions">
-        <el-button type="danger" size="large" @click="retryPayment">
-          <el-icon style="margin-right: 8px"><RefreshRight /></el-icon> Try Again
+        <el-button type="primary" size="large" @click="goToOrders">
+          <el-icon style="margin-right: 8px"><List /></el-icon> Go to My Orders
         </el-button>
         <el-button size="large" @click="goHome">
           <el-icon style="margin-right: 8px"><House /></el-icon> Back to Home

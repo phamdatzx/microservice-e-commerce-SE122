@@ -85,10 +85,37 @@ const router = createRouter({
     {
       path: '/profile',
       component: ProfileView,
-    },
-    {
-      path: '/orders',
-      component: MyOrder,
+      children: [
+        {
+          path: '',
+          redirect: '/profile/account-info',
+        },
+        {
+          path: 'account-info',
+          name: 'account-info',
+          component: () => import('@/views/customer/ProfileView/components/AccountInfo.vue'),
+        },
+        {
+          path: 'orders',
+          name: 'my-orders',
+          component: () => import('@/views/customer/ProfileView/components/MyOrder.vue'),
+        },
+        {
+          path: 'address',
+          name: 'my-address',
+          component: () => import('@/views/customer/ProfileView/components/MyAddress.vue'),
+        },
+        {
+          path: 'change-password',
+          name: 'change-password',
+          component: () => import('@/views/customer/ProfileView/components/ChangePassword.vue'),
+        },
+        {
+          path: 'vouchers',
+          name: 'my-vouchers',
+          component: () => import('@/views/customer/ProfileView/components/MyVoucher.vue'),
+        },
+      ],
     },
     {
       path: '/checkout',

@@ -2,38 +2,30 @@
 import Header from '@/components/Header.vue'
 import { ref } from 'vue'
 import { ArrowRight } from '@element-plus/icons-vue'
-import AccountInfo from './components/AccountInfo.vue'
-import ChangePassword from './components/ChangePassword.vue'
-import MyAddress from './components/MyAddress.vue'
-import MyOrder from './components/MyOrder.vue'
-import MyVoucher from './components/MyVoucher.vue'
+import { useRouter, useRoute } from 'vue-router'
+
+const router = useRouter()
+const route = useRoute()
 
 const name = ref('Mark Cole')
 const email = ref('swoo@gmail.com')
 const phone = ref('+1 0231 4554 452')
 
-import { useRoute } from 'vue-router'
-import { watch } from 'vue'
-
-const route = useRoute()
-const activeMenu = ref(route.query.tab ? String(route.query.tab) : 'account-info')
-
-watch(
-  () => route.query.tab,
-  (newTab) => {
-    if (newTab) {
-      activeMenu.value = String(newTab)
-    }
-  },
-)
-
 const menuItems = [
-  { id: 'account-info', label: 'Account info' },
-  { id: 'my-order', label: 'My order' },
-  { id: 'my-voucher', label: 'My vouchers' },
-  { id: 'my-address', label: 'My address' },
-  { id: 'change-password', label: 'Change password' },
+  { id: 'account-info', label: 'Account info', path: '/profile/account-info' },
+  { id: 'my-order', label: 'My order', path: '/profile/orders' },
+  { id: 'my-voucher', label: 'My vouchers', path: '/profile/vouchers' },
+  { id: 'my-address', label: 'My address', path: '/profile/address' },
+  { id: 'change-password', label: 'Change password', path: '/profile/change-password' },
 ]
+
+const handleMenuClick = (path: string) => {
+  router.push(path)
+}
+
+const isActive = (path: string) => {
+  return route.path.includes(path)
+}
 </script>
 
 <template>
@@ -57,8 +49,8 @@ const menuItems = [
               v-for="item in menuItems"
               :key="item.id"
               class="menu-item"
-              :class="{ active: activeMenu === item.id }"
-              @click="activeMenu = item.id"
+              :class="{ active: isActive(item.path) }"
+              @click="handleMenuClick(item.path)"
             >
               <span>{{ item.label }}</span>
               <el-icon><ArrowRight /></el-icon>
@@ -70,28 +62,14 @@ const menuItems = [
       <!-- Main Content -->
       <el-col :span="18">
         <div class="content-area">
-          <AccountInfo
-            v-if="activeMenu === 'account-info'"
-            v-model:name="name"
-            v-model:email="email"
-            v-model:phone="phone"
-          />
-
-          <ChangePassword v-else-if="activeMenu === 'change-password'" />
-
-          <MyAddress v-else-if="activeMenu === 'my-address'" />
-
-          <MyOrder v-else-if="activeMenu === 'my-order'" />
-
-          <MyVoucher v-else-if="activeMenu === 'my-voucher'" />
-
-          <!-- Fallback -->
-          <div v-else>
-            <h2 class="section-title">Coming Soon</h2>
-            <div style="padding: 40px; text-align: center; color: #999">
-              This section is under development.
-            </div>
-          </div>
+          <router-view v-slot="{ Component }">
+            <component
+              :is="Component"
+              v-model:name="name"
+              v-model:email="email"
+              v-model:phone="phone"
+            />
+          </router-view>
         </div>
       </el-col>
     </el-row>

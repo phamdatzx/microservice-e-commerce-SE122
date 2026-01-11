@@ -204,7 +204,7 @@ defineExpose({
                   </svg>
                   My Profile
                 </RouterLink>
-                <RouterLink to="/orders" class="dropdown-item">
+                <RouterLink to="/profile/orders" class="dropdown-item">
                   <svg
                     width="18"
                     height="18"
@@ -221,7 +221,7 @@ defineExpose({
                   </svg>
                   My Orders
                 </RouterLink>
-                <RouterLink to="/profile?tab=my-voucher" class="dropdown-item">
+                <RouterLink to="/profile/vouchers" class="dropdown-item">
                   <svg
                     width="18"
                     height="18"
