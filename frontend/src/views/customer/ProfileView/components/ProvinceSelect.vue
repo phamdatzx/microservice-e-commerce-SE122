@@ -3,42 +3,54 @@ import { ref, onMounted, computed } from 'vue'
 import axios from 'axios'
 
 interface Province {
-  code: string
-  name: string
+  ProvinceID: number
+  ProvinceName: string
+  NameExtension: string[]
 }
 
 const props = defineProps<{
-  modelValue: string
+  modelValue: number | string
   initialName?: string
 }>()
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: string): void
+  (e: 'update:modelValue', value: number): void
   (e: 'change', province: Province | null): void
 }>()
 
 const provinces = ref<Province[]>([])
 const loading = ref(false)
+const token = import.meta.env.VITE_GHN_TOKEN
 
 const hasInitialValue = computed(() => {
   return (
     props.modelValue &&
     props.initialName &&
-    !provinces.value.some((p) => p.code === props.modelValue)
+    !provinces.value.some((p) => p.ProvinceID === Number(props.modelValue))
   )
 })
 
 const fetchProvinces = async () => {
   loading.value = true
   try {
-    const response = await axios.get('/address-kit/2025-07-01/provinces')
-    provinces.value = response.data.provinces
+    const response = await axios.get(
+      `${import.meta.env.VITE_GHN_URL}/shiip/public-api/master-data/province`,
+      {
+        headers: { token },
+      },
+    )
+    // Filter provinces that have NameExtension as per user instruction
+    if (response.data && response.data.data) {
+      provinces.value = response.data.data.filter(
+        (p: any) => p.NameExtension && p.NameExtension.length > 0,
+      )
+    }
 
-    // If we have an initial name and it's being used as a code, resolve the real code
-    if (props.modelValue && props.initialName) {
-      const match = provinces.value.find((p) => p.name === props.initialName)
-      if (match && match.code !== props.modelValue) {
-        emit('update:modelValue', match.code)
+    // If we have an initial name, try to find matching ID if modelValue is missing or mismatch
+    if (props.initialName) {
+      const match = provinces.value.find((p) => p.ProvinceName === props.initialName)
+      if (match && match.ProvinceID !== Number(props.modelValue)) {
+        emit('update:modelValue', match.ProvinceID)
         emit('change', match)
       }
     }
@@ -49,9 +61,10 @@ const fetchProvinces = async () => {
   }
 }
 
-const handleChange = (value: string) => {
-  const selected = provinces.value.find((p) => p.code === value) || null
+const handleChange = (value: number) => {
+  const selected = provinces.value.find((p) => p.ProvinceID === value) || null
   emit('change', selected)
+  emit('update:modelValue', value)
 }
 
 onMounted(fetchProvinces)
@@ -61,14 +74,18 @@ onMounted(fetchProvinces)
   <el-select
     size="large"
     :model-value="modelValue"
-    @update:model-value="emit('update:modelValue', $event)"
+    @update:model-value="handleChange"
     placeholder="Select Province/City"
     filterable
     :loading="loading"
     style="width: 100%"
-    @change="handleChange"
   >
     <el-option v-if="hasInitialValue" :key="modelValue" :label="initialName" :value="modelValue" />
-    <el-option v-for="item in provinces" :key="item.code" :label="item.name" :value="item.code" />
+    <el-option
+      v-for="item in provinces"
+      :key="item.ProvinceID"
+      :label="item.ProvinceName"
+      :value="item.ProvinceID"
+    />
   </el-select>
 </template>

@@ -3,6 +3,7 @@ import { ref, onMounted, nextTick, watch } from 'vue'
 import { Plus, Edit, Delete, Check, Search } from '@element-plus/icons-vue'
 import axios from 'axios'
 import ProvinceSelect from './ProvinceSelect.vue'
+import DistrictSelect from './DistrictSelect.vue'
 import CommuneSelect from './CommuneSelect.vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import L from 'leaflet'
@@ -15,7 +16,12 @@ interface Address {
   phone: string
   address_line: string
   ward: string
+  district: string
   province: string
+  ward_code: string
+  province_code: string
+  district_id: number | string
+  province_id: number | string
   country: string
   latitude: number
   longitude: number
@@ -49,10 +55,12 @@ const addressForm = ref({
   id: '',
   name: '',
   phone: '',
-  provinceCode: '',
+  provinceId: '' as number | string,
   provinceName: '',
-  communeCode: '',
-  communeName: '',
+  districtId: '' as number | string,
+  districtName: '',
+  wardCode: '',
+  wardName: '',
   addressDetail: '',
   isDefault: false,
   latitude: 10.762622,
@@ -192,10 +200,12 @@ const openAddAddress = () => {
     id: '',
     name: '',
     phone: '',
-    provinceCode: '',
+    provinceId: '',
     provinceName: '',
-    communeCode: '',
-    communeName: '',
+    districtId: '',
+    districtName: '',
+    wardCode: '',
+    wardName: '',
     addressDetail: '',
     isDefault: false,
     latitude: 10.762622,
@@ -212,10 +222,12 @@ const editAddress = (address: Address) => {
     name: address.full_name,
     phone: address.phone,
     addressDetail: address.address_line,
-    provinceCode: address.province, // Use name as code for initial display
+    provinceId: address.province_id ? Number(address.province_id) : '',
     provinceName: address.province,
-    communeCode: address.ward,
-    communeName: address.ward,
+    districtId: address.district_id ? Number(address.district_id) : '',
+    districtName: address.district,
+    wardCode: address.ward_code,
+    wardName: address.ward,
     isDefault: address.default,
     latitude: address.latitude || 10.762622,
     longitude: address.longitude || 106.660172,
@@ -225,14 +237,28 @@ const editAddress = (address: Address) => {
 }
 
 const handleProvinceChange = (province: any) => {
-  if (province && province.name === addressForm.value.provinceName) return
-  addressForm.value.provinceName = province ? province.name : ''
-  addressForm.value.communeCode = ''
-  addressForm.value.communeName = ''
+  if (province && province.ProvinceName === addressForm.value.provinceName) return
+  addressForm.value.provinceName = province ? province.ProvinceName : ''
+  addressForm.value.provinceId = province ? province.ProvinceID : ''
+  // Reset child fields
+  addressForm.value.districtId = ''
+  addressForm.value.districtName = ''
+  addressForm.value.wardCode = ''
+  addressForm.value.wardName = ''
+}
+
+const handleDistrictChange = (district: any) => {
+  if (district && district.DistrictName === addressForm.value.districtName) return
+  addressForm.value.districtName = district ? district.DistrictName : ''
+  addressForm.value.districtId = district ? district.DistrictID : ''
+  // Reset child field
+  addressForm.value.wardCode = ''
+  addressForm.value.wardName = ''
 }
 
 const handleCommuneChange = (commune: any) => {
-  addressForm.value.communeName = commune ? commune.name : ''
+  addressForm.value.wardName = commune ? commune.WardName : ''
+  addressForm.value.wardCode = commune ? commune.WardCode : ''
 }
 
 const handlePhoneInput = (value: string) => {
@@ -244,8 +270,9 @@ const handleSaveAddress = async () => {
   if (
     !addressForm.value.name ||
     !addressForm.value.phone ||
-    !addressForm.value.provinceName ||
-    !addressForm.value.communeName ||
+    !addressForm.value.provinceId ||
+    !addressForm.value.districtId ||
+    !addressForm.value.wardCode ||
     !addressForm.value.addressDetail
   ) {
     ElMessage.warning('Please complete all required fields')
@@ -262,12 +289,21 @@ const handleSaveAddress = async () => {
     full_name: addressForm.value.name,
     phone: addressForm.value.phone,
     address_line: addressForm.value.addressDetail,
+
     province: addressForm.value.provinceName,
-    district: 'quan',
-    ward: addressForm.value.communeName,
+    province_id: String(addressForm.value.provinceId),
+    province_code: String(addressForm.value.provinceId), // Fallback
+
+    district: addressForm.value.districtName,
+    district_id: String(addressForm.value.districtId),
+    district_code: String(addressForm.value.districtId), // Fallback
+
+    ward: addressForm.value.wardName,
+    ward_code: String(addressForm.value.wardCode),
+
     country: 'viet nam',
     latitude: addressForm.value.latitude,
-    longitude: addressForm.value.longitude,
+    longtitude: addressForm.value.longitude, // MATCHING USER TYPO
     default: addressForm.value.isDefault,
   }
 
@@ -286,8 +322,14 @@ const handleSaveAddress = async () => {
     }
     await fetchAddresses()
     addressDialogVisible.value = false
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to save address:', error)
+    if (error.response && error.response.data) {
+      console.error('Error details:', error.response.data)
+      ElMessage.error(`Failed to save address: ${error.response.data.message || 'Check logs'}`)
+    } else {
+      ElMessage.error('Failed to save address')
+    }
   }
 }
 
@@ -318,12 +360,21 @@ const setDefaultAddress = async (address: Address) => {
     full_name: address.full_name,
     phone: address.phone,
     address_line: address.address_line,
+
     province: address.province,
-    district: 'quan',
+    province_id: String(address.province_id),
+    province_code: String(address.province_id),
+
+    district: address.district,
+    district_id: String(address.district_id),
+    district_code: String(address.district_id),
+
     ward: address.ward,
-    country: 'viet nam',
-    latitude: 1,
-    longitude: 1,
+    ward_code: String(address.ward_code),
+
+    country: address.country || 'viet nam',
+    latitude: address.latitude,
+    longtitude: address.longitude, // MATCHING BACKEND TYPO
     default: true,
   }
 
@@ -334,8 +385,14 @@ const setDefaultAddress = async (address: Address) => {
       },
     })
     await fetchAddresses()
-  } catch (error) {
+    ElMessage.success('Default address updated successfully')
+  } catch (error: any) {
     console.error('Failed to set default address:', error)
+    if (error.response && error.response.data) {
+      ElMessage.error(`Failed to set default: ${error.response.data.message || 'Unknown error'}`)
+    } else {
+      ElMessage.error('Failed to set default address')
+    }
   }
 }
 
@@ -431,18 +488,31 @@ onMounted(fetchAddresses)
             <el-col :span="12">
               <el-form-item label="City/Province" required>
                 <ProvinceSelect
-                  v-model="addressForm.provinceCode"
+                  v-model="addressForm.provinceId"
                   :initial-name="addressForm.provinceName"
                   @change="handleProvinceChange"
                 />
               </el-form-item>
             </el-col>
             <el-col :span="12">
+              <el-form-item label="District" required>
+                <DistrictSelect
+                  v-model="addressForm.districtId"
+                  :province-id="addressForm.provinceId"
+                  :initial-name="addressForm.districtName"
+                  @change="handleDistrictChange"
+                />
+              </el-form-item>
+            </el-col>
+          </el-row>
+
+          <el-row :gutter="20">
+            <el-col :span="12">
               <el-form-item label="Commune/Ward" required>
                 <CommuneSelect
-                  v-model="addressForm.communeCode"
-                  :province-code="addressForm.provinceCode"
-                  :initial-name="addressForm.communeName"
+                  v-model="addressForm.wardCode"
+                  :district-id="addressForm.districtId"
+                  :initial-name="addressForm.wardName"
                   @change="handleCommuneChange"
                 />
               </el-form-item>
@@ -453,7 +523,7 @@ onMounted(fetchAddresses)
             <el-input
               v-model="addressForm.addressDetail"
               type="textarea"
-              rows="2"
+              :rows="2"
               placeholder="House number, street name..."
             />
           </el-form-item>

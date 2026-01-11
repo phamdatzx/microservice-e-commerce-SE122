@@ -65,6 +65,8 @@ const router = createRouter({
   scrollBehavior(to, from, savedPosition) {
     if (savedPosition) {
       return savedPosition
+    } else if (to.path.startsWith('/profile') && from.path.startsWith('/profile')) {
+      return
     } else {
       return { top: 0 }
     }
