@@ -5,7 +5,7 @@ import { Check, View, House } from '@element-plus/icons-vue'
 const router = useRouter()
 
 const viewOrder = () => {
-  router.push('/profile') // Redirect to order history
+  router.push('/profile/orders') // Redirect to order history
 }
 
 const goHome = () => {
