@@ -14,6 +14,9 @@ type Address struct {
 	Ward        string    `json:"ward" gorm:"column:ward"`
 	District    string    `json:"district" gorm:"column:district"`
 	Province    string    `json:"province" gorm:"column:province"`
+	WardCode    string    `json:"ward_code" gorm:"column:ward_code"`
+	DistrictCode string    `json:"district_code" gorm:"column:district_code"`
+	ProvinceCode string    `json:"province_code" gorm:"column:province_code"`
 	Country     string    `json:"country" gorm:"column:country"`
 	Latitude    float64   `json:"latitude" gorm:"column:latitude"`
 	Longitude   float64   `json:"longitude" gorm:"column:longitude"`

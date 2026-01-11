@@ -134,6 +134,7 @@ func (s *userService) GetMyInfo(userId string) (dto.MyInfoResponse, error) {
 	return dto.MyInfoResponse{
 		ID:       user.ID.String(),
 		Username: user.Username,
+		Phone:    user.Phone,
 		Name:     user.Name,
 		Email:    user.Email,
 		Role:     user.Role,

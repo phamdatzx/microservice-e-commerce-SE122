@@ -37,8 +37,11 @@ func (s *addressService) CreateAddress(userID string, request dto.AddressRequest
 		Phone:       request.Phone,
 		AddressLine: request.AddressLine,
 		Ward:        request.Ward,
+		WardCode:    request.WardCode,
 		District:    request.District,
+		DistrictCode: request.DistrictCode,
 		Province:    request.Province,
+		ProvinceCode: request.ProvinceCode,
 		Country:     request.Country,
 		Latitude:    request.Latitude,
 		Longitude:   request.Longitude,
@@ -93,8 +96,11 @@ func (s *addressService) UpdateAddress(id string, userID string, request dto.Add
 	address.Phone = request.Phone
 	address.AddressLine = request.AddressLine
 	address.Ward = request.Ward
+	address.WardCode = request.WardCode
 	address.District = request.District
+	address.DistrictCode = request.DistrictCode
 	address.Province = request.Province
+	address.ProvinceCode = request.ProvinceCode
 	address.Country = request.Country
 	address.Latitude = request.Latitude
 	address.Longitude = request.Longitude
@@ -147,8 +153,11 @@ func (s *addressService) mapToResponse(address *model.Address) dto.AddressRespon
 		Phone:       address.Phone,
 		AddressLine: address.AddressLine,
 		Ward:        address.Ward,
+		WardCode:    address.WardCode,
 		District:    address.District,
+		DistrictCode: address.DistrictCode,
 		Province:    address.Province,
+		ProvinceCode: address.ProvinceCode,
 		Country:     address.Country,
 		Latitude:    address.Latitude,
 		Longitude:   address.Longitude,
