@@ -12,7 +12,9 @@ type User struct {
 	Username string    `json:"username" gorm:"uniqueIndex;column:username"`
 	Password string    `json:"password" gorm:"column:password"`
 	Name     string    `json:"name" gorm:"column:name"`
+	Phone    string    `json:"phone" gorm:"column:phone"`
 	Email    string    `json:"email" gorm:"column:email"`
+	Image    string    `json:"image" gorm:"column:image"`
 	Role     string    `json:"role" gorm:"column:role"`
 	IsActive bool      `json:"is_active" gorm:"column:is_active;default:false"`
 	IsVerify bool      `json:"is_verify" gorm:"column:is_verify;default:false"`
@@ -31,6 +33,7 @@ func NewUser(request dto.RegisterRequest) *User {
 		Username: request.Username,
 		Password: request.Password, // nếu có mã hóa password thì xử lý trước khi gán
 		Name:     request.Name,
+		Phone:    request.Phone,
 		Email:    request.Email,
 		Role:     request.Role,
 	}

@@ -22,14 +22,65 @@ type GetOrdersResponse struct {
 
 // OrderDto represents an order in the response
 type OrderDto struct {
-	ID              string        `json:"id"`
-	Status          string        `json:"status"`
-	PaymentMethod   string        `json:"payment_method"`
-	PaymentStatus   string        `json:"payment_status"`
-	Total           float64       `json:"total"`
-	ItemCount       int           `json:"item_count"`
-	CreatedAt       time.Time     `json:"created_at"`
-	UpdatedAt       time.Time     `json:"updated_at"`
+	ID              string             `json:"id"`
+	Status          string             `json:"status"`
+	User            UserDto            `json:"user"`
+	PaymentMethod   string             `json:"payment_method"`
+	PaymentStatus   string             `json:"payment_status"`
+	Seller          UserDto            `json:"seller"`
+	Items           []OrderItemDto     `json:"items"`
+	CreatedAt       time.Time          `json:"created_at"`
+	UpdatedAt       time.Time          `json:"updated_at"`
+	Voucher         *OrderVoucherDto   `json:"voucher"`
+	Total           float64            `json:"total"`
+	Phone           string             `json:"phone"`
+	ShippingAddress OrderAddressDto    `json:"shipping_address"`
+	DeliveryCode    string             `json:"delivery_code"`
+	ItemCount       int                `json:"item_count"` // Computed field
+}
+
+// UserDto represents user information in orders
+type UserDto struct {
+	ID       string `json:"id"`
+	Username string `json:"username"`
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+}
+
+// OrderItemDto represents an order item
+type OrderItemDto struct {
+	ProductID   string `json:"product_id"`
+	VariantID   string `json:"variant_id"`
+	ProductName string `json:"product_name"`
+	VariantName string `json:"variant_name"`
+	SKU         string `json:"sku"`
+	Price       int    `json:"price"`
+	Image       string `json:"image"`
+	Quantity    int    `json:"quantity"`
+}
+
+// OrderAddressDto represents shipping address
+type OrderAddressDto struct {
+	FullName    string  `json:"full_name"`
+	Phone       string  `json:"phone"`
+	AddressLine string  `json:"address_line"`
+	Ward        string  `json:"ward"`
+	District    string  `json:"district"`
+	Province    string  `json:"province"`
+	Country     string  `json:"country"`
+	Latitude    float64 `json:"latitude"`
+	Longitude   float64 `json:"longitude"`
+}
+
+// OrderVoucherDto represents voucher information
+type OrderVoucherDto struct {
+	Code                   string   `json:"code"`
+	DiscountType           string   `json:"discount_type"`
+	DiscountValue          int      `json:"discount_value"`
+	MaxDiscountValue       *int     `json:"max_discount_value"`
+	MinOrderValue          int      `json:"min_order_value"`
+	ApplyScope             string   `json:"apply_scope"`
+	ApplySellerCategoryIds []string `json:"apply_seller_category_ids"`
 }
 
 // GetOrdersBySellerRequest contains query parameters for seller orders with enhanced filtering
