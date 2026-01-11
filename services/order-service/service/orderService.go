@@ -377,16 +377,7 @@ func (s *orderService) GetUserOrders(ctx context.Context, userID string, request
 	// Map to DTOs
 	orderDtos := make([]dto.OrderDto, len(orders))
 	for i, order := range orders {
-		orderDtos[i] = dto.OrderDto{
-			ID:            order.ID,
-			Status:        order.Status,
-			PaymentMethod: order.PaymentMethod,
-			PaymentStatus: order.PaymentStatus,
-			Total:         order.Total,
-			ItemCount:     len(order.Items),
-			CreatedAt:     order.CreatedAt,
-			UpdatedAt:     order.UpdatedAt,
-		}
+		orderDtos[i] = convertOrderToDto(order)
 	}
 
 	// Calculate total pages
@@ -437,16 +428,7 @@ func (s *orderService) GetSellerOrders(ctx context.Context, sellerID string, req
 	// Map to DTOs
 	orderDtos := make([]dto.OrderDto, len(orders))
 	for i, order := range orders {
-		orderDtos[i] = dto.OrderDto{
-			ID:            order.ID,
-			Status:        order.Status,
-			PaymentMethod: order.PaymentMethod,
-			PaymentStatus: order.PaymentStatus,
-			Total:         order.Total,
-			ItemCount:     len(order.Items),
-			CreatedAt:     order.CreatedAt,
-			UpdatedAt:     order.UpdatedAt,
-		}
+		orderDtos[i] = convertOrderToDto(order)
 	}
 
 	// Calculate total pages
@@ -510,4 +492,74 @@ func (s *orderService) UpdateOrderStatus(ctx context.Context,userID string, orde
 	//update in database
 	oldOrder.Status = request.Status
 	return s.repo.UpdateOrder(oldOrder)
+}
+
+// Helper function to convert Order model to OrderDto
+func convertOrderToDto(order *model.Order) dto.OrderDto {
+	// Convert items
+	itemDtos := make([]dto.OrderItemDto, len(order.Items))
+	for i, item := range order.Items {
+		itemDtos[i] = dto.OrderItemDto{
+			ProductID:   item.ProductID,
+			VariantID:   item.VariantID,
+			ProductName: item.ProductName,
+			VariantName: item.VariantName,
+			SKU:         item.SKU,
+			Price:       item.Price,
+			Image:       item.Image,
+			Quantity:    item.Quantity,
+		}
+	}
+
+	// Convert voucher if present
+	var voucherDto *dto.OrderVoucherDto
+	if order.Voucher != nil {
+		voucherDto = &dto.OrderVoucherDto{
+			Code:                   order.Voucher.Code,
+			DiscountType:           order.Voucher.DiscountType,
+			DiscountValue:          order.Voucher.DiscountValue,
+			MaxDiscountValue:       order.Voucher.MaxDiscountValue,
+			MinOrderValue:          order.Voucher.MinOrderValue,
+			ApplyScope:             order.Voucher.ApplyScope,
+			ApplySellerCategoryIds: order.Voucher.ApplySellerCategoryIds,
+		}
+	}
+
+	return dto.OrderDto{
+		ID:     order.ID,
+		Status: order.Status,
+		User: dto.UserDto{
+			ID:       order.User.ID,
+			Username: order.User.Username,
+			Name:     order.User.Name,
+			Email:    order.User.Email,
+		},
+		PaymentMethod: order.PaymentMethod,
+		PaymentStatus: order.PaymentStatus,
+		Seller: dto.UserDto{
+			ID:       order.Seller.ID,
+			Username: order.Seller.Username,
+			Name:     order.Seller.Name,
+			Email:    order.Seller.Email,
+		},
+		Items:     itemDtos,
+		CreatedAt: order.CreatedAt,
+		UpdatedAt: order.UpdatedAt,
+		Voucher:   voucherDto,
+		Total:     order.Total,
+		Phone:     order.Phone,
+		ShippingAddress: dto.OrderAddressDto{
+			FullName:    order.ShippingAddress.FullName,
+			Phone:       order.ShippingAddress.Phone,
+			AddressLine: order.ShippingAddress.AddressLine,
+			Ward:        order.ShippingAddress.Ward,
+			District:    order.ShippingAddress.District,
+			Province:    order.ShippingAddress.Province,
+			Country:     order.ShippingAddress.Country,
+			Latitude:    order.ShippingAddress.Latitude,
+			Longitude:   order.ShippingAddress.Longitude,
+		},
+		DeliveryCode: order.DeliveryCode,
+		ItemCount:    len(order.Items),
+	}
 }
