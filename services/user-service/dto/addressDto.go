@@ -10,8 +10,9 @@ type AddressRequest struct {
 	District    string  `json:"district" validate:"required"`
 	Province    string  `json:"province" validate:"required"`
 	WardCode    string  `json:"ward_code" validate:"required"`
-	DistrictCode string  `json:"district_code" validate:"required"`
 	ProvinceCode string  `json:"province_code" validate:"required"`
+	DistrictID  string  `json:"district_id" validate:"required"`
+	ProvinceID  string  `json:"province_id" validate:"required"`
 	Country     string  `json:"country" validate:"required"`
 	Latitude    float64 `json:"latitude"`
 	Longitude   float64 `json:"longitude"`
@@ -28,8 +29,9 @@ type AddressResponse struct {
 	District    string    `json:"district"`
 	Province    string    `json:"province"`
 	WardCode    string    `json:"ward_code"`
-	DistrictCode string    `json:"district_code"`
 	ProvinceCode string    `json:"province_code"`
+	DistrictID  string    `json:"district_id"`
+	ProvinceID  string    `json:"province_id"`
 	Country     string    `json:"country"`
 	Latitude    float64   `json:"latitude"`
 	Longitude   float64   `json:"longitude"`
