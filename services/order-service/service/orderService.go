@@ -9,6 +9,7 @@ import (
 	appError "order-service/error"
 	"order-service/model"
 	"order-service/repository"
+	"os"
 
 	"github.com/stripe/stripe-go/v84"
 	"github.com/stripe/stripe-go/v84/checkout/session"
@@ -33,6 +34,7 @@ type orderService struct {
 	userClient    *client.UserServiceClient
 	paymentClient payment.PaymentClient
 	GHNClient     *client.GHNClient
+	clientURL     string
 }
 
 func NewOrderService(
@@ -50,6 +52,7 @@ func NewOrderService(
 		userClient:    userClient,
 		paymentClient: paymentClient,
 		GHNClient:     GHNClient,
+		clientURL:     os.Getenv("CLIENT_URL"),
 	}
 }
 
@@ -341,7 +344,7 @@ func (s *orderService) CreatePaymentForOrder(ctx context.Context, orderID string
 	}
 
 	// Create payment via Stripe
-	paymentUrl, err := s.paymentClient.CreatePayment(order, "http://localhost:3000/checkout/success", "http://localhost:3000/checkout/failure")
+	paymentUrl, err := s.paymentClient.CreatePayment(order, s.clientURL+"/checkout/success", s.clientURL+"/checkout/failure")
 	if err != nil {
 		return nil, err
 	}
