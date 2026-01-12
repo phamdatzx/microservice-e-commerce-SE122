@@ -476,6 +476,10 @@ const formatStatus = (status: string) => {
   color: #666;
 }
 
+.date-filter span {
+  white-space: nowrap;
+}
+
 .sub-tabs-row {
   display: flex;
   align-items: center;
