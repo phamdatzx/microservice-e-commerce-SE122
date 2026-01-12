@@ -3,6 +3,10 @@ import CustomerChat from './CustomerChat.vue'
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
+import IconUser from './icons/IconUser.vue'
+import IconOrder from './icons/IconOrder.vue'
+import IconVoucher from './icons/IconVoucher.vue'
+import IconLogout from './icons/IconLogout.vue'
 
 const router = useRouter()
 const isLoggedIn = ref(false)
@@ -189,74 +193,20 @@ defineExpose({
               <!-- Dropdown Menu -->
               <div class="user-dropdown">
                 <RouterLink to="/profile" class="dropdown-item">
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="12" cy="7" r="4"></circle>
-                  </svg>
+                  <IconUser />
                   My Profile
                 </RouterLink>
                 <RouterLink to="/profile/orders" class="dropdown-item">
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
-                    <path d="M3 6h18" />
-                    <path d="M16 10a4 4 0 0 1-8 0" />
-                  </svg>
+                  <IconOrder />
                   My Orders
                 </RouterLink>
                 <RouterLink to="/profile/vouchers" class="dropdown-item">
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path
-                      d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"
-                    ></path>
-                    <path d="M13 5v2"></path>
-                    <path d="M13 17v2"></path>
-                    <path d="M13 11v2"></path>
-                  </svg>
+                  <IconVoucher />
                   My Vouchers
                 </RouterLink>
                 <div class="dropdown-divider"></div>
                 <button @click="handleLogout" class="dropdown-item logout-btn">
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                    <polyline points="16 17 21 12 16 7" />
-                    <line x1="21" y1="12" x2="9" y2="12" />
-                  </svg>
+                  <IconLogout />
                   Logout
                 </button>
               </div>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { ArrowRight } from '@element-plus/icons-vue'
+import { ref, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
 import AccountInfo from '@/views/customer/ProfileView/components/AccountInfo.vue'
 import ChangePassword from '@/views/customer/ProfileView/components/ChangePassword.vue'
 import MyAddress from '@/views/customer/ProfileView/components/MyAddress.vue'
@@ -9,7 +10,23 @@ const name = ref('Mark Cole')
 const email = ref('swoo@gmail.com')
 const phone = ref('+1 0231 4554 452')
 
+const route = useRoute()
 const activeMenu = ref('account-info')
+
+onMounted(() => {
+  if (route.query.tab) {
+    activeMenu.value = route.query.tab as string
+  }
+})
+
+watch(
+  () => route.query.tab,
+  (newTab) => {
+    if (newTab) {
+      activeMenu.value = newTab as string
+    }
+  },
+)
 
 const menuItems = [
   { id: 'account-info', label: 'Account info' },
