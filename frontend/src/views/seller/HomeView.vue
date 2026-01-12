@@ -270,6 +270,7 @@ a {
 /* User section */
 .user-dropdown-trigger {
   margin-left: auto;
+  outline: none;
 }
 
 .user-section {
@@ -277,7 +278,9 @@ a {
   align-items: center;
   gap: 12px;
   cursor: pointer;
-  padding: 12px 28px;
+  padding: 12px 20px;
+  margin-right: 24px;
+  outline: none;
 
   &:hover {
     background-color: #f5f5f5;
