@@ -12,6 +12,7 @@ import {
   Loading,
   Ticket,
   Van,
+  WarnTriangleFilled,
 } from '@element-plus/icons-vue'
 import { ElMessage, ElLoading } from 'element-plus'
 import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
@@ -42,9 +43,7 @@ const subtotal = computed(() => {
   return checkoutItems.value.reduce((sum, item) => sum + item.price * (item.quantity || 1), 0)
 })
 
-const shippingFee = computed(() => {
-  return 0
-})
+const shippingFee = ref(0)
 
 const selectedVoucher = computed(() => {
   return vouchers.value.find((v) => v.id === selectedVoucherId.value)
@@ -114,6 +113,11 @@ const fetchAddresses = async () => {
       } else if (addresses.value.length > 0) {
         selectedAddressId.value = addresses.value[0].id
       }
+
+      // Auto fetch services once address is ready
+      if (selectedAddressId.value) {
+        fetchShippingServices(false)
+      }
     }
   } catch (error) {
     console.error('Failed to fetch addresses:', error)
@@ -122,9 +126,11 @@ const fetchAddresses = async () => {
   }
 }
 
-const fetchShippingServices = async () => {
+const fetchShippingServices = async (openDialog: any = true) => {
+  const shouldOpen = openDialog !== false
+
   if (shippingServices.value.length > 0) {
-    showServiceDialog.value = true
+    if (shouldOpen) showServiceDialog.value = true
     return
   }
 
@@ -146,7 +152,12 @@ const fetchShippingServices = async () => {
 
     if (response.data.code === 200) {
       shippingServices.value = response.data.data
-      showServiceDialog.value = true
+      if (shouldOpen) showServiceDialog.value = true
+
+      // Auto select first service
+      if (shippingServices.value.length > 0 && !selectedService.value) {
+        selectedService.value = shippingServices.value[0]
+      }
     } else {
       ElMessage.error(response.data.message || 'Failed to fetch services')
     }
@@ -157,6 +168,55 @@ const fetchShippingServices = async () => {
     isFetchingServices.value = false
   }
 }
+
+const calculateShippingFee = async () => {
+  if (!selectedService.value || !selectedAddress.value) {
+    shippingFee.value = 0
+    return
+  }
+
+  // Use values from prompt/requirement or fallback to defaults
+  const toDistrictId = selectedAddress.value.district_id || 2264
+  const toWardCode = selectedAddress.value.ward_code || '90816'
+
+  try {
+    const response = await axios.post(
+      'https://dev-online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/fee',
+      {
+        from_district_id: 2194,
+        from_ward_code: '220714',
+        service_id: selectedService.value.service_id,
+        service_type_id: selectedService.value.service_type_id,
+        to_district_id: toDistrictId,
+        to_ward_code: toWardCode,
+        height: 50,
+        length: 20,
+        weight: 20,
+        width: 20,
+      },
+      {
+        headers: {
+          Token: import.meta.env.VITE_GHN_TOKEN,
+        },
+      },
+    )
+
+    if (response.data.code === 200) {
+      shippingFee.value = response.data.data.total
+    } else {
+      console.error('Failed to calculate shipping fee:', response.data.message)
+      // Optional: ElMessage.warning('Could not calculate shipping fee')
+    }
+  } catch (error) {
+    console.error('Error calculating shipping fee:', error)
+  }
+}
+
+// Watch for changes to trigger calculation
+import { watch } from 'vue'
+watch([selectedService, selectedAddress], () => {
+  calculateShippingFee()
+})
 
 const selectService = (service: any) => {
   selectedService.value = service
@@ -383,6 +443,11 @@ onMounted(() => {
             <div class="summary-row">
               <span>Merchandise Subtotal</span>
               <span>{{ formatNumberWithDots(subtotal) }}đ</span>
+            </div>
+
+            <div class="summary-row">
+              <span>Shipping Fee</span>
+              <span>{{ formatNumberWithDots(shippingFee) }}đ</span>
             </div>
 
             <!-- Shipping Service Section -->
