@@ -45,6 +45,7 @@ const subtotal = computed(() => {
 })
 
 const shippingFee = ref(0)
+const expectedDeliveryTime = ref<number | null>(null)
 
 const selectedVoucher = computed(() => {
   return vouchers.value.find((v) => v.id === selectedVoucherId.value)
@@ -194,6 +195,7 @@ const calculateShippingFee = async () => {
     const response = await axios.post(
       'https://dev-online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/fee',
       {
+        shop_id: 885,
         from_district_id: fromDistrictId,
         from_ward_code: fromWardCode,
         service_id: selectedService.value.service_id,
@@ -223,11 +225,66 @@ const calculateShippingFee = async () => {
   }
 }
 
+const calculateLeadTime = async () => {
+  if (!selectedService.value || !selectedAddress.value || !sellerAddress.value) {
+    expectedDeliveryTime.value = null
+    return
+  }
+
+  const toDistrictId = parseInt(selectedAddress.value.district_id)
+  const toWardCode = selectedAddress.value.ward_code
+
+  const fromDistrictId = parseInt(sellerAddress.value.district_id)
+  const fromWardCode = sellerAddress.value.ward_code
+
+  const body = {
+    shop_id: 885,
+    from_district_id: fromDistrictId,
+    from_ward_code: fromWardCode,
+    to_district_id: toDistrictId,
+    to_ward_code: toWardCode,
+    service_id: selectedService.value.service_id,
+  }
+
+  console.log('Calculating Lead Time Body:', JSON.stringify(body, null, 2))
+
+  try {
+    const response = await axios.post(
+      'https://dev-online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/leadtime',
+      body,
+      {
+        headers: {
+          Token: import.meta.env.VITE_GHN_TOKEN,
+        },
+      },
+    )
+
+    if (response.data.code === 200) {
+      expectedDeliveryTime.value = response.data.data.leadtime
+    }
+  } catch (error) {
+    console.error('Error calculating lead time:', error)
+  }
+}
+
 // Watch for changes to trigger calculation
 import { watch } from 'vue'
 watch([selectedService, selectedAddress], () => {
   calculateShippingFee()
+  calculateLeadTime()
 })
+
+const formatDate = (date: number | string | Date) => {
+  if (!date) return ''
+  const d = new Date(date)
+  if (isNaN(d.getTime())) return ''
+  return d.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+}
 
 const selectService = (service: any) => {
   selectedService.value = service
@@ -516,11 +573,22 @@ onMounted(async () => {
               </div>
             </div>
 
-            <el-divider />
+            <el-divider style="margin: 12px" />
             <div class="summary-row total-row">
               <span>Total Payment</span>
               <span class="total-amount">{{ formatNumberWithDots(total) }}đ</span>
             </div>
+
+            <!-- Expected Delivery -->
+            <div class="summary-row delivery-time-row" v-if="expectedDeliveryTime">
+              <div class="delivery-label">
+                <span>Expected Delivery</span>
+              </div>
+              <div class="delivery-value">
+                {{ formatDate(expectedDeliveryTime * 1000) }}
+              </div>
+            </div>
+
             <el-button
               type="primary"
               class="place-order-btn"
@@ -684,6 +752,22 @@ onMounted(async () => {
 
 .select-text {
   color: #22c55e;
+}
+
+.delivery-time-row {
+  border-radius: 8px;
+  margin-top: 6px !important;
+  margin-bottom: 0 !important;
+  font-size: 13px;
+}
+
+.delivery-label {
+  color: #666;
+}
+
+.delivery-value {
+  color: var(--main-color);
+  font-weight: 600;
 }
 
 .loading-services {
@@ -936,7 +1020,6 @@ onMounted(async () => {
 
 .total-row {
   color: #333;
-  margin-top: 15px;
   align-items: center;
 }
 
