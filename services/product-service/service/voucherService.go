@@ -118,6 +118,8 @@ func (s *voucherService) DeleteVoucher(id string, sellerID string) error {
 		return appError.NewAppError(403, "permission denied")
 	}
 
+	s.savedVoucherRepo.DeleteByVoucherID(id)
+
 	return s.repo.Delete(id)
 }
 

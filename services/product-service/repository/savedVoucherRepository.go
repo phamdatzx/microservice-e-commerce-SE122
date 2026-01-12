@@ -14,6 +14,7 @@ type SavedVoucherRepository interface {
 	FindByUserID(userID string) ([]model.SavedVoucher, error)
 	FindByUserAndVoucher(userID, voucherID string) (*model.SavedVoucher, error)
 	Delete(userID, voucherID string) error
+	DeleteByVoucherID(voucherID string) error
 }
 
 type savedVoucherRepository struct {
@@ -68,6 +69,18 @@ func (r *savedVoucherRepository) Delete(userID, voucherID string) error {
 	_, err := r.collection.UpdateOne(
 		ctx,
 		bson.M{"user_id": userID, "voucher_id": voucherID},
+		bson.M{"$set": bson.M{"is_deleted": true}},
+	)
+	return err
+}
+
+func (r *savedVoucherRepository) DeleteByVoucherID(voucherID string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	// Soft delete: set is_deleted to true for all saved vouchers with this voucher_id
+	_, err := r.collection.UpdateMany(
+		ctx,
+		bson.M{"voucher_id": voucherID},
 		bson.M{"$set": bson.M{"is_deleted": true}},
 	)
 	return err
