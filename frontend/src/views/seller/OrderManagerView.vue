@@ -1,386 +1,179 @@
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { Search, Download, ChatDotRound } from '@element-plus/icons-vue'
 import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
+import axios from 'axios'
+import { ElNotification, ElLoading } from 'element-plus'
 
 // --- Interfaces ---
-interface Product {
+interface User {
   id: string
+  username: string
   name: string
-  image: string
-  variant: string
-  quantity: number
+  email: string
+}
+
+interface ProductItem {
+  product_id: string
+  variant_id: string
+  product_name: string
+  variant_name: string
+  sku: string
   price: number
+  image: string
+  quantity: number
+}
+
+interface ShippingAddress {
+  full_name: string
+  phone: string
+  address_line: string
+  ward: string
+  district: string
+  province: string
+  country: string
 }
 
 interface Order {
   id: string
-  customerName: string
-  customerAvatar?: string
-  status: 'TO_PICKUP' | 'TO_CONFIRM' | 'SHIPPING' | 'COMPLETED' | 'CANCELLED' | 'RETURNED'
-  totalAmount: number
-  paymentMethod: string
-  countdown: string
-  confirmedDate: string // ISO 8601
-
-  isProcessed: boolean
-  products: Product[]
+  status: string
+  user: User
+  payment_method: string
+  payment_status: string
+  items: ProductItem[]
+  created_at: string
+  updated_at: string
+  total: number
+  shipping_address: ShippingAddress
 }
 
 // --- State ---
-const activeTab = ref('to_pickup')
+const activeTab = ref('all')
 const activeSubTab = ref('all')
 const searchKeyword = ref('')
 const dateRange = ref('')
-const sortBy = ref('confirmed_date_desc')
+const sortBy = ref('created_at')
+const sortOrder = ref('descending')
 
-// Mock Data
-const orders = ref<Order[]>([
-  {
-    id: '210803JQCW7ZM3',
-    customerName: 'tuyenmrxv',
-    customerAvatar: 'https://placehold.co/30x30/orange/white?text=T',
-    status: 'TO_PICKUP',
-    totalAmount: 251500,
-    paymentMethod: 'COD',
-    countdown: 'Prepare by 23/08/2025',
-    confirmedDate: '2025-08-20T10:00:00',
+const orders = ref<Order[]>([])
+const loading = ref(false)
+const totalCount = ref(0)
+const currentPage = ref(1)
+const pageSize = ref(10)
 
-    isProcessed: false,
-    products: [
-      {
-        id: 'p1',
-        name: '[WHOLESALE] Infrared Thermometer for Baby, Milk, Food',
-        image: 'https://placehold.co/60x60?text=Thermo',
-        variant: 'Model 1502',
-        quantity: 1,
-        price: 251500,
-      },
-    ],
-  },
-  {
-    id: '210731C6RXE3VN',
-    customerName: 'myny1997',
-    customerAvatar: 'https://placehold.co/30x30/gray/white?text=M',
-    status: 'TO_PICKUP',
-    totalAmount: 177658,
-    paymentMethod: 'ShopeePay',
-    countdown: 'Prepare by 20/08/2025',
-    confirmedDate: '2025-08-18T14:30:00',
-    isProcessed: true,
-    products: [
-      {
-        id: 'p2',
-        name: '[GOOD] Electronic Kitchen Scale for Baking, Diet',
-        image: 'https://placehold.co/60x60?text=Scale',
-        variant: 'Electronic Scale',
-        quantity: 1,
-        price: 90000,
-      },
-      {
-        id: 'p3',
-        name: '[WARRANTY 6M] Silent Computer Mouse Bluetooth Q5',
-        image: 'https://placehold.co/60x60?text=Mouse',
-        variant: 'Black Q1',
-        quantity: 1,
-        price: 87658,
-      },
-      {
-        id: 'p4',
-        name: 'Gift - Ceramic Knife',
-        image: 'https://placehold.co/60x60?text=Knife',
-        variant: 'Free Gift',
-        quantity: 1,
-        price: 0,
-      },
-    ],
-  },
-  {
-    id: '210725RGKPVV5N',
-    customerName: 'xe2_pzc2a1',
-    customerAvatar: 'https://placehold.co/30x30/blue/white?text=X',
-    status: 'TO_PICKUP',
-    totalAmount: 124300,
-    paymentMethod: 'COD',
-    countdown: 'Prepare by 13/08/2025',
-    confirmedDate: '2025-08-10T09:15:00',
-    isProcessed: false,
-    products: [
-      {
-        id: 'p5',
-        name: '[GENUINE] Kemei Hair Straightener 4 Mode',
-        image: 'https://placehold.co/60x60?text=Hair',
-        variant: 'Kemei KM',
-        quantity: 1,
-        price: 124300,
-      },
-    ],
-  },
-  // ... existing mock data ...
-  {
-    id: 'ORDER_CONFIRM_1',
-    customerName: 'new_buyer',
-    customerAvatar: 'https://placehold.co/30x30/green/white?text=N',
-    status: 'TO_CONFIRM',
-    totalAmount: 500000,
-    paymentMethod: 'COD',
-    countdown: 'Confirm by 24/08/2025',
-    confirmedDate: '2025-08-21T08:00:00',
-    isProcessed: false,
-    products: [
-      {
-        id: 'p6',
-        name: 'Gaming Headset 7.1 Surround',
-        image: 'https://placehold.co/60x60?text=Headset',
-        variant: 'Black/Red',
-        quantity: 1,
-        price: 500000,
-      },
-    ],
-  },
-  {
-    id: 'ORDER_SHIP_1',
-    customerName: 'loyal_cust',
-    customerAvatar: 'https://placehold.co/30x30/purple/white?text=L',
-    status: 'SHIPPING',
-    totalAmount: 150000,
-    paymentMethod: 'ShopeePay',
-    countdown: 'Estimated 25/08/2025',
-    confirmedDate: '2025-08-19T11:45:00',
-    isProcessed: true,
-    products: [
-      {
-        id: 'p7',
-        name: 'Wireless Charger Pad',
-        image: 'https://placehold.co/60x60?text=Charger',
-        variant: 'White',
-        quantity: 2,
-        price: 75000,
-      },
-    ],
-  },
-  {
-    id: 'ORDER_COMP_1',
-    customerName: 'happy_user',
-    customerAvatar: 'https://placehold.co/30x30/blue/white?text=H',
-    status: 'COMPLETED',
-    totalAmount: 1200000,
-    paymentMethod: 'Credit Card',
-    countdown: 'Completed 20/08/2025',
-    confirmedDate: '2025-08-15T16:20:00',
-    isProcessed: true,
-    products: [
-      {
-        id: 'p8',
-        name: 'Mechanical Keyboard Blue Switch',
-        image: 'https://placehold.co/60x60?text=Keyboard',
-        variant: 'RGB',
-        quantity: 1,
-        price: 1200000,
-      },
-    ],
-  },
-  {
-    id: 'ORDER_CANC_1',
-    customerName: 'cancel_user',
-    customerAvatar: 'https://placehold.co/30x30/red/white?text=C',
-    status: 'CANCELLED',
-    totalAmount: 45000,
-    paymentMethod: 'COD',
-    countdown: 'Cancelled by User',
-    confirmedDate: '2025-08-12T13:10:00',
-    isProcessed: true,
-    products: [
-      {
-        id: 'p9',
-        name: 'Phone Case iPhone 13',
-        image: 'https://placehold.co/60x60?text=Case',
-        variant: 'Transparent',
-        quantity: 1,
-        price: 45000,
-      },
-    ],
-  },
-  {
-    id: 'ORDER_RET_1',
-    customerName: 'return_guy',
-    customerAvatar: 'https://placehold.co/30x30/yellow/white?text=R',
-    status: 'RETURNED',
-    totalAmount: 300000,
-    paymentMethod: 'COD',
-    countdown: 'Return requested',
-    confirmedDate: '2025-08-22T09:50:00',
-    isProcessed: false,
-    products: [
-      {
-        id: 'p10',
-        name: 'Running Shoes Size 42',
-        image: 'https://placehold.co/60x60?text=Shoes',
-        variant: 'Blue',
-        quantity: 1,
-        price: 300000,
-      },
-    ],
-  },
-])
+const token = localStorage.getItem('access_token') || ''
+const BE_API_URL = import.meta.env.VITE_BE_API_URL
 
-const filteredOrders = computed(() => {
-  let result = orders.value
+// --- Methods ---
 
-  // 1. Filter by Tab
-  if (activeTab.value !== 'all') {
-    const statusMap: Record<string, string> = {
-      to_confirm: 'TO_CONFIRM',
-      to_pickup: 'TO_PICKUP',
-      shipping: 'SHIPPING',
-      completed: 'COMPLETED',
-      cancelled: 'CANCELLED',
-      return: 'RETURNED',
+const fetchOrders = async () => {
+  loading.value = true
+  try {
+    const params: any = {
+      page: currentPage.value,
+      limit: pageSize.value,
+      sort_by: sortBy.value,
+      sort_order: sortOrder.value,
     }
-    result = result.filter((o) => o.status === statusMap[activeTab.value])
-  }
 
-  // 2. Filter by Search Keyword
-  if (searchKeyword.value) {
-    const kw = searchKeyword.value.toLowerCase()
-    result = result.filter(
-      (o) =>
-        o.id.toLowerCase().includes(kw) ||
-        o.customerName.toLowerCase().includes(kw) ||
-        o.products.some((p) => p.name.toLowerCase().includes(kw)),
-    )
-  }
+    if (searchKeyword.value) {
+      params.keyword = searchKeyword.value
+    }
 
-  // 3. Filter by Date Range
-  if (dateRange.value && Array.isArray(dateRange.value) && dateRange.value.length === 2) {
-    const start = new Date(dateRange.value[0])
-    const end = new Date(dateRange.value[1])
-    // Normalize end date to end of day if needed, or rely on picker behavior
-    // For simplicity, comparing timestamps
-    result = result.filter((o) => {
-      const orderDate = new Date(o.confirmedDate)
-      return orderDate >= start && orderDate <= end
+    if (activeTab.value !== 'all') {
+      const statusMap: Record<string, string> = {
+        to_confirm: 'TO_CONFIRM',
+        to_pickup: 'TO_PICKUP',
+        shipping: 'SHIPPING',
+        completed: 'COMPLETED',
+        cancelled: 'CANCELLED',
+        return: 'RETURNED',
+      }
+      params.status = statusMap[activeTab.value]
+    }
+
+    const response = await axios.get(`${BE_API_URL}/order/seller`, {
+      params,
+      headers: { Authorization: `Bearer ${token}` },
     })
+
+    orders.value = response.data.orders
+    totalCount.value = response.data.total_count
+  } catch (error) {
+    console.error('Error fetching orders:', error)
+    ElNotification.error('Failed to fetch orders')
+  } finally {
+    loading.value = false
   }
+}
 
-  // 4. Filter by Sub-tab
-  if (activeSubTab.value === 'unprocessed') {
-    result = result.filter((o) => !o.isProcessed)
-  } else if (activeSubTab.value === 'processed') {
-    result = result.filter((o) => o.isProcessed)
-  }
-
-  // 5. Sort
-  result = [...result].sort((a, b) => {
-    const dateA = new Date(a.confirmedDate).getTime()
-    const dateB = new Date(b.confirmedDate).getTime()
-    if (sortBy.value === 'confirmed_date_asc') {
-      return dateA - dateB
-    } else {
-      return dateB - dateA
-    }
-  })
-
-  return result
+// --- Watchers ---
+watch([activeTab, currentPage, pageSize, sortBy, sortOrder, searchKeyword], () => {
+  fetchOrders()
+  // Refresh counts when data might have changed or when switching tabs
+  fetchAllTabCounts()
 })
 
-const subTabCounts = computed(() => {
-  // Base list filtered by Tab, Search, Date (same as filteredOrders before Sub-tab step)
-  let result = orders.value
+// --- Computed ---
 
-  // 1. Tab
-  if (activeTab.value !== 'all') {
-    const statusMap: Record<string, string> = {
-      to_confirm: 'TO_CONFIRM',
-      to_pickup: 'TO_PICKUP',
-      shipping: 'SHIPPING',
-      completed: 'COMPLETED',
-      cancelled: 'CANCELLED',
-      return: 'RETURNED',
-    }
-    result = result.filter((o) => o.status === statusMap[activeTab.value])
-  }
-
-  // 2. Search
-  if (searchKeyword.value) {
-    const kw = searchKeyword.value.toLowerCase()
-    result = result.filter(
-      (o) =>
-        o.id.toLowerCase().includes(kw) ||
-        o.customerName.toLowerCase().includes(kw) ||
-        o.products.some((p) => p.name.toLowerCase().includes(kw)),
-    )
-  }
-
-  // 3. Date
-  if (dateRange.value && Array.isArray(dateRange.value) && dateRange.value.length === 2) {
-    const start = new Date(dateRange.value[0])
-    const end = new Date(dateRange.value[1])
-    result = result.filter((o) => {
-      const orderDate = new Date(o.confirmedDate)
-      return orderDate >= start && orderDate <= end
-    })
-  }
-
-  const allCount = result.length
-  const unprocessedCount = result.filter((o) => !o.isProcessed).length
-  const processedCount = result.filter((o) => o.isProcessed).length
-
-  return { all: allCount, unprocessed: unprocessedCount, processed: processedCount }
+const tabCounts = reactive({
+  all: 0,
+  to_confirm: 0,
+  to_pickup: 0,
+  shipping: 0,
+  completed: 0,
+  cancelled: 0,
+  return: 0,
 })
 
-const tabCounts = computed(() => {
-  const counts = {
-    all: orders.value.length,
-    to_confirm: 0,
-    to_pickup: 0,
-    shipping: 0,
-    completed: 0,
-    cancelled: 0,
-    return: 0,
-  }
+const fetchAllTabCounts = async () => {
+  const statuses = [
+    { key: 'all', status: undefined },
+    { key: 'to_confirm', status: 'TO_CONFIRM' },
+    { key: 'to_pickup', status: 'TO_PICKUP' },
+    { key: 'shipping', status: 'SHIPPING' },
+    { key: 'completed', status: 'COMPLETED' },
+    { key: 'cancelled', status: 'CANCELLED' },
+    { key: 'return', status: 'RETURNED' },
+  ]
 
-  orders.value.forEach((order) => {
-    switch (order.status) {
-      case 'TO_CONFIRM':
-        counts.to_confirm++
-        break
-      case 'TO_PICKUP':
-        counts.to_pickup++
-        break
-      case 'SHIPPING':
-        counts.shipping++
-        break
-      case 'COMPLETED':
-        counts.completed++
-        break
-      case 'CANCELLED':
-        counts.cancelled++
-        break
-      case 'RETURNED':
-        counts.return++
-        break
-    }
-  })
-  return counts
+  try {
+    const promises = statuses.map((item) => {
+      const params: any = { page: 1, limit: 1 }
+      if (item.status) params.status = item.status
+      return axios.get(`${BE_API_URL}/order/seller`, {
+        params,
+        headers: { Authorization: `Bearer ${token}` },
+      })
+    })
+
+    const results = await Promise.all(promises)
+    results.forEach((res, index) => {
+      const statusItem = statuses[index]
+      if (statusItem) {
+        const key = statusItem.key as keyof typeof tabCounts
+        tabCounts[key] = res.data.total_count
+      }
+    })
+  } catch (error) {
+    console.error('Error fetching tab counts:', error)
+  }
+}
+
+onMounted(() => {
+  fetchOrders()
+  fetchAllTabCounts()
 })
 
 const handleExport = () => {
-  const headers = [
-    'Order ID',
-    'Customer',
-    'Status',
-    'Total Amount',
-    'Payment Method',
-    'Confirmed Date',
-  ]
-  const rows = filteredOrders.value.map((order) => [
+  const headers = ['Order ID', 'Customer', 'Status', 'Price', 'Payment Method', 'Created At']
+  const rows = orders.value.map((order) => [
     order.id,
-    order.customerName,
+    order.user.name,
     order.status,
-    order.totalAmount,
-    order.paymentMethod,
-    order.confirmedDate,
+    order.total,
+    order.payment_method,
+    order.created_at,
   ])
 
   const csvContent = [
@@ -405,6 +198,42 @@ const handleExport = () => {
 
 const handleBatchDelivery = () => {
   console.log('Batch delivery clicked')
+}
+
+const handleUpdateStatus = async (orderId: string, status: string) => {
+  try {
+    console.log(`Updating order ${orderId} to status: ${status}`)
+    const loading = ElLoading.service({
+      lock: true,
+      text: `Moving to ${status.replace('_', ' ')}...`,
+      background: 'rgba(0, 0, 0, 0.7)',
+    })
+    const response = await axios.put(
+      `${BE_API_URL}/order/${orderId}`,
+      { status },
+      { headers: { Authorization: `Bearer ${token}` } },
+    )
+    console.log('Update response:', response.data)
+    ElNotification.success(`Order status updated to ${formatStatus(status)}`)
+    fetchOrders()
+    fetchAllTabCounts()
+    loading.close()
+  } catch (error: any) {
+    console.error('Error updating order status:', error)
+    ElNotification.error(error.response?.data?.message || 'Failed to update order status')
+  }
+}
+
+const formatStatus = (status: string) => {
+  const map: Record<string, string> = {
+    TO_CONFIRM: 'To Confirm',
+    TO_PICKUP: 'To Pickup',
+    SHIPPING: 'Shipping',
+    COMPLETED: 'Completed',
+    CANCELLED: 'Cancelled',
+    RETURNED: 'Returned',
+  }
+  return map[status] || status
 }
 </script>
 
@@ -449,27 +278,23 @@ const handleBatchDelivery = () => {
       <div class="sub-tabs-row">
         <div class="sub-tabs">
           <el-radio-group v-model="activeSubTab" size="small">
-            <el-radio-button size="large" label="all">All ({{ subTabCounts.all }})</el-radio-button>
-            <el-radio-button size="large" label="unprocessed"
-              >Unprocessed ({{ subTabCounts.unprocessed }})</el-radio-button
-            >
-            <el-radio-button size="large" label="processed"
-              >Processed ({{ subTabCounts.processed }})</el-radio-button
-            >
+            <el-radio-button size="large" label="all">All ({{ totalCount }})</el-radio-button>
+            <el-radio-button size="large" label="unprocessed">Unprocessed</el-radio-button>
+            <el-radio-button size="large" label="processed">Processed</el-radio-button>
           </el-radio-group>
         </div>
       </div>
     </div>
 
     <!-- Orders List Section -->
-    <div class="orders-section">
+    <div class="orders-section" v-loading="loading">
       <div class="orders-header-bar">
-        <h3>{{ filteredOrders.length }} Orders</h3>
+        <h3>{{ totalCount }} Orders Found</h3>
         <div class="orders-actions">
           <span class="sort-label">Sort by</span>
-          <el-select v-model="sortBy" placeholder="Confirmed Date" style="width: 200px">
-            <el-option label="Order Confirmed Date: Oldest to Newest" value="confirmed_date_asc" />
-            <el-option label="Order Confirmed Date: Newest to Oldest" value="confirmed_date_desc" />
+          <el-select v-model="sortOrder" placeholder="Created Date" style="width: 200px">
+            <el-option label="Order Created Date: Oldest to Newest" value="ascending" />
+            <el-option label="Order Created Date: Newest to Oldest" value="descending" />
           </el-select>
           <el-button
             type="primary"
@@ -484,19 +309,20 @@ const handleBatchDelivery = () => {
       <!-- Column Headers -->
       <div class="table-header-row">
         <div class="col-product">Product(s)</div>
-        <div class="col-total">Total Amount</div>
+        <div class="col-price">Price</div>
         <div class="col-status">Status</div>
-        <div class="col-countdown">Countdown</div>
+        <div class="col-countdown">Created At</div>
+        <div class="col-action">Actions</div>
       </div>
 
       <!-- Order List -->
       <div class="order-list">
-        <div v-for="order in filteredOrders" :key="order.id" class="order-card">
+        <div v-for="order in orders" :key="order.id" class="order-card">
           <!-- Order Header -->
           <div class="order-card-header">
             <div class="user-info">
-              <el-avatar :size="24" :src="order.customerAvatar" />
-              <span class="username">{{ order.customerName }}</span>
+              <el-avatar :size="24" icon="User" />
+              <span class="username">{{ order.user.name }}</span>
               <el-icon class="chat-icon"><ChatDotRound /></el-icon>
             </div>
             <div class="order-id">Order ID: {{ order.id }}</div>
@@ -506,33 +332,84 @@ const handleBatchDelivery = () => {
           <div class="order-card-content">
             <!-- Products Column -->
             <div class="col-product product-list">
-              <div v-for="product in order.products" :key="product.id" class="product-item">
-                <img :src="product.image" class="product-img" alt="Product" />
+              <div
+                v-for="item in order.items"
+                :key="item.product_id + item.variant_id"
+                class="product-item"
+              >
+                <img
+                  :src="item.image || 'https://placehold.co/60x60?text=Product'"
+                  class="product-img"
+                  alt="Product"
+                />
                 <div class="product-info">
-                  <div class="product-name">{{ product.name }}</div>
-                  <div class="product-variant">{{ product.variant }}</div>
+                  <div class="product-name">{{ item.product_name }}</div>
+                  <div class="product-variant">{{ item.variant_name }}</div>
                 </div>
-                <div class="product-qty">x{{ product.quantity }}</div>
+                <div class="product-qty">x{{ item.quantity }}</div>
               </div>
             </div>
 
             <!-- Other Columns (Vertical alignment wrapper) -->
-            <div class="col-total border-left flex-center-col">
-              <span class="price-text">₫{{ formatNumberWithDots(order.totalAmount) }}</span>
-              <span class="sub-text">{{ order.paymentMethod }}</span>
+            <div class="col-price border-left flex-center-col">
+              <span class="price-text">₫{{ formatNumberWithDots(order.total) }}</span>
+              <span class="sub-text">{{ order.payment_method }}</span>
             </div>
 
             <div class="col-status border-left flex-center-col">
-              <span class="status-strong">{{
-                order.status === 'TO_PICKUP' ? 'To Pickup' : order.status
-              }}</span>
+              <span class="status-strong">{{ formatStatus(order.status) }}</span>
             </div>
 
             <div class="col-countdown border-left flex-center-col">
-              <span class="countdown-text">{{ order.countdown }}</span>
+              <span class="countdown-text">{{ new Date(order.created_at).toLocaleString() }}</span>
+            </div>
+
+            <div class="col-action border-left flex-center-col">
+              <el-button
+                v-if="order.status === 'TO_CONFIRM'"
+                type="primary"
+                color="var(--main-color)"
+                size="small"
+                @click="handleUpdateStatus(order.id, 'TO_PICKUP')"
+                >Confirm</el-button
+              >
+              <el-button
+                v-if="order.status === 'TO_PICKUP'"
+                type="primary"
+                color="var(--main-color)"
+                size="small"
+                @click="handleUpdateStatus(order.id, 'SHIPPING')"
+                >Ship</el-button
+              >
+              <el-button
+                v-if="order.status === 'SHIPPING'"
+                type="primary"
+                color="var(--main-color)"
+                size="small"
+                @click="handleUpdateStatus(order.id, 'COMPLETED')"
+                >Delivered</el-button
+              >
+              <span
+                v-if="['COMPLETED', 'CANCELLED', 'RETURNED'].includes(order.status)"
+                class="sub-text"
+                >No Actions</span
+              >
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination-container">
+        <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :page-sizes="[10, 20, 50, 100]"
+          layout="total, sizes, prev, pager, next, jumper"
+          :total="totalCount"
+          @size-change="fetchOrders"
+          @current-change="fetchOrders"
+        />
       </div>
     </div>
   </div>
@@ -651,7 +528,7 @@ const handleBatchDelivery = () => {
   font-size: 13px;
   font-weight: 500;
   border: 1px solid #e5e5e5;
-  border-bottom: none; /* Merges visually with first card if close, but we have margin */
+  border-bottom: none;
   margin-bottom: 12px;
 }
 
@@ -794,5 +671,14 @@ const handleBatchDelivery = () => {
 .countdown-text {
   color: var(--main-color); /* Alert color for deadline */
   font-size: 13px;
+}
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+  padding: 20px;
+  background: white;
+  border-radius: 2px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 </style>
