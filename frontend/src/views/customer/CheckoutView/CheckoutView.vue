@@ -32,6 +32,7 @@ const shippingServices = ref<any[]>([])
 const selectedService = ref<any>(null)
 const showServiceDialog = ref(false)
 const isFetchingServices = ref(false)
+const sellerAddress = ref<any>(null)
 
 // Voucher State
 const vouchers = ref<any[]>([])
@@ -114,8 +115,8 @@ const fetchAddresses = async () => {
         selectedAddressId.value = addresses.value[0].id
       }
 
-      // Auto fetch services once address is ready
-      if (selectedAddressId.value) {
+      // Auto fetch services once address is ready and seller address is ready
+      if (selectedAddressId.value && sellerAddress.value) {
         fetchShippingServices(false)
       }
     }
@@ -129,6 +130,12 @@ const fetchAddresses = async () => {
 const fetchShippingServices = async (openDialog: any = true) => {
   const shouldOpen = openDialog !== false
 
+  // Require seller address
+  if (!sellerAddress.value) {
+    if (shouldOpen) ElMessage.warning('Seller address not found')
+    return
+  }
+
   if (shippingServices.value.length > 0) {
     if (shouldOpen) showServiceDialog.value = true
     return
@@ -136,12 +143,14 @@ const fetchShippingServices = async (openDialog: any = true) => {
 
   isFetchingServices.value = true
   try {
+    const fromDistrict = parseInt(sellerAddress.value.district_id)
+
     const response = await axios.post(
       'https://dev-online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/available-services',
       {
         shop_id: 885,
-        from_district: 2194,
-        to_district: 2264,
+        from_district: fromDistrict,
+        to_district: parseInt(selectedAddress.value?.district_id),
       },
       {
         headers: {
@@ -170,21 +179,23 @@ const fetchShippingServices = async (openDialog: any = true) => {
 }
 
 const calculateShippingFee = async () => {
-  if (!selectedService.value || !selectedAddress.value) {
+  if (!selectedService.value || !selectedAddress.value || !sellerAddress.value) {
     shippingFee.value = 0
     return
   }
 
-  // Use values from prompt/requirement or fallback to defaults
-  const toDistrictId = selectedAddress.value.district_id || 2264
-  const toWardCode = selectedAddress.value.ward_code || '90816'
+  const toDistrictId = parseInt(selectedAddress.value.district_id)
+  const toWardCode = selectedAddress.value.ward_code
+
+  const fromDistrictId = parseInt(sellerAddress.value.district_id)
+  const fromWardCode = sellerAddress.value.ward_code
 
   try {
     const response = await axios.post(
       'https://dev-online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/fee',
       {
-        from_district_id: 2194,
-        from_ward_code: '220714',
+        from_district_id: fromDistrictId,
+        from_ward_code: fromWardCode,
         service_id: selectedService.value.service_id,
         service_type_id: selectedService.value.service_type_id,
         to_district_id: toDistrictId,
@@ -341,7 +352,31 @@ const validVouchers = computed(() => {
   })
 })
 
-onMounted(() => {
+const fetchSellerAddress = async () => {
+  try {
+    const response = await axios.get('http://localhost:81/api/order/cart', {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+      },
+    })
+
+    if (response.data && response.data.cart_items && response.data.cart_items.length > 0) {
+      // Find the first item that matches one of our checkout items (to ensure we get the right seller)
+      // Assuming all checkout items belong to the same seller for now as per standard flow, or we just take the first.
+      const firstItem = response.data.cart_items.find((item: any) =>
+        checkoutItems.value.some((cItem) => cItem.id === item.id),
+      )
+
+      if (firstItem && firstItem.seller && firstItem.seller.address) {
+        sellerAddress.value = firstItem.seller.address
+      }
+    }
+  } catch (error) {
+    console.error('Failed to fetch seller address:', error)
+  }
+}
+
+onMounted(async () => {
   // Load checkout items
   const storedItems = localStorage.getItem('checkout_items')
   if (storedItems) {
@@ -353,6 +388,9 @@ onMounted(() => {
     router.push('/cart')
     return
   }
+
+  // Fetch seller address first
+  await fetchSellerAddress()
 
   fetchAddresses()
 })
