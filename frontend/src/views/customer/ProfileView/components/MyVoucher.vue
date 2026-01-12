@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import axios from 'axios'
-import { Ticket, Timer, CopyDocument } from '@element-plus/icons-vue'
+import { Ticket, Timer, CopyDocument, Delete } from '@element-plus/icons-vue'
 import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 interface SavedVoucher {
   id: string
+  voucher_id: string
   used_count: number
   max_uses_allowed: number
   voucher: {
+    id: string
     code: string
     name: string
     description: string
@@ -58,6 +60,34 @@ const filteredVouchers = computed(() => {
     }
   })
 })
+
+const unsaveVoucher = async (voucherId: string) => {
+  try {
+    await ElMessageBox.confirm('Are you sure you want to remove this voucher?', 'Warning', {
+      confirmButtonText: 'Remove',
+      cancelButtonText: 'Cancel',
+      type: 'warning',
+    })
+
+    const response = await axios.delete(
+      `http://localhost:81/api/product/saved-vouchers/${voucherId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+        },
+      },
+    )
+    if (response.status === 200) {
+      ElMessage.success('Voucher unsaved successfully')
+      fetchSavedVouchers() // Refresh list
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('Failed to unsave voucher:', error)
+      ElMessage.error('Failed to unsave voucher')
+    }
+  }
+}
 
 const copyCode = (code: string) => {
   navigator.clipboard
@@ -118,47 +148,54 @@ onMounted(() => {
             new Date(item.voucher.end_time) <= new Date(),
         }"
       >
-        <div class="voucher-left">
-          <div class="icon-box">
-            <el-icon :size="24"><Ticket /></el-icon>
-          </div>
-          <div class="voucher-info">
-            <h4 class="voucher-name">{{ item.voucher.name }}</h4>
-            <div class="voucher-code-wrapper">
-              <span class="voucher-code">{{ item.voucher.code }}</span>
-              <el-icon class="copy-icon" @click="copyCode(item.voucher.code)"
-                ><CopyDocument
-              /></el-icon>
+        <div class="voucher-main-content">
+          <div class="voucher-left">
+            <div class="icon-box">
+              <el-icon :size="24"><Ticket /></el-icon>
             </div>
-            <p class="voucher-desc">{{ item.voucher.description }}</p>
-            <div class="usage-info">
-              Used: {{ item.used_count }} / {{ item.max_uses_allowed }}
-              <span v-if="item.used_count >= item.max_uses_allowed" class="used-badge"
-                >(Fully Used)</span
+            <div class="voucher-info">
+              <h4 class="voucher-name">{{ item.voucher.name }}</h4>
+              <div class="voucher-code-wrapper">
+                <span class="voucher-code">{{ item.voucher.code }}</span>
+                <el-icon class="copy-icon" @click="copyCode(item.voucher.code)"
+                  ><CopyDocument
+                /></el-icon>
+              </div>
+              <p class="voucher-desc">{{ item.voucher.description }}</p>
+              <div class="usage-info">
+                Used: {{ item.used_count }} / {{ item.max_uses_allowed }}
+                <span v-if="item.used_count >= item.max_uses_allowed" class="used-badge"
+                  >(Fully Used)</span
+                >
+                <span v-else-if="new Date(item.voucher.end_time) <= new Date()" class="used-badge"
+                  >(Expired)</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <div class="voucher-right">
+            <div class="discount-info">
+              <span class="discount-amount">
+                <template v-if="item.voucher.discount_type === 'FIXED'">
+                  {{ formatNumberWithDots(item.voucher.discount_value) }}đ off
+                </template>
+                <template v-else> {{ item.voucher.discount_value }}% off </template>
+              </span>
+              <span class="min-spend"
+                >Min. Spend {{ formatNumberWithDots(item.voucher.min_order_value) }}đ</span
               >
-              <span v-else-if="new Date(item.voucher.end_time) <= new Date()" class="used-badge"
-                >(Expired)</span
-              >
+            </div>
+            <div class="expiry-info">
+              <el-icon><Timer /></el-icon>
+              <span>Exp: {{ formatDate(item.voucher.end_time) }}</span>
             </div>
           </div>
         </div>
 
-        <div class="voucher-right">
-          <div class="discount-info">
-            <span class="discount-amount">
-              <template v-if="item.voucher.discount_type === 'FIXED'">
-                {{ formatNumberWithDots(item.voucher.discount_value) }}đ off
-              </template>
-              <template v-else> {{ item.voucher.discount_value }}% off </template>
-            </span>
-            <span class="min-spend"
-              >Min. Spend {{ formatNumberWithDots(item.voucher.min_order_value) }}đ</span
-            >
-          </div>
-          <div class="expiry-info">
-            <el-icon><Timer /></el-icon>
-            <span>Exp: {{ formatDate(item.voucher.end_time) }}</span>
-          </div>
+        <!-- Hover Remove Overlay -->
+        <div class="remove-overlay" @click.stop="unsaveVoucher(item.voucher_id)">
+          <el-icon :size="20"><Delete /></el-icon>
         </div>
       </div>
     </div>
@@ -224,6 +261,7 @@ onMounted(() => {
 }
 
 .voucher-card {
+  position: relative;
   display: flex;
   background: #fff;
   border: 1px solid #e0e0e0;
@@ -244,6 +282,16 @@ onMounted(() => {
   gap: 15px;
   align-items: center;
   border-right: 1px dashed #e0e0e0;
+}
+
+.voucher-main-content {
+  display: flex;
+  width: 100%;
+  flex: 1;
+}
+
+.voucher-card:hover .voucher-right {
+  transform: translateX(-50px);
 }
 
 .icon-box {
@@ -315,6 +363,7 @@ onMounted(() => {
   justify-content: center;
   align-items: end;
   text-align: right;
+  transition: transform 0.3s ease;
 }
 
 .discount-info {
@@ -342,13 +391,36 @@ onMounted(() => {
   color: #999;
 }
 
-.voucher-card.is-used {
+.remove-overlay {
+  position: absolute;
+  top: 0;
+  right: -50px; /* Hidden by default */
+  width: 50px;
+  height: 100%;
+  background-color: #ef4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 5;
+}
+
+.voucher-card:hover .remove-overlay {
+  right: 0;
+}
+
+.remove-overlay:hover {
+  background-color: #dc2626;
+}
+
+.voucher-card.is-used .voucher-main-content {
   filter: grayscale(1);
   opacity: 0.7;
 }
 
 .voucher-card.is-used:hover {
-  border-color: #e0e0e0;
   box-shadow: none;
 }
 
