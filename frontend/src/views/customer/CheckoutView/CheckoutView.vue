@@ -11,6 +11,7 @@ import {
   Plus,
   Loading,
   Ticket,
+  Van,
 } from '@element-plus/icons-vue'
 import { ElMessage, ElLoading } from 'element-plus'
 import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
@@ -24,6 +25,12 @@ const selectedAddressId = ref('')
 const paymentMethod = ref('COD')
 const voucherCode = ref('') // Keep for display if needed
 const isLoading = ref(false)
+
+// Shipping Service State
+const shippingServices = ref<any[]>([])
+const selectedService = ref<any>(null)
+const showServiceDialog = ref(false)
+const isFetchingServices = ref(false)
 
 // Voucher State
 const vouchers = ref<any[]>([])
@@ -115,6 +122,47 @@ const fetchAddresses = async () => {
   }
 }
 
+const fetchShippingServices = async () => {
+  if (shippingServices.value.length > 0) {
+    showServiceDialog.value = true
+    return
+  }
+
+  isFetchingServices.value = true
+  try {
+    const response = await axios.post(
+      'https://dev-online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/available-services',
+      {
+        shop_id: 885,
+        from_district: 2194,
+        to_district: 2264,
+      },
+      {
+        headers: {
+          Token: import.meta.env.VITE_GHN_TOKEN,
+        },
+      },
+    )
+
+    if (response.data.code === 200) {
+      shippingServices.value = response.data.data
+      showServiceDialog.value = true
+    } else {
+      ElMessage.error(response.data.message || 'Failed to fetch services')
+    }
+  } catch (error) {
+    console.error('Failed to fetch services:', error)
+    ElMessage.error('Failed to load shipping services')
+  } finally {
+    isFetchingServices.value = false
+  }
+}
+
+const selectService = (service: any) => {
+  selectedService.value = service
+  showServiceDialog.value = false
+}
+
 const handlePlaceOrder = async () => {
   if (!selectedAddressId.value) {
     ElMessage.warning('Please select a shipping address')
@@ -142,6 +190,11 @@ const handlePlaceOrder = async () => {
 
   if (selectedVoucherId.value) {
     payload.voucher_id = selectedVoucherId.value
+  }
+
+  if (selectedService.value) {
+    payload.service_id = selectedService.value.service_id
+    payload.service_type_id = selectedService.value.service_type_id
   }
 
   console.log('Checkout Payload:', payload)
@@ -332,6 +385,21 @@ onMounted(() => {
               <span>{{ formatNumberWithDots(subtotal) }}đ</span>
             </div>
 
+            <!-- Shipping Service Section -->
+            <div class="summary-row service-row" @click="fetchShippingServices">
+              <div class="service-label">
+                <el-icon><Van /></el-icon> <span>Shipping Service</span>
+              </div>
+              <div class="service-value" :class="{ 'has-selection': selectedService }">
+                <span v-if="selectedService">{{ selectedService.short_name }}</span>
+                <span v-else class="select-text">Select Service</span>
+              </div>
+            </div>
+
+            <div v-if="isFetchingServices" class="loading-services">
+              <el-icon class="is-loading"><Loading /></el-icon> Loading services...
+            </div>
+
             <!-- Voucher Section -->
             <div class="summary-row voucher-row" @click="showVoucherDialog = true">
               <div class="voucher-label">
@@ -408,6 +476,36 @@ onMounted(() => {
         </div>
       </div>
     </el-dialog>
+
+    <!-- Shipping Service Dialog -->
+    <el-dialog
+      v-model="showServiceDialog"
+      title="Select Shipping Service"
+      width="400px"
+      class="service-dialog"
+    >
+      <div class="service-list-dialog">
+        <div
+          v-for="service in shippingServices"
+          :key="service.service_id"
+          class="service-item-dialog"
+          :class="{ selected: selectedService?.service_id === service.service_id }"
+          @click="selectService(service)"
+        >
+          <div class="s-left">
+            <div class="s-name">{{ service.short_name }}</div>
+          </div>
+          <div class="s-right">
+            <el-radio
+              :model-value="selectedService?.service_id"
+              :label="service.service_id"
+              @change="selectService(service)"
+              >{{ '' }}</el-radio
+            >
+          </div>
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -446,6 +544,81 @@ onMounted(() => {
 
 .select-voucher-text {
   color: #22c55e;
+}
+
+.service-row {
+  cursor: pointer;
+  padding: 12px 12px;
+  border-bottom: 1px dashed #eee;
+  margin: 10px 0;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.service-row:hover {
+  background-color: #fafafa;
+}
+
+.service-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--main-color);
+  font-weight: 500;
+}
+
+.service-value {
+  color: #999;
+  font-size: 14px;
+}
+
+.service-value.has-selection {
+  color: var(--main-color);
+  font-weight: 500;
+}
+
+.select-text {
+  color: #22c55e;
+}
+
+.loading-services {
+  font-size: 12px;
+  color: #999;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+/* Service Dialog Styles */
+.service-list-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.service-item-dialog {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #eee;
+  padding: 10px 15px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.service-item-dialog:hover {
+  border-color: var(--main-color);
+  background: #f0fdf4;
+}
+
+.service-item-dialog.selected {
+  border-color: var(--main-color);
+  background: #f0fdf4;
+}
+
+.s-name {
+  font-weight: 500;
+  color: #333;
 }
 
 /* Dialog Styles */
