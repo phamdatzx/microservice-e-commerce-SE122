@@ -262,8 +262,8 @@ const handlePlaceOrder = async () => {
     payment_method: paymentMethod.value,
   }
 
-  if (selectedVoucherId.value) {
-    payload.voucher_id = selectedVoucherId.value
+  if (selectedVoucher.value?.voucher?.id) {
+    payload.voucher_id = selectedVoucher.value.voucher.id
   }
 
   if (selectedService.value) {
