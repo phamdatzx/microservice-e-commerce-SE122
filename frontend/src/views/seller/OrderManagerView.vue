@@ -409,7 +409,7 @@ const handleBatchDelivery = () => {
 </script>
 
 <template>
-  <div class="shipping-manager">
+  <div class="order-manager">
     <!-- Main Tabs -->
     <div class="main-tabs">
       <el-tabs v-model="activeTab" class="custom-tabs">
@@ -539,7 +539,7 @@ const handleBatchDelivery = () => {
 </template>
 
 <style scoped>
-.shipping-manager {
+.order-manager {
   padding: 20px;
   background-color: #f6f6f6;
   min-height: 100vh;

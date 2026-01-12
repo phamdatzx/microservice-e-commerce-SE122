@@ -18,7 +18,7 @@ import CheckoutView from '@/views/customer/CheckoutView/CheckoutView.vue'
 import ChatView from '@/views/seller/ChatView.vue'
 import SellerProfileView from '@/views/seller/ProfileView.vue'
 import VoucherManagerView from '@/views/seller/VoucherManagerView.vue'
-import ShippingManagerView from '@/views/seller/ShippingManagerView.vue'
+import OrderManagerView from '@/views/seller/OrderManagerView.vue'
 import StatisticView from '@/views/seller/StatisticView.vue'
 import AdminHomeView from '@/views/admin/HomeView.vue'
 import CategoryManagerView from '@/views/admin/CategoryView.vue'
@@ -194,7 +194,7 @@ const router = createRouter({
         { path: 'chat', name: 'chat', component: ChatView },
         { path: 'profile', name: 'seller-profile', component: SellerProfileView },
         { path: 'voucher', name: 'voucher', component: VoucherManagerView },
-        { path: 'shipping', name: 'shipping', component: ShippingManagerView },
+        { path: 'order', name: 'order', component: OrderManagerView },
         { path: 'statistic', name: 'statistic', component: StatisticView },
       ],
     },

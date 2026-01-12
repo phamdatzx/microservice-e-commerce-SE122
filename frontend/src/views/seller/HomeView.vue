@@ -94,10 +94,10 @@ const handleClose = (key: string, keyPath: string[]) => {
                 <span>Voucher</span>
               </el-menu-item>
             </RouterLink>
-            <RouterLink to="/seller/shipping">
+            <RouterLink to="/seller/order">
               <el-menu-item index="7">
                 <el-icon><Van /></el-icon>
-                <span>Shipping</span>
+                <span>Order</span>
               </el-menu-item>
             </RouterLink>
             <RouterLink to="/seller/product">
