@@ -170,7 +170,7 @@ func (s *orderService) Checkout(userID string, request dto.CheckoutRequest) (*dt
 		}
 
 		// Validate voucher (basic validation, more complex logic might be needed)
-		if voucher.Status != "active" {
+		if voucher.Status != "ACTIVE" {
 			return nil, appError.NewAppError(400, "voucher is not active")
 		}
 		if totalAmount < float64(voucher.MinOrderValue) {
@@ -179,13 +179,17 @@ func (s *orderService) Checkout(userID string, request dto.CheckoutRequest) (*dt
 		// TODO: Validate usage limit, date, seller/category applicability
 
 		discount := 0.0
-		if voucher.DiscountType == "percentage" {
+		if voucher.DiscountType == "PERCENTAGE" {
 			discount = totalAmount * float64(voucher.DiscountValue) / 100
 			if discount > float64(voucher.MaxDiscountAmount) {
 				discount = float64(voucher.MaxDiscountAmount)
 			}
-		} else if voucher.DiscountType == "fixed_amount" {
+		} else if voucher.DiscountType == "FIXED" {
 			discount = float64(voucher.DiscountValue)
+		}
+
+		if discount > float64(voucher.MaxDiscountAmount) {
+			discount = float64(voucher.MaxDiscountAmount)
 		}
 
 		totalAmount -= discount
