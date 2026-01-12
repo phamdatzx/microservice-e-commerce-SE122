@@ -6,6 +6,7 @@ import axios from 'axios'
 import IconUser from './icons/IconUser.vue'
 import IconOrder from './icons/IconOrder.vue'
 import IconVoucher from './icons/IconVoucher.vue'
+import IconLock from './icons/IconLock.vue'
 import IconLogout from './icons/IconLogout.vue'
 
 const router = useRouter()
@@ -203,6 +204,10 @@ defineExpose({
                 <RouterLink to="/profile/vouchers" class="dropdown-item">
                   <IconVoucher />
                   My Vouchers
+                </RouterLink>
+                <RouterLink to="/profile/change-password" class="dropdown-item">
+                  <IconLock />
+                  Change Password
                 </RouterLink>
                 <div class="dropdown-divider"></div>
                 <button @click="handleLogout" class="dropdown-item logout-btn">
