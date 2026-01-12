@@ -431,7 +431,7 @@ onMounted(fetchAddresses)
           </div>
           <div class="details">
             <p>{{ address.address_line }}</p>
-            <p>{{ address.ward }}, {{ address.province }}</p>
+            <p>{{ address.ward }}, {{ address.district }}, {{ address.province }}</p>
           </div>
         </div>
         <div class="address-actions">
