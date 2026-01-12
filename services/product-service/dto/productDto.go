@@ -67,3 +67,22 @@ func NewPaginatedProductsResponse(products []model.Product, total int64, page, l
 		},
 	}
 }
+
+// Stock Reservation DTOs
+
+// ReserveStockItem represents a single item to reserve
+type ReserveStockItem struct {
+	VariantID string `json:"variant_id" binding:"required"`
+	Quantity  int    `json:"quantity" binding:"required,gt=0"`
+}
+
+// ReserveStockRequest represents the request to reserve stock
+type ReserveStockRequest struct {
+	OrderID string             `json:"order_id" binding:"required"`
+	Items   []ReserveStockItem `json:"items" binding:"required,min=1"`
+}
+
+// ReleaseStockRequest represents the request to release stock
+type ReleaseStockRequest struct {
+	OrderID string `json:"order_id" binding:"required"`
+}

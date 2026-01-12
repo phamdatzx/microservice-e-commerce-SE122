@@ -19,6 +19,7 @@ type ProductRepository interface {
 	UpdateVariantImages(productID string, variantUpdates map[string]string) error
 	FindBySeller(sellerID string, filter bson.M, skip, limit int, sortField string, sortDirection int) ([]model.Product, int64, error)
 	FindVariantsByIds(variantIDs []string) (map[string]*model.Product, error)
+	UpdateVariantStock(productID string, variantID string, stockDelta int) error
 }
 
 type productRepository struct {
@@ -217,3 +218,46 @@ func (r *productRepository) FindVariantsByIds(variantIDs []string) (map[string]*
 	return variantToProduct, nil
 }
 
+func (r *productRepository) UpdateVariantStock(productID string, variantID string, stockDelta int) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Fetch the product first to find the variant
+	var product model.Product
+	err := r.collection.FindOne(ctx, bson.M{"_id": productID}).Decode(&product)
+	if err != nil {
+		return err
+	}
+
+	// Find the variant and update its stock
+	variantFound := false
+	for i := range product.Variants {
+		if product.Variants[i].ID == variantID {
+			product.Variants[i].Stock += stockDelta
+			variantFound = true
+			break
+		}
+	}
+
+	if !variantFound {
+		return mongo.ErrNoDocuments
+	}
+
+	// Update the entire variants array, product stock, and updated_at
+	product.UpdatedAt = time.Now()
+
+	_, err = r.collection.UpdateOne(
+		ctx,
+		bson.M{"_id": productID},
+		bson.M{
+			"$set": bson.M{
+				"variants":   product.Variants,
+				"updated_at": product.UpdatedAt,
+			},
+			"$inc": bson.M{
+				"stock": stockDelta,
+			},
+		},
+	)
+	return err
+}

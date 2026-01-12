@@ -88,6 +88,8 @@ func (s *cartService) AddCartItem(userID string, request dto.AddCartItemRequest)
 			ID:       seller.ID,
 			Name:     seller.Name,
 			Username: seller.Username,
+			Image:    seller.Image,
+			Phone:    seller.Phone,
 			Address: model.Address{
 				FullName:    seller.Address.FullName,
 				Phone:       seller.Address.Phone,

@@ -10,6 +10,7 @@ import (
 	"order-service/model"
 	"order-service/repository"
 	"os"
+	"time"
 
 	"github.com/stripe/stripe-go/v84"
 	"github.com/stripe/stripe-go/v84/checkout/session"
@@ -96,7 +97,7 @@ func (s *orderService) Checkout(userID string, request dto.CheckoutRequest) (*dt
 		return nil, fmt.Errorf("failed to get seller info: %w", err)
 	}
 
-	// 4. Fetch Variant details and Verify stock
+	// 4. Fetch Variant details and reverse stock
 	var orderItems []model.OrderItem
 	var totalAmount float64
 	var variantIDs []string
@@ -161,19 +162,42 @@ func (s *orderService) Checkout(userID string, request dto.CheckoutRequest) (*dt
 		})
 	}
 
+	// Reserve stock for all items
+	var reserveItems []client.ReserveStockItem
+	for _, item := range cartItems {
+		reserveItems = append(reserveItems, client.ReserveStockItem{
+			VariantID: item.Variant.ID,
+			Quantity:  item.Quantity,
+		})
+	}
+
+	// Create a temporary order ID for stock reservation
+	// We'll use this to track the reservation before the actual order is created
+	tempOrderID := fmt.Sprintf("temp_%s_%d", userID, time.Now().UnixNano())
+
+	if err := s.productClient.ReserveStock(tempOrderID, reserveItems); err != nil {
+		return nil, fmt.Errorf("failed to reserve stock: %w", err)
+	}
+
 	// 5. Apply Voucher
 	var orderVoucher *model.OrderVoucher
 	if request.VoucherID != "" {
 		voucher, err := s.productClient.GetVoucherByID(request.VoucherID)
 		if err != nil {
+			// Rollback: release reserved stock
+			_ = s.productClient.ReleaseStock(tempOrderID)
 			return nil, fmt.Errorf("failed to get voucher: %w", err)
 		}
 
 		// Validate voucher (basic validation, more complex logic might be needed)
 		if voucher.Status != "ACTIVE" {
+			// Rollback: release reserved stock
+			_ = s.productClient.ReleaseStock(tempOrderID)
 			return nil, appError.NewAppError(400, "voucher is not active")
 		}
 		if totalAmount < float64(voucher.MinOrderValue) {
+			// Rollback: release reserved stock
+			_ = s.productClient.ReleaseStock(tempOrderID)
 			return nil, appError.NewAppError(400, "order value does not meet voucher minimum requirement")
 		}
 		// TODO: Validate usage limit, date, seller/category applicability
@@ -240,7 +264,18 @@ func (s *orderService) Checkout(userID string, request dto.CheckoutRequest) (*dt
 	}
 
 	if err := s.repo.CreateOrder(order); err != nil {
+		// Rollback: release reserved stock
+		_ = s.productClient.ReleaseStock(tempOrderID)
 		return nil, err
+	}
+
+	// Update stock reservation with actual order ID
+	// We need to release the temp reservation and create a new one with the actual order ID
+	_ = s.productClient.ReleaseStock(tempOrderID)
+	if err := s.productClient.ReserveStock(order.ID, reserveItems); err != nil {
+		// Log error but don't fail the order creation since it's already created
+		// In production, you might want to handle this differently
+		fmt.Printf("Warning: failed to update stock reservation with order ID: %v\n", err)
 	}
 
 	// Delete purchased cart items

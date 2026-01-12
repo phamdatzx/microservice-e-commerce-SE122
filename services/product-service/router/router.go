@@ -9,11 +9,12 @@ import (
 
 // AppRouter holds all controllers for dependency injection
 type AppRouter struct {
-	ProductController        *controller.ProductController
-	CategoryController       *controller.CategoryController
-	SellerCategoryController *controller.SellerCategoryController
-	VoucherController        *controller.VoucherController
-	SavedVoucherController   *controller.SavedVoucherController
+	ProductController           *controller.ProductController
+	CategoryController          *controller.CategoryController
+	SellerCategoryController    *controller.SellerCategoryController
+	VoucherController           *controller.VoucherController
+	SavedVoucherController      *controller.SavedVoucherController
+	StockReservationController  *controller.StockReservationController
 }
 
 // SetupRouter builds the main Gin router and registers all module routes
@@ -41,6 +42,9 @@ func SetupRouter(engine *gin.Engine, appRouter *AppRouter) *gin.Engine {
 
 		// Saved Voucher routes
 		RegisterSavedVoucherRoutes(productGroup, appRouter.SavedVoucherController)
+
+		// Stock Reservation routes
+		SetupStockReservationRoutes(productGroup, appRouter.StockReservationController)
 	}
 
 	return engine
