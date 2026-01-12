@@ -5,43 +5,37 @@ import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
 import axios from 'axios'
 
 const activeOrderTab = ref('all')
-
 const orders = ref<any[]>([])
+const loading = ref(false)
+
+// Pagination state
+const currentPage = ref(1)
+const pageSize = ref(10)
+const totalItems = ref(0)
 
 const statusMapping: Record<string, string> = {
   all: '',
-  'to-pay': 'TO_STATUS_PAY', // Backend doesn't support 'TO_PAY' filter directly if payment status is separate?
-  // Wait, UserService CreateOrder sets status=TO_PAY for Stripe.
-  // Let's assume backend filters by status field directly.
+  'to-pay': 'TO_STATUS_PAY',
   'to-ship': 'TO_CONFIRM',
-  'to-receive': 'SHIPPING', // or TO_PICKUP? User example used TO_CONFIRM. Backend update logic has TO_PICKUP, SHIPPING.
-  // Let's use standard Shopee-like flow: To Ship -> TO_CONFIRM/TO_PICKUP, To Receive -> SHIPPING
-  // For this project, listing "To Ship" usually maps to TO_CONFIRM.
+  'to-receive': 'SHIPPING',
   completed: 'COMPLETED',
   cancelled: 'CANCELLED',
   'return-refund': 'RETURNED',
 }
 
 const fetchOrders = async () => {
+  loading.value = true
   try {
     const params: any = {
-      page: 1,
-      limit: 10,
+      page: currentPage.value,
+      limit: pageSize.value,
       sort_by: 'created_at',
       sort_order: 'descending',
     }
 
     if (activeOrderTab.value !== 'all') {
-      // Map frontend tab to backend status
-      let status = activeOrderTab.value.toUpperCase().replace(/-/g, '_')
-
-      // Override with specific mapping if needed
-      if (activeOrderTab.value === 'to-ship') status = 'TO_CONFIRM'
-      if (activeOrderTab.value === 'to-receive') status = 'SHIPPING' // or TO_PICKUP
-      if (activeOrderTab.value === 'return-refund') status = 'RETURNED'
-      if (activeOrderTab.value === 'to-pay') status = 'TO_PAY'
-
-      params.status = status
+      params.status =
+        statusMapping[activeOrderTab.value] || activeOrderTab.value.toUpperCase().replace(/-/g, '_')
     }
 
     const response = await axios.get('http://localhost:81/api/order', {
@@ -52,25 +46,26 @@ const fetchOrders = async () => {
     })
 
     if (response.data && response.data.orders) {
-      orders.value = response.data.orders.map((order: any) => ({
-        ...order,
-        // Since API doesn't return items/shop info, we mock or handle empty for now
-        // UI expects: shopName, shippingUpdate, statusText, items[], totalAmount
-        shopName: 'Official Store', // Placeholder
-        shippingUpdate: 'Updated recently',
-        statusText: order.status,
-        totalAmount: order.total,
-        items: [], // API doesn't return items yet
-      }))
+      orders.value = response.data.orders
+      totalItems.value = response.data.total_count
     } else {
       orders.value = []
+      totalItems.value = 0
     }
   } catch (error) {
     console.error('Failed to fetch orders:', error)
+  } finally {
+    loading.value = false
   }
 }
 
+const handlePageChange = (page: number) => {
+  currentPage.value = page
+  fetchOrders()
+}
+
 watch(activeOrderTab, () => {
+  currentPage.value = 1
   fetchOrders()
 })
 
@@ -111,34 +106,37 @@ const orderTabs = [
       />
     </div>
 
-    <div class="order-list">
+    <div v-loading="loading" class="order-list">
       <div v-for="order in filteredOrders" :key="order.id" class="order-card box-shadow">
         <div class="order-header">
           <div class="shop-info">
-            <span class="shop-name">{{ order.shopName }}</span>
+            <span class="shop-name">{{ order.seller?.name || 'Shop' }}</span>
             <el-button :icon="ChatDotRound" size="small" link>Chat</el-button>
             <el-divider direction="vertical" />
             <el-button :icon="Shop" size="small" link>View Shop</el-button>
           </div>
           <div class="order-status">
-            <span class="shipping-status">{{ order.shippingUpdate }}</span>
+            <span class="shipping-status"
+              >Order ID: {{ order.id.split('-')[0].toUpperCase() }}</span
+            >
             <el-divider direction="vertical" />
-            <span class="status-text">{{ order.statusText }}</span>
+            <span class="status-text">{{ order.status }}</span>
           </div>
         </div>
 
         <div class="order-items">
-          <div v-for="item in order.items" :key="item.id" class="order-item">
-            <img :src="item.image" :alt="item.name" class="item-image" />
+          <div v-for="item in order.items" :key="item.variant_id" class="order-item">
+            <img
+              :src="item.image || 'https://via.placeholder.com/80'"
+              :alt="item.product_name"
+              class="item-image"
+            />
             <div class="item-details">
-              <h4 class="item-name">{{ item.name }}</h4>
-              <p class="item-variant">Variant: {{ item.variant }}</p>
+              <h4 class="item-name">{{ item.product_name }}</h4>
+              <p class="item-variant">Variant: {{ item.variant_name || 'Default' }}</p>
               <p class="item-quantity">x{{ item.quantity }}</p>
             </div>
             <div class="item-price">
-              <span v-if="item.oldPrice" class="old-price"
-                >{{ formatNumberWithDots(item.oldPrice) }}đ</span
-              >
               <span class="current-price">{{ formatNumberWithDots(item.price) }}đ</span>
             </div>
           </div>
@@ -147,10 +145,10 @@ const orderTabs = [
         <div class="order-footer">
           <div class="total-section">
             <span class="total-label">Order Total:</span>
-            <span class="total-amount">{{ formatNumberWithDots(order.totalAmount) }}đ</span>
+            <span class="total-amount">{{ formatNumberWithDots(order.total) }}đ</span>
           </div>
           <div class="order-actions">
-            <template v-if="order.status === 'TO_RECEIVE'">
+            <template v-if="order.status === 'SHIPPING'">
               <el-button type="primary" size="large">Order Received</el-button>
               <el-button size="large">Return/Refund</el-button>
               <el-button size="large">Contact Seller</el-button>
@@ -164,7 +162,20 @@ const orderTabs = [
         </div>
       </div>
 
-      <div v-if="filteredOrders.length === 0" class="no-orders text-center">
+      <!-- Pagination -->
+      <div v-if="totalItems > pageSize" class="pagination-container">
+        <el-pagination
+          background
+          layout="prev, pager, next"
+          :total="totalItems"
+          :page-size="pageSize"
+          size="large"
+          v-model:current-page="currentPage"
+          @current-change="handlePageChange"
+        />
+      </div>
+
+      <div v-if="filteredOrders.length === 0 && !loading" class="no-orders text-center">
         <el-empty description="No orders found" />
       </div>
     </div>
@@ -322,5 +333,23 @@ const orderTabs = [
 
 .no-orders {
   padding: 60px 0;
+}
+
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 28px;
+  padding-bottom: 8px;
+}
+
+.pagination-container :deep(.el-pagination.is-background .el-pager li:not(.is-active)),
+.pagination-container :deep(.el-pagination.is-background .btn-prev),
+.pagination-container :deep(.el-pagination.is-background .btn-next) {
+  background-color: #fff !important;
+  border: 1px solid #e0e0e0;
+}
+
+.pagination-container :deep(.el-pagination.is-background .el-pager li.is-active) {
+  background-color: var(--main-color) !important;
 }
 </style>
