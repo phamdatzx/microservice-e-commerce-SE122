@@ -251,9 +251,8 @@ func (s *orderService) Checkout(userID string, request dto.CheckoutRequest) (*dt
 		orderStatus = "TO_CONFIRM"
 	}
 
-	
 	order := &model.Order{
-		Status: orderStatus,
+		Status:        orderStatus,
 		PaymentMethod: request.PaymentMethod,
 		PaymentStatus: "PENDING",
 		User: model.User{
@@ -264,9 +263,9 @@ func (s *orderService) Checkout(userID string, request dto.CheckoutRequest) (*dt
 			ID:   seller.ID,
 			Name: seller.Name,
 		},
-		Items:   orderItems,
-		Voucher: orderVoucher,
-		Total:   totalAmount,
+		Items:             orderItems,
+		Voucher:           orderVoucher,
+		Total:             totalAmount,
 		DeliveryServiceID: request.DeliveryServiceID,
 		ShippingAddress: model.OrderAddress{
 			FullName:    request.ShippingAddress.FullName,
@@ -278,6 +277,8 @@ func (s *orderService) Checkout(userID string, request dto.CheckoutRequest) (*dt
 			Country:     request.ShippingAddress.Country,
 			Latitude:    request.ShippingAddress.Latitude,
 			Longitude:   request.ShippingAddress.Longitude,
+			DistrictID:  request.ShippingAddress.DistrictID,
+			WardCode:    request.ShippingAddress.WardCode,
 		},
 	}
 
@@ -291,8 +292,6 @@ func (s *orderService) Checkout(userID string, request dto.CheckoutRequest) (*dt
 		return nil, fmt.Errorf("failed to get delivery fee: %w", err)
 	}
 	order.DeliveryFee = deliveryFeeResponse.Total
-
-
 
 	if err := s.repo.CreateOrder(order); err != nil {
 		// Rollback: release reserved stock
@@ -316,7 +315,7 @@ func (s *orderService) Checkout(userID string, request dto.CheckoutRequest) (*dt
 
 	return &dto.CheckoutResponse{
 		OrderID:     order.ID,
-		TotalAmount: order.Total,
+		TotalAmount: order.Total + float64(order.DeliveryFee),
 		Status:      order.Status,
 	}, nil
 }
@@ -342,7 +341,7 @@ func (s *orderService) UpdateOrderPaymentStatus(ctx context.Context, orderID str
 
 func (s *orderService) CreateCheckoutSession(order *model.Order, successURL, cancelURL string) (string, error) {
 	var lineItems []*stripe.CheckoutSessionLineItemParams
-	
+
 	for _, item := range order.Items {
 		lineItems = append(lineItems, &stripe.CheckoutSessionLineItemParams{
 			PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{
@@ -530,22 +529,22 @@ func (s *orderService) GetSellerOrders(ctx context.Context, sellerID string, req
 	}, nil
 }
 
-func (s *orderService) UpdateOrderStatus(ctx context.Context,userID string, orderID string, request dto.UpdateOrderStatusRequest) error {
+func (s *orderService) UpdateOrderStatus(ctx context.Context, userID string, orderID string, request dto.UpdateOrderStatusRequest) error {
 
 	//get old order
-	oldOrder,err := s.repo.FindOrderByID(orderID)
+	oldOrder, err := s.repo.FindOrderByID(orderID)
 	if err != nil {
 		return err
 	}
 	if oldOrder == nil {
 		return appError.NewAppError(404, "Order not found")
 	}
-	if oldOrder.Seller.ID !=  userID{
+	if oldOrder.Seller.ID != userID {
 		return appError.NewAppError(403, "You are not authorized to update this order")
 	}
 
 	//fetch seller
-	seller,err := s.userClient.GetUserByID(oldOrder.Seller.ID)
+	seller, err := s.userClient.GetUserByID(oldOrder.Seller.ID)
 	if err != nil {
 		return err
 	}
@@ -557,11 +556,11 @@ func (s *orderService) UpdateOrderStatus(ctx context.Context,userID string, orde
 			return appError.NewAppError(400, "Invalid status")
 		}
 		if request.Status == "TO_PICKUP" {
-			request,err := s.GHNClient.CreateRequest(*oldOrder,*seller)
+			request, err := s.GHNClient.CreateRequest(*oldOrder, *seller)
 			if err != nil {
 				return err
 			}
-			deliveryCode , err := s.GHNClient.CreateOrder(request)
+			deliveryCode, err := s.GHNClient.CreateOrder(request)
 			if err != nil {
 				return err
 			}
@@ -576,7 +575,7 @@ func (s *orderService) UpdateOrderStatus(ctx context.Context,userID string, orde
 			return appError.NewAppError(400, "Invalid status")
 		}
 	default:
-		return appError.NewAppError(409, "Current status of this order can't be updated"+ oldOrder.Status)
+		return appError.NewAppError(409, "Current status of this order can't be updated"+oldOrder.Status)
 	}
 
 	//update in database
