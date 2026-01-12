@@ -34,10 +34,7 @@ const handleClose = (key: string, keyPath: string[]) => {
 <template>
   <div class="common-layout">
     <el-container>
-      <el-header
-        class="header"
-        style="background-color: white; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); height: 64px"
-      >
+      <el-header class="header">
         <div class="container">
           <div class="header-content">
             <div class="logo">
@@ -183,6 +180,11 @@ a {
 
 .header {
   padding: 0 0;
+  background-color: white;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  height: 64px;
+  position: relative;
+  z-index: 10;
 }
 
 .header-link {
