@@ -388,7 +388,7 @@ onMounted(() => {
             <!-- Shipping Service Section -->
             <div class="summary-row service-row" @click="fetchShippingServices">
               <div class="service-label">
-                <el-icon><Van /></el-icon> <span>Shipping Service</span>
+                <el-icon><Van /></el-icon> <span>Service Type</span>
               </div>
               <div class="service-value" :class="{ 'has-selection': selectedService }">
                 <span v-if="selectedService">{{ selectedService.short_name }}</span>
