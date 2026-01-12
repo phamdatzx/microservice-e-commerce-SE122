@@ -9,7 +9,6 @@ import {
   CreditCard,
   ArrowRight,
   Plus,
-  Loading,
   Ticket,
   Van,
   WarnTriangleFilled,
@@ -30,9 +29,8 @@ const isLoading = ref(false)
 // Shipping Service State
 const shippingServices = ref<any[]>([])
 const selectedService = ref<any>(null)
-const showServiceDialog = ref(false)
-const isFetchingServices = ref(false)
 const sellerAddress = ref<any>(null)
+const isCalculatingShipping = ref(false)
 
 // Voucher State
 const vouchers = ref<any[]>([])
@@ -44,7 +42,7 @@ const subtotal = computed(() => {
   return checkoutItems.value.reduce((sum, item) => sum + item.price * (item.quantity || 1), 0)
 })
 
-const shippingFee = ref(0)
+const shippingFee = ref<number | null>(0)
 const expectedDeliveryTime = ref<number | null>(null)
 
 const selectedVoucher = computed(() => {
@@ -71,7 +69,7 @@ const discountAmount = computed(() => {
 })
 
 const total = computed(() => {
-  const t = subtotal.value + shippingFee.value - discountAmount.value
+  const t = subtotal.value + (shippingFee.value || 0) - discountAmount.value
   return t > 0 ? t : 0
 })
 
@@ -118,7 +116,7 @@ const fetchAddresses = async () => {
 
       // Auto fetch services once address is ready and seller address is ready
       if (selectedAddressId.value && sellerAddress.value) {
-        fetchShippingServices(false)
+        fetchShippingServices()
       }
     }
   } catch (error) {
@@ -128,21 +126,19 @@ const fetchAddresses = async () => {
   }
 }
 
-const fetchShippingServices = async (openDialog: any = true) => {
-  const shouldOpen = openDialog !== false
-
+const fetchShippingServices = async () => {
   // Require seller address
-  if (!sellerAddress.value) {
-    if (shouldOpen) ElMessage.warning('Seller address not found')
+  if (!sellerAddress.value || !selectedAddress.value) {
     return
   }
 
-  if (shippingServices.value.length > 0) {
-    if (shouldOpen) showServiceDialog.value = true
-    return
-  }
+  // Reset current selections
+  shippingServices.value = []
+  selectedService.value = null
+  shippingFee.value = null
+  expectedDeliveryTime.value = null
 
-  isFetchingServices.value = true
+  isCalculatingShipping.value = true
   try {
     const fromDistrict = parseInt(sellerAddress.value.district_id)
 
@@ -162,11 +158,13 @@ const fetchShippingServices = async (openDialog: any = true) => {
 
     if (response.data.code === 200) {
       shippingServices.value = response.data.data
-      if (shouldOpen) showServiceDialog.value = true
 
-      // Auto select first service
-      if (shippingServices.value.length > 0 && !selectedService.value) {
+      // Auto select first service and calculate details
+      if (shippingServices.value.length > 0) {
         selectedService.value = shippingServices.value[0]
+        // Trigger calculations sequentially
+        await calculateShippingFee()
+        await calculateLeadTime()
       }
     } else {
       ElMessage.error(response.data.message || 'Failed to fetch services')
@@ -175,7 +173,7 @@ const fetchShippingServices = async (openDialog: any = true) => {
     console.error('Failed to fetch services:', error)
     ElMessage.error('Failed to load shipping services')
   } finally {
-    isFetchingServices.value = false
+    isCalculatingShipping.value = false
   }
 }
 
@@ -269,9 +267,12 @@ const calculateLeadTime = async () => {
 
 // Watch for changes to trigger calculation
 import { watch } from 'vue'
-watch([selectedService, selectedAddress], () => {
-  calculateShippingFee()
-  calculateLeadTime()
+
+// When address changes, force refresh available services
+watch(selectedAddress, (newVal) => {
+  if (newVal && sellerAddress.value) {
+    fetchShippingServices()
+  }
 })
 
 const formatDate = (date: number | string | Date) => {
@@ -284,11 +285,6 @@ const formatDate = (date: number | string | Date) => {
     month: 'long',
     day: 'numeric',
   })
-}
-
-const selectService = (service: any) => {
-  selectedService.value = service
-  showServiceDialog.value = false
 }
 
 const handlePlaceOrder = async () => {
@@ -535,7 +531,7 @@ onMounted(async () => {
 
         <!-- Right Column: Summary -->
         <div class="right-col">
-          <div class="section-card summary-card">
+          <div class="section-card summary-card" v-loading="isCalculatingShipping">
             <h3>Order Summary</h3>
             <div class="summary-row">
               <span>Merchandise Subtotal</span>
@@ -544,22 +540,9 @@ onMounted(async () => {
 
             <div class="summary-row">
               <span>Shipping Fee</span>
-              <span>{{ formatNumberWithDots(shippingFee) }}đ</span>
-            </div>
-
-            <!-- Shipping Service Section -->
-            <div class="summary-row service-row" @click="fetchShippingServices">
-              <div class="service-label">
-                <el-icon><Van /></el-icon> <span>Service Type</span>
-              </div>
-              <div class="service-value" :class="{ 'has-selection': selectedService }">
-                <span v-if="selectedService">{{ selectedService.short_name }}</span>
-                <span v-else class="select-text">Select Service</span>
-              </div>
-            </div>
-
-            <div v-if="isFetchingServices" class="loading-services">
-              <el-icon class="is-loading"><Loading /></el-icon> Loading services...
+              <span>{{
+                shippingFee !== null ? formatNumberWithDots(shippingFee) + 'đ' : '---'
+              }}</span>
             </div>
 
             <!-- Voucher Section -->
@@ -573,19 +556,19 @@ onMounted(async () => {
               </div>
             </div>
 
-            <el-divider style="margin: 12px" />
+            <el-divider style="margin: 12px 0" />
             <div class="summary-row total-row">
               <span>Total Payment</span>
               <span class="total-amount">{{ formatNumberWithDots(total) }}đ</span>
             </div>
 
             <!-- Expected Delivery -->
-            <div class="summary-row delivery-time-row" v-if="expectedDeliveryTime">
+            <div class="summary-row delivery-time-row">
               <div class="delivery-label">
                 <span>Expected Delivery</span>
               </div>
               <div class="delivery-value">
-                {{ formatDate(expectedDeliveryTime * 1000) }}
+                {{ expectedDeliveryTime ? formatDate(expectedDeliveryTime * 1000) : '---' }}
               </div>
             </div>
 
@@ -650,35 +633,7 @@ onMounted(async () => {
       </div>
     </el-dialog>
 
-    <!-- Shipping Service Dialog -->
-    <el-dialog
-      v-model="showServiceDialog"
-      title="Select Shipping Service"
-      width="400px"
-      class="service-dialog"
-    >
-      <div class="service-list-dialog">
-        <div
-          v-for="service in shippingServices"
-          :key="service.service_id"
-          class="service-item-dialog"
-          :class="{ selected: selectedService?.service_id === service.service_id }"
-          @click="selectService(service)"
-        >
-          <div class="s-left">
-            <div class="s-name">{{ service.short_name }}</div>
-          </div>
-          <div class="s-right">
-            <el-radio
-              :model-value="selectedService?.service_id"
-              :label="service.service_id"
-              @change="selectService(service)"
-              >{{ '' }}</el-radio
-            >
-          </div>
-        </div>
-      </div>
-    </el-dialog>
+    <!-- Shipping Service Dialog REMOVED -->
   </div>
 </template>
 
@@ -719,44 +674,9 @@ onMounted(async () => {
   color: #22c55e;
 }
 
-.service-row {
-  cursor: pointer;
-  padding: 12px 12px;
-  border-bottom: 1px dashed #eee;
-  margin: 10px 0;
-  align-items: center;
-  transition: all 0.2s;
-}
-
-.service-row:hover {
-  background-color: #fafafa;
-}
-
-.service-label {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--main-color);
-  font-weight: 500;
-}
-
-.service-value {
-  color: #999;
-  font-size: 14px;
-}
-
-.service-value.has-selection {
-  color: var(--main-color);
-  font-weight: 500;
-}
-
-.select-text {
-  color: #22c55e;
-}
-
 .delivery-time-row {
   border-radius: 8px;
-  margin-top: 6px !important;
+  margin-top: 4px !important;
   margin-bottom: 0 !important;
   font-size: 13px;
 }
@@ -768,46 +688,6 @@ onMounted(async () => {
 .delivery-value {
   color: var(--main-color);
   font-weight: 600;
-}
-
-.loading-services {
-  font-size: 12px;
-  color: #999;
-  text-align: center;
-  margin-bottom: 10px;
-}
-
-/* Service Dialog Styles */
-.service-list-dialog {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.service-item-dialog {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border: 1px solid #eee;
-  padding: 10px 15px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.service-item-dialog:hover {
-  border-color: var(--main-color);
-  background: #f0fdf4;
-}
-
-.service-item-dialog.selected {
-  border-color: var(--main-color);
-  background: #f0fdf4;
-}
-
-.s-name {
-  font-weight: 500;
-  color: #333;
 }
 
 /* Dialog Styles */
@@ -878,8 +758,6 @@ onMounted(async () => {
   color: var(--main-color);
   font-size: 16px;
 }
-
-/* ... Existing styles ... */
 
 .checkout-page {
   background-color: #f5f5f5;
@@ -1020,6 +898,7 @@ onMounted(async () => {
 
 .total-row {
   color: #333;
+  margin-bottom: 0 !important;
   align-items: center;
 }
 
