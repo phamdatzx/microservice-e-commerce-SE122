@@ -113,3 +113,92 @@ func (c *ProductServiceClient) GetVoucherByID(voucherID string) (*dto.VoucherRes
 	return &response, nil
 }
 
+// ReserveStockItem represents a single item to reserve
+type ReserveStockItem struct {
+	VariantID string `json:"variant_id"`
+	Quantity  int    `json:"quantity"`
+}
+
+// ReserveStockRequest represents the request to reserve stock
+type ReserveStockRequest struct {
+	OrderID string             `json:"order_id"`
+	Items   []ReserveStockItem `json:"items"`
+}
+
+// ReleaseStockRequest represents the request to release stock
+type ReleaseStockRequest struct {
+	OrderID string `json:"order_id"`
+}
+
+// ReserveStock calls product-service to reserve stock for an order
+func (c *ProductServiceClient) ReserveStock(orderID string, items []ReserveStockItem) error {
+	// Prepare request
+	requestBody := ReserveStockRequest{
+		OrderID: orderID,
+		Items:   items,
+	}
+
+	jsonData, err := json.Marshal(requestBody)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	// Make HTTP request
+	url := fmt.Sprintf("%s/api/product/stock/reserve", c.baseURL)
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to call product-service: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Check response status
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("product-service returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	return nil
+}
+
+// ReleaseStock calls product-service to release stock for an order
+func (c *ProductServiceClient) ReleaseStock(orderID string) error {
+	// Prepare request
+	requestBody := ReleaseStockRequest{
+		OrderID: orderID,
+	}
+
+	jsonData, err := json.Marshal(requestBody)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	// Make HTTP request
+	url := fmt.Sprintf("%s/api/product/stock/release", c.baseURL)
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to call product-service: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Check response status
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("product-service returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	return nil
+}

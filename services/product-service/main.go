@@ -50,16 +50,22 @@ func main() {
 	savedVoucherService := service.NewSavedVoucherService(savedVoucherRepo, voucherRepo)
 	savedVoucherController := controller.NewSavedVoucherController(savedVoucherService)
 
+	// Wiring dependencies - StockReservation
+	stockReservationRepo := repository.NewStockReservationRepository(config.DB)
+	stockReservationService := service.NewStockReservationService(stockReservationRepo, productRepo)
+	stockReservationController := controller.NewStockReservationController(stockReservationService)
+
 	r := gin.Default()
 	r.Use(cors.Default())
 
 	// Setup routes
 	router.SetupRouter(r, &router.AppRouter{
-		ProductController:        productController,
-		CategoryController:       categoryController,
-		SellerCategoryController: sellerCategoryController,
-		VoucherController:        voucherController,
-		SavedVoucherController:   savedVoucherController,
+		ProductController:          productController,
+		CategoryController:         categoryController,
+		SellerCategoryController:   sellerCategoryController,
+		VoucherController:          voucherController,
+		SavedVoucherController:     savedVoucherController,
+		StockReservationController: stockReservationController,
 	})
 
 	r.Run(":8085")
