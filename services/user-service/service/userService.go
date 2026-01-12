@@ -159,10 +159,41 @@ func (s *userService) GetUserByID(userId string) (dto.UserResponse, error) {
 		return dto.UserResponse{}, err
 	}
 
+	// Find default address
+	var defaultAddress *dto.AddressResponse
+	for _, addr := range user.Addresses {
+		if addr.Default {
+			defaultAddress = &dto.AddressResponse{
+				ID:           addr.ID,
+				UserID:       addr.UserID,
+				FullName:     addr.FullName,
+				Phone:        addr.Phone,
+				AddressLine:  addr.AddressLine,
+				Ward:         addr.Ward,
+				District:     addr.District,
+				Province:     addr.Province,
+				WardCode:     addr.WardCode,
+				ProvinceCode: addr.ProvinceCode,
+				DistrictID:   addr.DistrictID,
+				ProvinceID:   addr.ProvinceID,
+				Country:      addr.Country,
+				Latitude:     addr.Latitude,
+				Longitude:    addr.Longitude,
+				Default:      addr.Default,
+			}
+			break
+		}
+	}
+
+
 	return dto.UserResponse{
 		ID:       user.ID.String(),
 		Username: user.Username,
 		Name:     user.Name,
+		Phone:    user.Phone,
+		Email:    user.Email,
+		Image:    user.Image,
+		Address:  defaultAddress,
 	}, nil
 }
 

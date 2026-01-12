@@ -48,7 +48,7 @@ func NewGHNCreateOrderRequest() GHNCreateOrderRequest {
 		ToAddress:        "72 Thành Thái, Phường 14, Quận 10, Hồ Chí Minh, Vietnam",
 		ToWardCode:       "20308",
 		ToDistrictID:     1444,
-		CodAmount:        200000,
+		CodAmount:        0,
 		Content:          "Theo New York Times",
 		Weight:           200,
 		Length:           1,

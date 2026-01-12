@@ -58,6 +58,12 @@ func NewOrderService(
 }
 
 func (s *orderService) Checkout(userID string, request dto.CheckoutRequest) (*dto.CheckoutResponse, error) {
+	//fetch seller
+	sellerFetch, err := s.userClient.GetUserByID(userID)
+	if err != nil {
+		return nil, err
+	}
+
 	// 1. Fetch cart items
 	var cartItems []*model.CartItem
 	for _, itemID := range request.CartItemIDs {
@@ -228,6 +234,17 @@ func (s *orderService) Checkout(userID string, request dto.CheckoutRequest) (*dt
 		}
 	}
 
+	if err != nil {
+		// Rollback: release reserved stock
+		_ = s.productClient.ReleaseStock(tempOrderID)
+		return nil, fmt.Errorf("failed to create calculate fee request: %w", err)
+	}
+	if err != nil {
+		// Rollback: release reserved stock
+		_ = s.productClient.ReleaseStock(tempOrderID)
+		return nil, fmt.Errorf("failed to get delivery fee: %w", err)
+	}
+
 	// 6. Create Order record
 	orderStatus := "TO_PAY"
 	if request.PaymentMethod == "COD" {
@@ -250,6 +267,7 @@ func (s *orderService) Checkout(userID string, request dto.CheckoutRequest) (*dt
 		Items:   orderItems,
 		Voucher: orderVoucher,
 		Total:   totalAmount,
+		DeliveryServiceID: request.DeliveryServiceID,
 		ShippingAddress: model.OrderAddress{
 			FullName:    request.ShippingAddress.FullName,
 			Phone:       request.ShippingAddress.Phone,
@@ -262,6 +280,19 @@ func (s *orderService) Checkout(userID string, request dto.CheckoutRequest) (*dt
 			Longitude:   request.ShippingAddress.Longitude,
 		},
 	}
+
+	//handle delivery fee
+	// calculate delivery fee
+	calculateFeeRequest, err := s.GHNClient.CreateCalculateFeeRequest(*order, *sellerFetch)
+	deliveryFeeResponse, err := s.GHNClient.CalculateFee(*calculateFeeRequest)
+	if err != nil {
+		// Rollback: release reserved stock
+		_ = s.productClient.ReleaseStock(tempOrderID)
+		return nil, fmt.Errorf("failed to get delivery fee: %w", err)
+	}
+	order.DeliveryFee = deliveryFeeResponse.Total
+
+
 
 	if err := s.repo.CreateOrder(order); err != nil {
 		// Rollback: release reserved stock
@@ -315,13 +346,27 @@ func (s *orderService) CreateCheckoutSession(order *model.Order, successURL, can
 	for _, item := range order.Items {
 		lineItems = append(lineItems, &stripe.CheckoutSessionLineItemParams{
 			PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{
-				Currency: stripe.String("usd"),
+				Currency: stripe.String("vnd"),
 				ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{
 					Name: stripe.String(item.ProductName + " - " + item.VariantName),
 				},
-				UnitAmount: stripe.Int64(int64(item.Price * 100)),
+				UnitAmount: stripe.Int64(int64(item.Price)),
 			},
 			Quantity: stripe.Int64(int64(item.Quantity)),
+		})
+	}
+
+	// Add delivery fee as a separate line item
+	if order.DeliveryFee > 0 {
+		lineItems = append(lineItems, &stripe.CheckoutSessionLineItemParams{
+			PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{
+				Currency: stripe.String("vnd"),
+				ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{
+					Name: stripe.String("Delivery Fee"),
+				},
+				UnitAmount: stripe.Int64(int64(order.DeliveryFee)),
+			},
+			Quantity: stripe.Int64(1),
 		})
 	}
 
@@ -499,6 +544,12 @@ func (s *orderService) UpdateOrderStatus(ctx context.Context,userID string, orde
 		return appError.NewAppError(403, "You are not authorized to update this order")
 	}
 
+	//fetch seller
+	seller,err := s.userClient.GetUserByID(oldOrder.Seller.ID)
+	if err != nil {
+		return err
+	}
+
 	//validate current status
 	switch oldOrder.Status {
 	case "TO_CONFIRM":
@@ -506,7 +557,7 @@ func (s *orderService) UpdateOrderStatus(ctx context.Context,userID string, orde
 			return appError.NewAppError(400, "Invalid status")
 		}
 		if request.Status == "TO_PICKUP" {
-			request,err := s.GHNClient.CreateRequest(*oldOrder)
+			request,err := s.GHNClient.CreateRequest(*oldOrder,*seller)
 			if err != nil {
 				return err
 			}
