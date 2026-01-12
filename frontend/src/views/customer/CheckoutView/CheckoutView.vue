@@ -251,6 +251,9 @@ const handlePlaceOrder = async () => {
     country: selectedAddress.value.country || 'viet nam',
     latitude: selectedAddress.value.latitude || 0,
     longitude: selectedAddress.value.longitude || 0,
+    ward_code: selectedAddress.value.ward_code || '',
+    province_id: selectedAddress.value.province_id ? String(selectedAddress.value.province_id) : '',
+    district_id: selectedAddress.value.district_id ? String(selectedAddress.value.district_id) : '',
   }
 
   const payload: any = {
@@ -264,11 +267,10 @@ const handlePlaceOrder = async () => {
   }
 
   if (selectedService.value) {
-    payload.service_id = selectedService.value.service_id
-    payload.service_type_id = selectedService.value.service_type_id
+    payload.delivery_service_id = selectedService.value.service_id
   }
 
-  console.log('Checkout Payload:', payload)
+  console.log('Checkout Payload:', JSON.stringify(payload, null, 2))
 
   const loading = ElLoading.service({
     lock: true,
