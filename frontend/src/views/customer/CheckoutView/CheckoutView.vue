@@ -532,7 +532,7 @@ onMounted(async () => {
         <!-- Right Column: Summary -->
         <div class="right-col">
           <div class="section-card summary-card" v-loading="isCalculatingShipping">
-            <h3>Order Summary</h3>
+            <h3 style="margin-bottom: 10px">Order Summary</h3>
             <div class="summary-row">
               <span>Merchandise Subtotal</span>
               <span>{{ formatNumberWithDots(subtotal) }}đ</span>
