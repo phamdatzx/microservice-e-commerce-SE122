@@ -5,6 +5,7 @@ type CheckoutRequest struct {
 	VoucherID       string             `json:"voucher_id"`
 	ShippingAddress ShippingAddressDto `json:"shipping_address" binding:"required"`
 	PaymentMethod   string             `json:"payment_method" binding:"required,oneof=COD STRIPE"`
+	DeliveryServiceID int `json:"delivery_service_id" binding:"required"`
 }
 
 type ShippingAddressDto struct {
@@ -17,6 +18,9 @@ type ShippingAddressDto struct {
 	Country     string  `json:"country" binding:"required"`
 	Latitude    float64 `json:"latitude"`
 	Longitude   float64 `json:"longitude"`
+	WardCode    string  `json:"ward_code"`
+	ProvinceID  string  `json:"province_id"`
+	DistrictID  string  `json:"district_id"`
 }
 
 type CheckoutResponse struct {

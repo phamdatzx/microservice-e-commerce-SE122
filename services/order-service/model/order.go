@@ -21,6 +21,8 @@ type Order struct {
 	Phone           string        `bson:"phone" json:"phone"`
 	ShippingAddress OrderAddress  `bson:"shipping_address" json:"shipping_address"`
 	DeliveryCode    string        `bson:"delivery_code" json:"delivery_code"`
+	DeliveryFee     int           `bson:"delivery_fee" json:"delivery_fee"`
+	DeliveryServiceID int        `bson:"delivery_service" json:"delivery_service"`
 }
 
 type OrderItem struct {
@@ -51,6 +53,9 @@ type OrderAddress struct {
 	Country     string  `bson:"country" json:"country"`
 	Latitude    float64 `bson:"latitude" json:"latitude"`
 	Longitude   float64 `bson:"longitude" json:"longitude"`
+	WardCode    string  `bson:"ward_code" json:"ward_code"`
+	ProvinceID  string  `bson:"province_id" json:"province_id"`
+	DistrictID  string  `bson:"district_id" json:"district_id"`
 }
 
 type OrderVoucher struct {

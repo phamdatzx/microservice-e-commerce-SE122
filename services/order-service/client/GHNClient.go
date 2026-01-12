@@ -9,6 +9,7 @@ import (
 	"order-service/dto"
 	"order-service/model"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -237,21 +238,27 @@ func (c *GHNClient) CreateOrder(request dto.GHNCreateOrderRequest) (string, erro
 	return data.OrderCode, nil
 }
 
-func (c *GHNClient) CreateRequest(order model.Order) (dto.GHNCreateOrderRequest, error) {
-	seller := order.Seller
+func (c *GHNClient) CreateRequest(order model.Order, seller dto.UserResponse) (dto.GHNCreateOrderRequest, error) {
 
 	shippingAddress := order.ShippingAddress
 
 	request := dto.NewGHNCreateOrderRequest()
 
-	//map address, receiver info
-	request.FromName = shippingAddress.FullName
-	request.FromPhone = shippingAddress.Phone
-	request.FromAddress = shippingAddress.AddressLine
+	//map address, sender info
+	request.FromName = seller.Name
+	request.FromPhone = seller.Phone
+	request.FromAddress = seller.Address.AddressLine
+	request.FromWardName = seller.Address.Ward
+	request.FromDistrictName = seller.Address.District
+	request.FromProvinceName = seller.Address.Province
 
-	//map sender
-	request.ToName = seller.Name
-
+	//map receiver info
+	request.ToName = shippingAddress.FullName
+	request.ToPhone = shippingAddress.Phone
+	request.ToAddress = shippingAddress.AddressLine
+	request.ToWardCode = shippingAddress.WardCode
+	toDistrictId, _ := strconv.Atoi(shippingAddress.DistrictID)
+	request.ToDistrictID = toDistrictId
 	//map items
 	for _, item := range order.Items {
 		request.Items = append(request.Items, dto.GHNItem{
@@ -264,8 +271,41 @@ func (c *GHNClient) CreateRequest(order model.Order) (dto.GHNCreateOrderRequest,
 
 	//map cod if needed
 	if order.PaymentMethod == "COD" {
-		request.CodAmount = int(order.Total)
+		request.CodAmount = int(order.Total) + order.DeliveryFee
 	}
 
 	return request, nil
 }
+
+// CalculateFee calls GHN API to calculate shipping fee
+func (c *GHNClient) CalculateFee(request dto.GHNCalculateFeeRequest) (*dto.GHNCalculateFeeResponse, error) {
+	url := fmt.Sprintf("%s/shiip/public-api/v2/shipping-order/fee", c.baseURL)
+	
+	data, err := callGHNWithBody[dto.GHNCalculateFeeResponse]("POST", url, c.token, request)
+	if err != nil {
+		return nil, err
+	}
+	
+	return &data, nil
+}
+
+func (c *GHNClient) CreateCalculateFeeRequest(order model.Order, seller dto.UserResponse) (*dto.GHNCalculateFeeRequest, error) {
+	shippingAddress := order.ShippingAddress
+
+	request := dto.NewGHNCalculateFeeRequest()
+
+	//map address, sender info
+	fromDistrictId, _ := strconv.Atoi(seller.Address.DistrictID)
+	request.FromDistrictID = fromDistrictId
+	request.FromWardCode = seller.Address.WardCode
+
+	//map receiver info
+	toDistrictId, _ := strconv.Atoi(shippingAddress.DistrictID)
+	request.ToDistrictID = toDistrictId
+	request.ToWardCode = shippingAddress.WardCode
+
+	//
+	request.ServiceID = order.DeliveryServiceID
+	return &request, nil
+}
+	

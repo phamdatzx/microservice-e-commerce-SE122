@@ -47,7 +47,7 @@ func (r *userRepository) GetUserByUsername(username string) (*model.User, error)
 
 func (r *userRepository) GetUserByID(id string) (*model.User, error) {
 	var user model.User
-	err := r.db.First(&user, "id = ?", id).Error
+	err := r.db.Preload("Addresses").First(&user, "id = ?", id).Error
 	if err != nil {
 		return nil, err
 	}
