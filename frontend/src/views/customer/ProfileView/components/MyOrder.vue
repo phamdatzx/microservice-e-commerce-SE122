@@ -160,6 +160,10 @@ const orderTabs = [
               <el-button size="large">Cancel Order</el-button>
               <el-button size="large">Contact Seller</el-button>
             </template>
+            <template v-else-if="order.status === 'TO_CONFIRM'">
+              <el-button size="large">Cancel Order</el-button>
+              <el-button size="large">Contact Seller</el-button>
+            </template>
             <template v-else-if="order.status === 'SHIPPING'">
               <el-button type="primary" size="large">Order Received</el-button>
               <el-button size="large">Return/Refund</el-button>
