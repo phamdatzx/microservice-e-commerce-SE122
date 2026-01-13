@@ -541,7 +541,7 @@ const handleUpdateStatus = async (orderId: string, status: string) => {
 .table-header-row {
   display: flex;
   background: #fafafa;
-  padding: 12px 20px;
+  padding: 0;
   color: #888;
   font-size: 13px;
   font-weight: 500;
@@ -550,23 +550,38 @@ const handleUpdateStatus = async (orderId: string, status: string) => {
   margin-bottom: 12px;
 }
 
+.table-header-row .col-product {
+  padding: 15px 20px;
+  box-sizing: border-box;
+}
+
+.table-header-row div:not(.col-product) {
+  border-left: 1px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 15px;
+  box-sizing: border-box;
+}
+
 .col-product {
   flex: 4;
 }
 .col-price {
-  flex: 1.5;
+  width: 120px;
   text-align: center;
 }
 .col-status {
-  flex: 1.5;
+  width: 120px;
+  font-size: 14px;
   text-align: center;
 }
 .col-countdown {
-  flex: 1.5;
+  width: 200px;
   text-align: center;
 }
 .col-action {
-  width: 89px;
+  width: 100px;
   text-align: center;
 }
 
