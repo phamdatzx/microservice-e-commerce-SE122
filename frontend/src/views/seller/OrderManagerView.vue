@@ -403,15 +403,9 @@ const handleUpdateStatus = async (orderId: string, status: string) => {
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
-              <el-button
-                v-if="order.status === 'SHIPPING'"
-                type="primary"
-                color="var(--main-color)"
-                size="small"
-                @click="handleUpdateStatus(order.id, 'COMPLETED')"
-                >Delivered</el-button
-              >
-              <span v-if="['COMPLETED', 'CANCELLED'].includes(order.status)" class="sub-text"
+              <span
+                v-if="['TO_PAY', 'SHIPPING', 'COMPLETED', 'CANCELLED'].includes(order.status)"
+                class="sub-text"
                 >No Actions</span
               >
             </div>
