@@ -16,6 +16,8 @@ func RegisterOrderRoutes(rg *gin.RouterGroup, c controller.OrderController) {
 		order.POST("/checkout", c.Checkout)
 		order.POST("/:orderId/payment", c.CreatePayment)
 		order.POST("/public/webhook/stripe", c.StripeWebhook)
+		order.POST("/verify-purchase", c.VerifyPurchase)
 		order.GET("/test", c.Test)
 	}
 }
+

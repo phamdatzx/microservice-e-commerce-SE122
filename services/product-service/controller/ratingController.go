@@ -22,8 +22,8 @@ func (c *RatingController) CreateRating(ctx *gin.Context) {
 	var rating model.Rating
 	
 	// Get user ID from header
-	rating.UserID = ctx.GetHeader("X-User-Id")
-	if rating.UserID == "" {
+	rating.User.ID = ctx.GetHeader("X-User-Id")
+	if rating.User.ID == "" {
 		ctx.Error(error.NewAppError(http.StatusUnauthorized, "User ID not found"))
 		return
 	}

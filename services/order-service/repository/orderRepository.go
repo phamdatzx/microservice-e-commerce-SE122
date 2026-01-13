@@ -15,6 +15,7 @@ type OrderRepository interface {
 	UpdateOrder(order *model.Order) error
 	FindOrdersByUser(userID string, status string, page, limit int, sortBy, sortOrder string) ([]*model.Order, int64, error)
 	FindOrdersBySeller(sellerID string, status string, paymentMethod string, paymentStatus string, search string, page, limit int, sortBy, sortOrder string) ([]*model.Order, int64, error)
+	VerifyVariantPurchase(userID, productID, variantID string) (bool, error)
 }
 
 type orderRepository struct {
@@ -176,3 +177,23 @@ func (r *orderRepository) FindOrdersBySeller(sellerID string, status string, pay
 
 	return orders, totalCount, nil
 }
+
+func (r *orderRepository) VerifyVariantPurchase(userID, productID, variantID string) (bool, error) {
+	filter := bson.M{
+		"user._id": userID,
+		"items": bson.M{
+			"$elemMatch": bson.M{
+				"product_id": productID,
+				"variant_id": variantID,
+			},
+		},
+	}
+
+	count, err := r.collection.CountDocuments(context.Background(), filter)
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
+}
+

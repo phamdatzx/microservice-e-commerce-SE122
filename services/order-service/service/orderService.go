@@ -26,6 +26,7 @@ type OrderService interface {
 	GetUserOrders(ctx context.Context, userID string, request dto.GetOrdersRequest) (*dto.GetOrdersResponse, error)
 	GetSellerOrders(ctx context.Context, sellerID string, request dto.GetOrdersBySellerRequest) (*dto.GetOrdersResponse, error)
 	UpdateOrderStatus(ctx context.Context, userID string, orderID string, request dto.UpdateOrderStatusRequest) error
+	VerifyVariantPurchase(userID, productID, variantID string) (bool, error)
 }
 
 type orderService struct {
@@ -195,6 +196,12 @@ func (s *orderService) Checkout(userID string, request dto.CheckoutRequest) (*dt
 			return nil, fmt.Errorf("failed to get voucher: %w", err)
 		}
 
+		if voucher.SellerID != sellerID {
+			// Rollback: release reserved stock
+			_ = s.productClient.ReleaseStock(tempOrderID)
+			return nil, appError.NewAppError(400, "voucher does not belong to seller")
+		}
+
 		// Validate voucher (basic validation, more complex logic might be needed)
 		if voucher.Status != "ACTIVE" {
 			// Rollback: release reserved stock
@@ -211,15 +218,15 @@ func (s *orderService) Checkout(userID string, request dto.CheckoutRequest) (*dt
 		discount := 0.0
 		if voucher.DiscountType == "PERCENTAGE" {
 			discount = totalAmount * float64(voucher.DiscountValue) / 100
-			if discount > float64(voucher.MaxDiscountAmount) {
-				discount = float64(voucher.MaxDiscountAmount)
+			if discount > float64(voucher.MaxDiscountValue) {
+				discount = float64(voucher.MaxDiscountValue)
 			}
 		} else if voucher.DiscountType == "FIXED" {
 			discount = float64(voucher.DiscountValue)
 		}
 
-		if discount > float64(voucher.MaxDiscountAmount) {
-			discount = float64(voucher.MaxDiscountAmount)
+		if discount > float64(voucher.MaxDiscountValue) {
+			discount = float64(voucher.MaxDiscountValue)
 		}
 
 		totalAmount -= discount
@@ -607,10 +614,6 @@ func convertOrderToDto(order *model.Order) dto.OrderDto {
 			Code:                   order.Voucher.Code,
 			DiscountType:           order.Voucher.DiscountType,
 			DiscountValue:          order.Voucher.DiscountValue,
-			MaxDiscountValue:       order.Voucher.MaxDiscountValue,
-			MinOrderValue:          order.Voucher.MinOrderValue,
-			ApplyScope:             order.Voucher.ApplyScope,
-			ApplySellerCategoryIds: order.Voucher.ApplySellerCategoryIds,
 		}
 	}
 
@@ -652,3 +655,8 @@ func convertOrderToDto(order *model.Order) dto.OrderDto {
 		ItemCount:    len(order.Items),
 	}
 }
+
+func (s *orderService) VerifyVariantPurchase(userID, productID, variantID string) (bool, error) {
+	return s.repo.VerifyVariantPurchase(userID, productID, variantID)
+}
+

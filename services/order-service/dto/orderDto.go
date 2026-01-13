@@ -77,10 +77,6 @@ type OrderVoucherDto struct {
 	Code                   string   `json:"code"`
 	DiscountType           string   `json:"discount_type"`
 	DiscountValue          int      `json:"discount_value"`
-	MaxDiscountValue       *int     `json:"max_discount_value"`
-	MinOrderValue          int      `json:"min_order_value"`
-	ApplyScope             string   `json:"apply_scope"`
-	ApplySellerCategoryIds []string `json:"apply_seller_category_ids"`
 }
 
 // GetOrdersBySellerRequest contains query parameters for seller orders with enhanced filtering

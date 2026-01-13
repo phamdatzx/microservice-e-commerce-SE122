@@ -62,10 +62,6 @@ type OrderVoucher struct {
 	Code                   string   `bson:"code" json:"code"`
 	DiscountType           string   `bson:"discount_type" json:"discount_type"`
 	DiscountValue          int      `bson:"discount_value" json:"discount_value"`
-	MaxDiscountValue       *int     `bson:"max_discount_value" json:"max_discount_value"`
-	MinOrderValue          int      `bson:"min_order_value" json:"min_order_value"`
-	ApplyScope             string   `bson:"apply_scope" json:"apply_scope"`
-	ApplySellerCategoryIds []string `bson:"apply_seller_category_ids" json:"apply_seller_category_ids"`
 }
 
 func (o *Order) BeforeCreate() {

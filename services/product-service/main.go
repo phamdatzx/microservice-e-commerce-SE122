@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"product-service/client"
 	"product-service/config"
 	"product-service/controller"
 	"product-service/repository"
@@ -57,7 +58,9 @@ func main() {
 
 	// Wiring dependencies - Rating
 	ratingRepo := repository.NewRatingRepository(config.DB)
-	ratingService := service.NewRatingService(ratingRepo)
+	orderClient := client.NewOrderServiceClient()
+	userClient := client.NewUserServiceClient()
+	ratingService := service.NewRatingService(ratingRepo, orderClient, userClient)
 	ratingController := controller.NewRatingController(ratingService)
 
 	r := gin.Default()
