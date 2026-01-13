@@ -15,6 +15,7 @@ import HeartFilledIcon from '@/components/icons/HeartFilledIcon.vue'
 import ShippingIcon from '@/components/icons/ShippingIcon.vue'
 import UserComment from '../../components/UserComment.vue'
 import ProductItem from '@/components/ProductItem.vue'
+import RecentlyViewed from '@/components/RecentlyViewed.vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import { ElNotification } from 'element-plus'
@@ -70,7 +71,7 @@ const product = ref<Product | null>(null)
 const isLoading = ref(true)
 const isAddingToCart = ref(false)
 const productList = ref<any[]>([]) // For related products
-const recentlyViewedProducts = ref<any[]>([])
+const recentlyViewedRef = ref<any>(null)
 
 const mainOptions: Options = {
   type: 'fade',
@@ -173,7 +174,7 @@ const fetchProduct = async () => {
 
   if (product.value) {
     saveToRecentlyViewed(product.value)
-    loadRecentlyViewed()
+    recentlyViewedRef.value?.loadRecentlyViewed()
   }
 }
 
@@ -212,13 +213,6 @@ const saveToRecentlyViewed = (p: Product) => {
   localStorage.setItem('recently_viewed', JSON.stringify(list))
 }
 
-const loadRecentlyViewed = () => {
-  const stored = localStorage.getItem('recently_viewed')
-  if (stored) {
-    recentlyViewedProducts.value = JSON.parse(stored)
-  }
-}
-
 watch(
   () => route.params.id,
   (newId) => {
@@ -239,7 +233,6 @@ watch(
 
 onMounted(() => {
   fetchProduct()
-  loadRecentlyViewed()
   syncSplides()
 })
 
@@ -647,52 +640,7 @@ const addToCart = async () => {
       </div>
     </div>
 
-    <div
-      class="box-shadow border-radius recently-viewed"
-      style="background-color: #fff; padding: 20px 20px 28px; margin-bottom: 20px"
-    >
-      <div style="display: flex; margin-bottom: 12px">
-        <h3 style="font-weight: bold">YOU RECENTLY VIEWED</h3>
-        <RouterLink
-          to="/"
-          style="position: relative; top: 3px; margin-left: 20px; color: #999; font-size: 13px"
-          >View All</RouterLink
-        >
-      </div>
-
-      <Splide
-        v-if="recentlyViewedProducts.length"
-        :options="{
-          rewind: true,
-          perPage: 5,
-          gap: '1rem',
-          breakpoints: {
-            1000: {
-              perPage: 1,
-            },
-          },
-        }"
-      >
-        <SplideSlide v-for="item in recentlyViewedProducts" :key="item.id">
-          <ProductItem
-            :image-url="item.imageUrl"
-            :name="item.name"
-            :price="item.price"
-            :rating="item.rating"
-            :location="item.location"
-            :discount="item.discount"
-            :id="item.id"
-          />
-        </SplideSlide>
-      </Splide>
-      <div v-else style="text-align: center; color: #999; padding: 40px">
-        <el-icon size="40" style="margin-bottom: 12px; opacity: 0.5"><ShoppingCart /></el-icon>
-        <p style="font-size: 14px">Your recently viewed list is empty.</p>
-        <p style="font-size: 13px; color: #bbb">
-          Products you visit will appear here for easy access.
-        </p>
-      </div>
-    </div>
+    <RecentlyViewed ref="recentlyViewedRef" />
   </div>
   <div
     v-else-if="isLoading"

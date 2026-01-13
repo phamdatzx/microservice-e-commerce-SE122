@@ -136,6 +136,11 @@ const router = createRouter({
       component: OrderTrackingView,
     },
     {
+      path: '/recently-viewed',
+      name: 'recently-viewed',
+      component: () => import('@/views/customer/RecentlyViewedView.vue'),
+    },
+    {
       path: '/seller-page',
       component: SellerView,
     },

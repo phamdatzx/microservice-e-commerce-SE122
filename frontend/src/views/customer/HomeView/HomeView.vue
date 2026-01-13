@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import Header from '@/components/Header.vue'
 import ProductItem from '@/components/ProductItem.vue'
+import RecentlyViewed from '@/components/RecentlyViewed.vue'
 
 import { Splide, SplideSlide } from '@splidejs/vue-splide'
 import '@splidejs/vue-splide/css'
@@ -204,18 +205,7 @@ const productList = [
   },
 ]
 
-const recentlyViewedProducts = ref<any[]>([])
-
-const loadRecentlyViewed = () => {
-  const stored = localStorage.getItem('recently_viewed')
-  if (stored) {
-    recentlyViewedProducts.value = JSON.parse(stored)
-  }
-}
-
-onMounted(() => {
-  loadRecentlyViewed()
-})
+onMounted(() => {})
 
 const activeTab = ref('best-seller')
 </script>
@@ -315,52 +305,7 @@ const activeTab = ref('best-seller')
       </el-tabs>
     </div>
 
-    <div
-      class="box-shadow border-radius recently-viewed"
-      style="background-color: #fff; padding: 20px; margin-bottom: 20px"
-    >
-      <div style="display: flex; margin-bottom: 12px">
-        <h3 style="font-weight: bold">YOU RECENTLY VIEWED</h3>
-        <RouterLink
-          to="/"
-          style="position: relative; top: 3px; margin-left: 20px; color: #999; font-size: 13px"
-          >View All</RouterLink
-        >
-      </div>
-
-      <Splide
-        v-if="recentlyViewedProducts.length"
-        :options="{
-          rewind: true,
-          perPage: 5,
-          gap: '1rem',
-          breakpoints: {
-            1000: {
-              perPage: 1,
-            },
-          },
-        }"
-      >
-        <SplideSlide v-for="item in recentlyViewedProducts" :key="item.id">
-          <ProductItem
-            :image-url="item.imageUrl"
-            :name="item.name"
-            :price="item.price"
-            :rating="item.rating"
-            :location="item.location"
-            :discount="item.discount"
-            :id="item.id"
-          />
-        </SplideSlide>
-      </Splide>
-      <div v-else style="text-align: center; color: #999; padding: 40px">
-        <el-icon size="40" style="margin-bottom: 12px; opacity: 0.5"><ShoppingCart /></el-icon>
-        <p style="font-size: 14px">Your recently viewed list is empty.</p>
-        <p style="font-size: 13px; color: #bbb">
-          Products you visit will appear here for easy access.
-        </p>
-      </div>
-    </div>
+    <RecentlyViewed />
   </main>
 </template>
 

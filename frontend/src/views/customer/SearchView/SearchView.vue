@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import ProductList from '@/components/ProductList.vue'
 import Header from '@/components/Header.vue'
+import RecentlyViewed from '@/components/RecentlyViewed.vue'
 import { ArrowDownBold, ArrowUpBold, Filter, Search } from '@element-plus/icons-vue'
 
 const categories = [
@@ -331,6 +332,8 @@ const clearAll = () => {
         </button>
       </template>
     </ProductList>
+
+    <RecentlyViewed style="margin-top: 40px" />
   </div>
 </template>
 

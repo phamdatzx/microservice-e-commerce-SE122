@@ -9,6 +9,7 @@ import { ElNotification, ElMessageBox, ElMessage } from 'element-plus'
 import { Splide, SplideSlide } from '@splidejs/vue-splide'
 import axios from 'axios'
 import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
+import RecentlyViewed from '@/components/RecentlyViewed.vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -62,8 +63,6 @@ export interface CartSeller {
   sellerId: string
   products: Product[]
 }
-
-const productList = ref<any[]>([]) // Recently viewed
 
 const headerRef = ref<InstanceType<typeof Header> | null>(null)
 
@@ -122,13 +121,6 @@ const fetchCart = async () => {
   }
 }
 
-const loadRecentlyViewed = () => {
-  const stored = localStorage.getItem('recently_viewed')
-  if (stored) {
-    productList.value = JSON.parse(stored)
-  }
-}
-
 const allProducts = computed(() => cartData.value.map((seller) => seller.products).flat())
 
 const handleCheckout = () => {
@@ -142,7 +134,6 @@ const handleCheckout = () => {
 
 onMounted(() => {
   fetchCart()
-  loadRecentlyViewed()
 })
 
 const handleCheckAll = () => {
@@ -387,49 +378,7 @@ const handleDeleteSelected = async () => {
       </div>
     </div>
 
-    <div
-      class="box-shadow border-radius recently-viewed"
-      style="background-color: #fff; padding: 20px; margin-bottom: 20px; margin-top: 28px"
-    >
-      <div style="display: flex; margin-bottom: 12px">
-        <h3 style="font-weight: bold">YOU RECENTLY VIEWED</h3>
-        <RouterLink
-          to="/"
-          style="position: relative; top: 3px; margin-left: 20px; color: #999; font-size: 13px"
-          >View All</RouterLink
-        >
-      </div>
-
-      <Splide
-        v-if="productList.length"
-        :options="{
-          rewind: true,
-          perPage: 5,
-          gap: '1rem',
-          breakpoints: {
-            1000: {
-              perPage: 1,
-            },
-          },
-        }"
-      >
-        <SplideSlide v-for="item in productList" :key="item.id">
-          <ProductItem
-            :image-url="item.imageUrl"
-            :name="item.name"
-            :price="item.price"
-            :rating="item.rating"
-            :location="item.location"
-            :discount="item.discount"
-            :id="item.id"
-          />
-        </SplideSlide>
-      </Splide>
-      <div v-else style="text-align: center; color: #999; padding: 40px">
-        <el-icon size="40" style="margin-bottom: 12px; opacity: 0.5"><ShoppingCart /></el-icon>
-        <p style="font-size: 14px">Your recently viewed list is empty.</p>
-      </div>
-    </div>
+    <RecentlyViewed />
   </div>
 </template>
 
