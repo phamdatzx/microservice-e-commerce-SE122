@@ -4,7 +4,7 @@ import { Search, Download, ChatDotRound, More } from '@element-plus/icons-vue'
 import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
 import { formatStatus } from '@/utils/formatStatus'
 import axios from 'axios'
-import { ElNotification, ElLoading } from 'element-plus'
+import { ElNotification, ElLoading, ElMessageBox } from 'element-plus'
 
 interface User {
   id: string
@@ -192,6 +192,21 @@ const handleBatchDelivery = () => {
 }
 
 const handleUpdateStatus = async (orderId: string, status: string) => {
+  if (status === 'CANCELLED') {
+    try {
+      await ElMessageBox.confirm(
+        'Are you sure you want to cancel this order?',
+        'Cancel Order Confirmation',
+        {
+          confirmButtonText: 'Yes, Cancel',
+          cancelButtonText: 'No, Keep Order',
+          type: 'warning',
+        },
+      )
+    } catch {
+      return
+    }
+  }
   try {
     console.log(`Updating order ${orderId} to status: ${status}`)
     const loading = ElLoading.service({
@@ -349,7 +364,7 @@ const handleUpdateStatus = async (orderId: string, status: string) => {
 
             <div class="col-action border-left flex-center-col">
               <el-dropdown v-if="order.status === 'TO_CONFIRM'" trigger="click">
-                <el-button link style="padding: 8px">
+                <el-button link style="padding: 16px">
                   <el-icon size="large" style="scale: 1.3">
                     <More />
                   </el-icon>
@@ -532,7 +547,7 @@ const handleUpdateStatus = async (orderId: string, status: string) => {
 .col-product {
   flex: 4;
 }
-.col-total {
+.col-price {
   flex: 1.5;
   text-align: center;
 }
@@ -542,6 +557,10 @@ const handleUpdateStatus = async (orderId: string, status: string) => {
 }
 .col-countdown {
   flex: 1.5;
+  text-align: center;
+}
+.col-action {
+  width: 89px;
   text-align: center;
 }
 
