@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { Search, ChatDotRound, Shop } from '@element-plus/icons-vue'
 import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
+import { formatStatus } from '@/utils/formatStatus'
 import axios from 'axios'
 
 const activeOrderTab = ref('all')
@@ -120,7 +121,7 @@ const orderTabs = [
               >Order ID: {{ order.id.split('-')[0].toUpperCase() }}</span
             >
             <el-divider direction="vertical" />
-            <span class="status-text">{{ order.status }}</span>
+            <span class="status-text">{{ formatStatus(order.status) }}</span>
           </div>
         </div>
 
@@ -133,7 +134,12 @@ const orderTabs = [
             />
             <div class="item-details">
               <h4 class="item-name">{{ item.product_name }}</h4>
-              <p class="item-variant">Variant: {{ item.variant_name || 'Default' }}</p>
+              <p
+                v-if="item.variant_name && item.variant_name.toLowerCase() !== 'default'"
+                class="item-variant"
+              >
+                Variant: {{ item.variant_name }}
+              </p>
               <p class="item-quantity">x{{ item.quantity }}</p>
             </div>
             <div class="item-price">
@@ -241,7 +247,6 @@ const orderTabs = [
 .status-text {
   color: var(--main-color);
   font-weight: 500;
-  text-transform: uppercase;
   font-size: 13px;
 }
 

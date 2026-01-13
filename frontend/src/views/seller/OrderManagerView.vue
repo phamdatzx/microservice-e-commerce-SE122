@@ -2,6 +2,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { Search, Download, ChatDotRound } from '@element-plus/icons-vue'
 import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
+import { formatStatus } from '@/utils/formatStatus'
 import axios from 'axios'
 import { ElNotification, ElLoading } from 'element-plus'
 
@@ -223,18 +224,6 @@ const handleUpdateStatus = async (orderId: string, status: string) => {
     ElNotification.error(error.response?.data?.message || 'Failed to update order status')
   }
 }
-
-const formatStatus = (status: string) => {
-  const map: Record<string, string> = {
-    TO_CONFIRM: 'To Confirm',
-    TO_PICKUP: 'To Pickup',
-    SHIPPING: 'Shipping',
-    COMPLETED: 'Completed',
-    CANCELLED: 'Cancelled',
-    RETURNED: 'Returned',
-  }
-  return map[status] || status
-}
 </script>
 
 <template>
@@ -344,7 +333,12 @@ const formatStatus = (status: string) => {
                 />
                 <div class="product-info">
                   <div class="product-name">{{ item.product_name }}</div>
-                  <div class="product-variant">{{ item.variant_name }}</div>
+                  <div
+                    v-if="item.variant_name && item.variant_name.toLowerCase() !== 'default'"
+                    class="product-variant"
+                  >
+                    {{ item.variant_name }}
+                  </div>
                 </div>
                 <div class="product-qty">x{{ item.quantity }}</div>
               </div>
