@@ -196,6 +196,12 @@ func (s *orderService) Checkout(userID string, request dto.CheckoutRequest) (*dt
 			return nil, fmt.Errorf("failed to get voucher: %w", err)
 		}
 
+		if voucher.SellerID != sellerID {
+			// Rollback: release reserved stock
+			_ = s.productClient.ReleaseStock(tempOrderID)
+			return nil, appError.NewAppError(400, "voucher does not belong to seller")
+		}
+
 		// Validate voucher (basic validation, more complex logic might be needed)
 		if voucher.Status != "ACTIVE" {
 			// Rollback: release reserved stock
@@ -212,15 +218,15 @@ func (s *orderService) Checkout(userID string, request dto.CheckoutRequest) (*dt
 		discount := 0.0
 		if voucher.DiscountType == "PERCENTAGE" {
 			discount = totalAmount * float64(voucher.DiscountValue) / 100
-			if discount > float64(voucher.MaxDiscountAmount) {
-				discount = float64(voucher.MaxDiscountAmount)
+			if discount > float64(voucher.MaxDiscountValue) {
+				discount = float64(voucher.MaxDiscountValue)
 			}
 		} else if voucher.DiscountType == "FIXED" {
 			discount = float64(voucher.DiscountValue)
 		}
 
-		if discount > float64(voucher.MaxDiscountAmount) {
-			discount = float64(voucher.MaxDiscountAmount)
+		if discount > float64(voucher.MaxDiscountValue) {
+			discount = float64(voucher.MaxDiscountValue)
 		}
 
 		totalAmount -= discount
@@ -608,10 +614,6 @@ func convertOrderToDto(order *model.Order) dto.OrderDto {
 			Code:                   order.Voucher.Code,
 			DiscountType:           order.Voucher.DiscountType,
 			DiscountValue:          order.Voucher.DiscountValue,
-			MaxDiscountValue:       order.Voucher.MaxDiscountValue,
-			MinOrderValue:          order.Voucher.MinOrderValue,
-			ApplyScope:             order.Voucher.ApplyScope,
-			ApplySellerCategoryIds: order.Voucher.ApplySellerCategoryIds,
 		}
 	}
 
