@@ -18,10 +18,10 @@ const statusMapping: Record<string, string> = {
   all: '',
   'to-pay': 'TO_PAY',
   'to-confirm': 'TO_CONFIRM',
-  'to-ship': 'TO_PICKUP',
+  'to-pickup': 'TO_PICKUP',
+  shipping: 'SHIPPING',
   completed: 'COMPLETED',
   cancelled: 'CANCELLED',
-  'return-refund': 'RETURNED',
 }
 
 const fetchOrders = async () => {
@@ -82,10 +82,10 @@ const orderTabs = [
   { label: 'All', value: 'all' },
   { label: 'To Pay', value: 'to-pay' },
   { label: 'To Confirm', value: 'to-confirm' },
-  { label: 'To Ship', value: 'to-ship' },
+  { label: 'To Pickup', value: 'to-pickup' },
+  { label: 'Shipping', value: 'shipping' },
   { label: 'Completed', value: 'completed' },
   { label: 'Cancelled', value: 'cancelled' },
-  { label: 'Return/Refund', value: 'return-refund' },
 ]
 </script>
 

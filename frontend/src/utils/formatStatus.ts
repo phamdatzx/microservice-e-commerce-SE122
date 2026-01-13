@@ -6,7 +6,6 @@ export const formatStatus = (status: string): string => {
     SHIPPING: 'Shipping',
     COMPLETED: 'Completed',
     CANCELLED: 'Cancelled',
-    RETURNED: 'Returned',
   }
   return map[status] || status
 }

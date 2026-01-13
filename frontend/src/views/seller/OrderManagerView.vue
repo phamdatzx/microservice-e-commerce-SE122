@@ -84,7 +84,6 @@ const fetchOrders = async () => {
         shipping: 'SHIPPING',
         completed: 'COMPLETED',
         cancelled: 'CANCELLED',
-        return: 'RETURNED',
       }
       params.status = statusMap[activeTab.value]
     }
@@ -117,7 +116,6 @@ const tabCounts = reactive({
   shipping: 0,
   completed: 0,
   cancelled: 0,
-  return: 0,
 })
 
 const fetchAllTabCounts = async () => {
@@ -128,7 +126,6 @@ const fetchAllTabCounts = async () => {
     { key: 'shipping', status: 'SHIPPING' },
     { key: 'completed', status: 'COMPLETED' },
     { key: 'cancelled', status: 'CANCELLED' },
-    { key: 'return', status: 'RETURNED' },
   ]
 
   try {
@@ -230,7 +227,6 @@ const handleUpdateStatus = async (orderId: string, status: string) => {
         <el-tab-pane :label="`Shipping (${tabCounts.shipping})`" name="shipping" />
         <el-tab-pane :label="`Completed (${tabCounts.completed})`" name="completed" />
         <el-tab-pane :label="`Cancelled (${tabCounts.cancelled})`" name="cancelled" />
-        <el-tab-pane :label="`Return/Refund (${tabCounts.return})`" name="return" />
       </el-tabs>
     </div>
 
@@ -376,9 +372,7 @@ const handleUpdateStatus = async (orderId: string, status: string) => {
                 @click="handleUpdateStatus(order.id, 'COMPLETED')"
                 >Delivered</el-button
               >
-              <span
-                v-if="['COMPLETED', 'CANCELLED', 'RETURNED'].includes(order.status)"
-                class="sub-text"
+              <span v-if="['COMPLETED', 'CANCELLED'].includes(order.status)" class="sub-text"
                 >No Actions</span
               >
             </div>
