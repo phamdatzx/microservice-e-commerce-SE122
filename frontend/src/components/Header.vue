@@ -70,45 +70,24 @@ defineExpose({
             </div>
           </RouterLink>
 
-          <nav class="nav">
-            <a href="#" class="nav-link">
-              HOMES
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <div class="search-bar">
+            <input type="text" placeholder="Search anything..." class="search-input" />
+            <button class="search-btn">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="#fff"
+                x="0px"
+                y="0px"
+                width="20"
+                height="20"
+                viewBox="0 0 50 50"
+              >
                 <path
-                  d="M3 4.5L6 7.5L9 4.5"
-                  stroke="currentColor"
-                  stroke-width="1.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
+                  d="M 21 3 C 11.621094 3 4 10.621094 4 20 C 4 29.378906 11.621094 37 21 37 C 24.710938 37 28.140625 35.804688 30.9375 33.78125 L 44.09375 46.90625 L 46.90625 44.09375 L 33.90625 31.0625 C 36.460938 28.085938 38 24.222656 38 20 C 38 10.621094 30.378906 3 21 3 Z M 21 5 C 29.296875 5 36 11.703125 36 20 C 36 28.296875 29.296875 35 21 35 C 12.703125 35 6 28.296875 6 20 C 6 11.703125 12.703125 5 21 5 Z"
+                ></path>
               </svg>
-            </a>
-            <a href="#" class="nav-link">
-              PAGES
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path
-                  d="M3 4.5L6 7.5L9 4.5"
-                  stroke="currentColor"
-                  stroke-width="1.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-            </a>
-            <a href="#" class="nav-link">
-              PRODUCTS
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path
-                  d="M3 4.5L6 7.5L9 4.5"
-                  stroke="currentColor"
-                  stroke-width="1.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-            </a>
-            <a href="#" class="nav-link">CONTACT</a>
-          </nav>
+            </button>
+          </div>
 
           <div class="header-actions">
             <button class="wishlist-btn" title="Wishlist">
@@ -220,45 +199,7 @@ defineExpose({
         </div>
       </div>
     </div>
-
-    <!-- Search Bar -->
-    <div class="search-section">
-      <div class="container">
-        <div class="search-bar">
-          <select class="category-select">
-            <option>All Categories</option>
-          </select>
-          <input type="text" placeholder="Search anything..." class="search-input" />
-          <button class="search-btn">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="#fff"
-              x="0px"
-              y="0px"
-              width="20"
-              height="20"
-              viewBox="0 0 50 50"
-            >
-              <path
-                d="M 21 3 C 11.621094 3 4 10.621094 4 20 C 4 29.378906 11.621094 37 21 37 C 24.710938 37 28.140625 35.804688 30.9375 33.78125 L 44.09375 46.90625 L 46.90625 44.09375 L 33.90625 31.0625 C 36.460938 28.085938 38 24.222656 38 20 C 38 10.621094 30.378906 3 21 3 Z M 21 5 C 29.296875 5 36 11.703125 36 20 C 36 28.296875 29.296875 35 21 35 C 12.703125 35 6 28.296875 6 20 C 6 11.703125 12.703125 5 21 5 Z"
-              ></path>
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
   </header>
-
-  <!-- Breadcrumb -->
-  <div class="breadcrumb">
-    <div class="container">
-      <a href="#" class="breadcrumb-link">Home</a>
-      <span class="breadcrumb-separator">/</span>
-      <a href="#" class="breadcrumb-link">pages</a>
-      <span class="breadcrumb-separator">/</span>
-      <span class="breadcrumb-current">login</span>
-    </div>
-  </div>
 
   <CustomerChat />
 </template>
@@ -319,28 +260,6 @@ defineExpose({
   color: #71717a;
   letter-spacing: 2px;
   font-weight: 600;
-}
-
-.nav {
-  display: flex;
-  gap: 32px;
-  align-items: center;
-}
-
-.nav-link {
-  color: #3f3f46;
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 0;
-  transition: all 0.2s ease;
-}
-
-.nav-link:hover {
-  color: #22c55e;
 }
 
 .header-actions {
@@ -559,46 +478,33 @@ defineExpose({
   color: #22c55e;
 }
 
-/* Search Section */
-.search-section {
-  background: linear-gradient(135deg, #22c55e, #16a34a);
-  padding: 24px 0;
-}
-
+/* Search Bar */
 .search-bar {
   display: flex;
-  max-width: 700px;
-  margin: 0 auto;
-  background: white;
-  border-radius: 12px;
+  flex: 1;
+  max-width: 540px;
+  margin: 0 40px;
+  background: #f4f4f5;
+  border-radius: 7px;
   overflow: hidden;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-  transition: transform 0.2s ease;
+  transition: all 0.2s ease;
+  border: 2px solid #e4e4e7;
 }
 
 .search-bar:focus-within {
-  transform: translateY(-2px);
-}
-
-.category-select {
-  padding: 0 24px;
-  border: none;
-  border-right: 1px solid #e4e4e7;
   background: white;
-  font-size: 14px;
-  font-weight: 600;
-  color: #3f3f46;
-  cursor: pointer;
-  outline: none;
+  border-color: #22c55e;
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.1);
 }
 
 .search-input {
   flex: 1;
-  padding: 16px 24px;
+  padding: 14px 16px;
   border: none;
   font-size: 14px;
   outline: none;
   color: #18181b;
+  background: transparent;
 }
 
 .search-input::placeholder {
@@ -606,9 +512,9 @@ defineExpose({
 }
 
 .search-btn {
-  background: #18181b;
+  background: var(--main-color);
   border: none;
-  padding: 0 28px;
+  padding: 0 20px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -617,40 +523,6 @@ defineExpose({
 }
 
 .search-btn:hover {
-  background: #27272a;
-}
-
-/* Breadcrumb */
-.breadcrumb {
-  padding: 16px 0;
-  background: #fafafa;
-  border-bottom: 1px solid #f4f4f5;
-}
-
-.breadcrumb .container {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 13px;
-}
-
-.breadcrumb-link {
-  color: #71717a;
-  text-decoration: none;
-  font-weight: 500;
-  transition: color 0.2s ease;
-}
-
-.breadcrumb-link:hover {
-  color: #22c55e;
-}
-
-.breadcrumb-separator {
-  color: #d4d4d8;
-}
-
-.breadcrumb-current {
-  color: #18181b;
-  font-weight: 600;
+  background: #22c55e;
 }
 </style>
