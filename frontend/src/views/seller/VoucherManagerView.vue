@@ -102,7 +102,7 @@ const rules = reactive<FormRules>({
   ],
 })
 
-const VOUCHER_API_URL = 'http://localhost:81/api/product/vouchers'
+const VOUCHER_API_URL = `${import.meta.env.VITE_BE_API_URL}/product/vouchers`
 
 const isPercentage = computed(() => ruleForm.discount_type === 'PERCENTAGE')
 

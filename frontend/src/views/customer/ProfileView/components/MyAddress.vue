@@ -32,7 +32,7 @@ const addresses = ref<Address[]>([])
 
 const fetchAddresses = async () => {
   try {
-    const response = await axios.get('http://localhost:81/api/user/addresses', {
+    const response = await axios.get(`${import.meta.env.VITE_BE_API_URL}/user/addresses`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem('access_token')}`,
       },
@@ -312,12 +312,16 @@ const handleSaveAddress = async () => {
       Authorization: `Bearer ${localStorage.getItem('access_token')}`,
     }
     if (isEditing.value) {
-      await axios.put(`http://localhost:81/api/user/addresses/${addressForm.value.id}`, payload, {
-        headers,
-      })
+      await axios.put(
+        `${import.meta.env.VITE_BE_API_URL}/user/addresses/${addressForm.value.id}`,
+        payload,
+        {
+          headers,
+        },
+      )
       ElMessage.success('Address updated successfully')
     } else {
-      await axios.post('http://localhost:81/api/user/addresses', payload, { headers })
+      await axios.post(`${import.meta.env.VITE_BE_API_URL}/user/addresses`, payload, { headers })
       ElMessage.success('Address added successfully')
     }
     await fetchAddresses()
@@ -341,7 +345,7 @@ const deleteAddress = async (id: string) => {
       type: 'warning',
     })
 
-    await axios.delete(`http://localhost:81/api/user/addresses/${id}`, {
+    await axios.delete(`${import.meta.env.VITE_BE_API_URL}/user/addresses/${id}`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem('access_token')}`,
       },
@@ -379,7 +383,7 @@ const setDefaultAddress = async (address: Address) => {
   }
 
   try {
-    await axios.put(`http://localhost:81/api/user/addresses/${address.id}`, payload, {
+    await axios.put(`${import.meta.env.VITE_BE_API_URL}/user/addresses/${address.id}`, payload, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem('access_token')}`,
       },

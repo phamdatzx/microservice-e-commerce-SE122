@@ -32,7 +32,7 @@ const activeTab = ref('all') // 'all' | 'available'
 const fetchSavedVouchers = async () => {
   loading.value = true
   try {
-    const response = await axios.get('http://localhost:81/api/product/saved-vouchers', {
+    const response = await axios.get(`${import.meta.env.VITE_BE_API_URL}/product/saved-vouchers`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem('access_token')}`,
       },
@@ -71,7 +71,7 @@ const unsaveVoucher = async (voucherId: string) => {
     })
 
     const response = await axios.delete(
-      `http://localhost:81/api/product/saved-vouchers/${voucherId}`,
+      `${import.meta.env.VITE_BE_API_URL}/product/saved-vouchers/${voucherId}`,
       {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('access_token')}`,

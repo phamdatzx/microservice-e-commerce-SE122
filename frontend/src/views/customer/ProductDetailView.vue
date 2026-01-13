@@ -151,7 +151,9 @@ const fetchProduct = async () => {
   if (!productId.value) return
   isLoading.value = true
   try {
-    const response = await axios.get(`http://localhost:81/api/product/public/${productId.value}`)
+    const response = await axios.get(
+      `${import.meta.env.VITE_BE_API_URL}/product/public/${productId.value}`,
+    )
     product.value = response.data
 
     // Initialize selected options
@@ -294,7 +296,7 @@ const addToCart = async () => {
   isAddingToCart.value = true
   try {
     await axios.post(
-      'http://localhost:81/api/order/cart',
+      `${import.meta.env.VITE_BE_API_URL}/order/cart`,
       {
         seller_id: product.value.seller_id,
         product_id: product.value.id,

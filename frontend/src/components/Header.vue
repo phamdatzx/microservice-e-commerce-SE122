@@ -12,7 +12,7 @@ import IconLogout from './icons/IconLogout.vue'
 const router = useRouter()
 const isLoggedIn = ref(false)
 const cartCount = ref(0)
-const API_URL = 'http://localhost:81/api/order/cart/count'
+const API_URL = `${import.meta.env.VITE_BE_API_URL}/order/cart/count`
 
 const fetchCartCount = async () => {
   const token = localStorage.getItem('access_token')

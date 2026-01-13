@@ -79,7 +79,7 @@ const fetchCart = async () => {
 
   isLoading.value = true
   try {
-    const response = await axios.get('http://localhost:81/api/order/cart', {
+    const response = await axios.get(`${import.meta.env.VITE_BE_API_URL}/order/cart`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -200,7 +200,7 @@ const removeFromCart = async (cartItemId: string, showNotification = true) => {
   }
 
   try {
-    await axios.delete(`http://localhost:81/api/order/cart/${cartItemId}`, {
+    await axios.delete(`${import.meta.env.VITE_BE_API_URL}/order/cart/${cartItemId}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },

@@ -39,7 +39,7 @@ const fetchOrders = async () => {
         statusMapping[activeOrderTab.value] || activeOrderTab.value.toUpperCase().replace(/-/g, '_')
     }
 
-    const response = await axios.get('http://localhost:81/api/order', {
+    const response = await axios.get(`${import.meta.env.VITE_BE_API_URL}/order`, {
       params,
       headers: {
         Authorization: `Bearer ${localStorage.getItem('access_token')}`,

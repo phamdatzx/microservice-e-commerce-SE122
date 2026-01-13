@@ -77,7 +77,7 @@ const selectedAddress = computed(() => {
 
 const fetchVouchers = async () => {
   try {
-    const response = await axios.get('http://localhost:81/api/product/saved-vouchers', {
+    const response = await axios.get(`${import.meta.env.VITE_BE_API_URL}/product/saved-vouchers`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem('access_token')}`,
       },
@@ -96,7 +96,7 @@ const fetchAddresses = async () => {
     // Parallel fetch if possible, but sequential is fine
     await fetchVouchers()
 
-    const response = await axios.get('http://localhost:81/api/user/addresses', {
+    const response = await axios.get(`${import.meta.env.VITE_BE_API_URL}/user/addresses`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem('access_token')}`,
       },
@@ -329,11 +329,15 @@ const handlePlaceOrder = async () => {
 
   try {
     // 1. Checkout API
-    const response = await axios.post('http://localhost:81/api/order/checkout', payload, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+    const response = await axios.post(
+      `${import.meta.env.VITE_BE_API_URL}/order/checkout`,
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+        },
       },
-    })
+    )
 
     if (response.data) {
       const orderId = response.data.order_id
@@ -357,7 +361,7 @@ const handlePlaceOrder = async () => {
 const handleStripePayment = async (orderId: string) => {
   try {
     const response = await axios.post(
-      `http://localhost:81/api/order/${orderId}/payment`,
+      `${import.meta.env.VITE_BE_API_URL}/order/${orderId}/payment`,
       {},
       {
         headers: {
@@ -405,7 +409,7 @@ const validVouchers = computed(() => {
 
 const fetchSellerAddress = async () => {
   try {
-    const response = await axios.get('http://localhost:81/api/order/cart', {
+    const response = await axios.get(`${import.meta.env.VITE_BE_API_URL}/order/cart`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem('access_token')}`,
       },
