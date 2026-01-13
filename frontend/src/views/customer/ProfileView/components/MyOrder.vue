@@ -16,9 +16,9 @@ const totalItems = ref(0)
 
 const statusMapping: Record<string, string> = {
   all: '',
-  'to-pay': 'TO_STATUS_PAY',
-  'to-ship': 'TO_CONFIRM',
-  'to-receive': 'SHIPPING',
+  'to-pay': 'TO_PAY',
+  'to-confirm': 'TO_CONFIRM',
+  'to-ship': 'TO_PICKUP',
   completed: 'COMPLETED',
   cancelled: 'CANCELLED',
   'return-refund': 'RETURNED',
@@ -80,8 +80,8 @@ const filteredOrders = computed(() => orders.value)
 const orderTabs = [
   { label: 'All', value: 'all' },
   { label: 'To Pay', value: 'to-pay' },
+  { label: 'To Confirm', value: 'to-confirm' },
   { label: 'To Ship', value: 'to-ship' },
-  { label: 'To Receive', value: 'to-receive' },
   { label: 'Completed', value: 'completed' },
   { label: 'Cancelled', value: 'cancelled' },
   { label: 'Return/Refund', value: 'return-refund' },
@@ -154,7 +154,12 @@ const orderTabs = [
             <span class="total-amount">{{ formatNumberWithDots(order.total) }}đ</span>
           </div>
           <div class="order-actions">
-            <template v-if="order.status === 'SHIPPING'">
+            <template v-if="order.status === 'TO_PAY'">
+              <el-button type="primary" size="large">Pay Order</el-button>
+              <el-button size="large">Cancel Order</el-button>
+              <el-button size="large">Contact Seller</el-button>
+            </template>
+            <template v-else-if="order.status === 'SHIPPING'">
               <el-button type="primary" size="large">Order Received</el-button>
               <el-button size="large">Return/Refund</el-button>
               <el-button size="large">Contact Seller</el-button>
