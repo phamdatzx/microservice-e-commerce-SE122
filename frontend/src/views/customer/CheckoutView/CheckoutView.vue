@@ -65,7 +65,7 @@ const discountAmount = computed(() => {
       discount = v.max_discount_value
     }
   }
-  return discount
+  return Math.round(discount)
 })
 
 const total = computed(() => {
