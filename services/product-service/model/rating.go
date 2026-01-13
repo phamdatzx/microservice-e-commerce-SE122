@@ -14,7 +14,8 @@ type Rating struct {
 	User    User `bson:"user" json:"user"`
 	Star      int    `bson:"star" json:"star"`
 	Content   string `bson:"content,omitempty" json:"content,omitempty"`
-	Image     string `bson:"image,omitempty" json:"image,omitempty"`
+	Images    []RatingImage `bson:"images,omitempty" json:"images,omitempty"`
+
 
 	RatingResponse []RatingResponse `bson:"rating_response,omitempty" json:"rating_response,omitempty"`
 
@@ -33,6 +34,11 @@ type User struct {
 type RatingResponse struct {
 	ID      string `bson:"_id" json:"id"`
 	Content string `bson:"content,omitempty" json:"content,omitempty"`
+}
+
+type RatingImage struct {
+	ID  string `bson:"_id" json:"id"`
+	URL string `bson:"url" json:"url"`
 }
 
 func (r *Rating) BeforeCreate() {

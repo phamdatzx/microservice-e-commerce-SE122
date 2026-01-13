@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"mime/multipart"
 	"net/http"
 	"product-service/error"
 	"product-service/model"
@@ -28,22 +29,54 @@ func (c *RatingController) CreateRating(ctx *gin.Context) {
 		return
 	}
 
-	if err := ctx.ShouldBindJSON(&rating); err != nil {
-		ctx.Error(error.NewAppErrorWithErr(http.StatusBadRequest, "Invalid request body", err))
+	// Parse multipart form
+	if err := ctx.Request.ParseMultipartForm(10 << 20); err != nil { // 10 MB max
+		ctx.Error(error.NewAppErrorWithErr(http.StatusBadRequest, "Failed to parse form", err))
 		return
 	}
+
+	// Get form fields
+	rating.ProductID = ctx.PostForm("product_id")
+	rating.VariantID = ctx.PostForm("variant_id")
+	rating.Content = ctx.PostForm("content")
+	starStr := ctx.PostForm("star")
 
 	// Validate required fields
 	if rating.ProductID == "" {
 		ctx.Error(error.NewAppError(http.StatusBadRequest, "Product ID is required"))
 		return
 	}
-	if rating.Star < 1 || rating.Star > 5 {
-		ctx.Error(error.NewAppError(http.StatusBadRequest, "Star rating must be between 1 and 5"))
+	if rating.VariantID == "" {
+		ctx.Error(error.NewAppError(http.StatusBadRequest, "Variant ID is required"))
+		return
+	}
+	if starStr == "" {
+		ctx.Error(error.NewAppError(http.StatusBadRequest, "Star rating is required"))
 		return
 	}
 
-	if err := c.service.CreateRating(&rating); err != nil {
+	// Parse star rating
+	star, err := strconv.Atoi(starStr)
+	if err != nil || star < 1 || star > 5 {
+		ctx.Error(error.NewAppError(http.StatusBadRequest, "Star rating must be between 1 and 5"))
+		return
+	}
+	rating.Star = star
+
+	// Get image files (optional, can be multiple)
+	form, err := ctx.MultipartForm()
+	if err != nil && err != http.ErrMissingFile {
+		ctx.Error(error.NewAppErrorWithErr(http.StatusBadRequest, "Failed to get multipart form", err))
+		return
+	}
+
+	var files []*multipart.FileHeader
+	if form != nil {
+		files = form.File["image"] // Get all files with field name "images"
+	}
+
+	// Create rating with image uploads
+	if err := c.service.CreateRating(&rating, files); err != nil {
 		ctx.Error(err)
 		return
 	}

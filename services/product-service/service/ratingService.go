@@ -1,18 +1,22 @@
 package service
 
 import (
+	"fmt"
+	"mime/multipart"
 	"net/http"
 	"product-service/client"
 	appError "product-service/error"
 	"product-service/model"
 	"product-service/repository"
+	"product-service/utils"
 	"time"
 
 	"github.com/google/uuid"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type RatingService interface {
-	CreateRating(rating *model.Rating) error
+	CreateRating(rating *model.Rating, files []*multipart.FileHeader) error
 	GetRatingByID(id string) (*model.Rating, error)
 	GetAllRatings() ([]model.Rating, error)
 	GetRatingsByProductID(productID string, page, limit int) ([]model.Rating, int64, error)
@@ -36,7 +40,7 @@ func NewRatingService(repo repository.RatingRepository, orderClient *client.Orde
 	}
 }
 
-func (s *ratingService) CreateRating(rating *model.Rating) error {
+func (s *ratingService) CreateRating(rating *model.Rating, files []*multipart.FileHeader) error {
 	// Fetch user info from user-service
 	userInfo, err := s.userClient.GetUserByID(rating.User.ID)
 	if err != nil {
@@ -57,6 +61,42 @@ func (s *ratingService) CreateRating(rating *model.Rating) error {
 
 	if !hasPurchased {
 		return appError.NewAppError(http.StatusForbidden, "You can only rate products you have purchased")
+	}
+
+	// Not allowed if user has already rated this product
+	_, err = s.repo.FindByProductIDAndUserID(rating.ProductID, rating.User.ID)
+	fmt.Println("get rating by product id and user id", err)
+
+	if err == nil {
+		// Found document → user already rated
+		return appError.NewAppError(http.StatusForbidden, "You can only rate products once")
+	}
+
+	if err != mongo.ErrNoDocuments {
+		return err
+	}
+
+	// Upload images to S3 if provided
+	if len(files) > 0 {
+		var ratingImages []model.RatingImage
+		for _, fileHeader := range files {
+			file, err := fileHeader.Open()
+			if err != nil {
+				return appError.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to open image file", err)
+			}
+			defer file.Close()
+
+			imageURL, err := utils.UploadImageToS3(file, fileHeader, "ratings")
+			if err != nil {
+				return appError.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to upload image", err)
+			}
+			
+			ratingImages = append(ratingImages, model.RatingImage{
+				ID:  uuid.New().String(),
+				URL: imageURL,
+			})
+		}
+		rating.Images = ratingImages
 	}
 
 	// Generate ID and timestamps
