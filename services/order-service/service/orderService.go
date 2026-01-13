@@ -26,6 +26,7 @@ type OrderService interface {
 	GetUserOrders(ctx context.Context, userID string, request dto.GetOrdersRequest) (*dto.GetOrdersResponse, error)
 	GetSellerOrders(ctx context.Context, sellerID string, request dto.GetOrdersBySellerRequest) (*dto.GetOrdersResponse, error)
 	UpdateOrderStatus(ctx context.Context, userID string, orderID string, request dto.UpdateOrderStatusRequest) error
+	VerifyVariantPurchase(userID, productID, variantID string) (bool, error)
 }
 
 type orderService struct {
@@ -652,3 +653,8 @@ func convertOrderToDto(order *model.Order) dto.OrderDto {
 		ItemCount:    len(order.Items),
 	}
 }
+
+func (s *orderService) VerifyVariantPurchase(userID, productID, variantID string) (bool, error) {
+	return s.repo.VerifyVariantPurchase(userID, productID, variantID)
+}
+

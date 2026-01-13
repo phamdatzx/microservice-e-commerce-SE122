@@ -1,6 +1,9 @@
 package service
 
 import (
+	"net/http"
+	"product-service/client"
+	appError "product-service/error"
 	"product-service/model"
 	"product-service/repository"
 	"time"
@@ -20,14 +23,42 @@ type RatingService interface {
 }
 
 type ratingService struct {
-	repo repository.RatingRepository
+	repo        repository.RatingRepository
+	orderClient *client.OrderServiceClient
+	userClient  *client.UserServiceClient
 }
 
-func NewRatingService(repo repository.RatingRepository) RatingService {
-	return &ratingService{repo: repo}
+func NewRatingService(repo repository.RatingRepository, orderClient *client.OrderServiceClient, userClient *client.UserServiceClient) RatingService {
+	return &ratingService{
+		repo:        repo,
+		orderClient: orderClient,
+		userClient:  userClient,
+	}
 }
 
 func (s *ratingService) CreateRating(rating *model.Rating) error {
+	// Fetch user info from user-service
+	userInfo, err := s.userClient.GetUserByID(rating.User.ID)
+	if err != nil {
+		return appError.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to fetch user information", err)
+	}
+
+	// Populate user data
+	rating.User.Name = userInfo.Name
+	rating.User.Email = userInfo.Email
+	rating.User.Image = userInfo.Image
+	rating.User.Phone = userInfo.Phone
+
+	// Validate if the user has purchased the variant
+	hasPurchased, err := s.orderClient.VerifyVariantPurchase(rating.User.ID, rating.ProductID, rating.VariantID)
+	if err != nil {
+		return appError.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to verify purchase", err)
+	}
+
+	if !hasPurchased {
+		return appError.NewAppError(http.StatusForbidden, "You can only rate products you have purchased")
+	}
+
 	// Generate ID and timestamps
 	rating.ID = uuid.New().String()
 	rating.CreatedAt = time.Now()

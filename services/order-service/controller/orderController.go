@@ -218,3 +218,22 @@ func (c *OrderController) Test(ctx *gin.Context) {
 	result, _ := c.GHNClient.ResolveGHNAddress(province, district, ward)
 	ctx.JSON(200, result)
 }
+
+func (c *OrderController) VerifyPurchase(ctx *gin.Context) {
+	var request dto.VerifyPurchaseRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.Error(appError.NewAppErrorWithErr(400, "Invalid request body", err))
+		return
+	}
+
+	hasPurchased, err := c.service.VerifyVariantPurchase(request.UserID, request.ProductID, request.VariantID)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(200, dto.VerifyPurchaseResponse{
+		HasPurchased: hasPurchased,
+	})
+}
+
