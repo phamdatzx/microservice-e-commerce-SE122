@@ -21,6 +21,7 @@ interface SavedVoucher {
     end_time: string
     status: string
     usage_limit_per_user: number
+    apply_scope: 'ALL' | 'CATEGORY'
   }
 }
 
@@ -162,6 +163,14 @@ onMounted(() => {
                 /></el-icon>
               </div>
               <p class="voucher-desc">{{ item.voucher.description }}</p>
+              <div class="apply-scope">
+                <el-tag
+                  size="small"
+                  :type="item.voucher.apply_scope === 'ALL' ? 'success' : 'warning'"
+                >
+                  {{ item.voucher.apply_scope === 'ALL' ? 'All Products' : 'Specific Categories' }}
+                </el-tag>
+              </div>
               <div class="usage-info">
                 Used: {{ item.used_count }} / {{ item.voucher.usage_limit_per_user }}
                 <span v-if="item.used_count >= item.voucher.usage_limit_per_user" class="used-badge"
@@ -346,12 +355,16 @@ onMounted(() => {
 .voucher-desc {
   font-size: 13px;
   color: #888;
-  margin: 0;
+  margin: 0 0 5px;
   display: -webkit-box;
   line-clamp: 1;
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.apply-scope {
+  margin-bottom: 5px;
 }
 
 .voucher-right {
