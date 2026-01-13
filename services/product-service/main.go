@@ -55,6 +55,11 @@ func main() {
 	stockReservationService := service.NewStockReservationService(stockReservationRepo, productRepo)
 	stockReservationController := controller.NewStockReservationController(stockReservationService)
 
+	// Wiring dependencies - Rating
+	ratingRepo := repository.NewRatingRepository(config.DB)
+	ratingService := service.NewRatingService(ratingRepo)
+	ratingController := controller.NewRatingController(ratingService)
+
 	r := gin.Default()
 	r.Use(cors.Default())
 
@@ -66,6 +71,7 @@ func main() {
 		VoucherController:          voucherController,
 		SavedVoucherController:     savedVoucherController,
 		StockReservationController: stockReservationController,
+		RatingController:           ratingController,
 	})
 
 	r.Run(":8085")
