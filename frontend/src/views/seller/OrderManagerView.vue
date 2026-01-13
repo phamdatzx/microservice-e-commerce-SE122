@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue'
-import { Search, Download, ChatDotRound } from '@element-plus/icons-vue'
+import { Search, Download, ChatDotRound, More } from '@element-plus/icons-vue'
 import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
 import { formatStatus } from '@/utils/formatStatus'
 import axios from 'axios'
@@ -348,14 +348,26 @@ const handleUpdateStatus = async (orderId: string, status: string) => {
             </div>
 
             <div class="col-action border-left flex-center-col">
-              <el-button
-                v-if="order.status === 'TO_CONFIRM'"
-                type="primary"
-                color="var(--main-color)"
-                size="small"
-                @click="handleUpdateStatus(order.id, 'TO_PICKUP')"
-                >Confirm</el-button
-              >
+              <el-dropdown v-if="order.status === 'TO_CONFIRM'" trigger="click">
+                <el-button link style="padding: 8px">
+                  <el-icon size="large" style="scale: 1.3">
+                    <More />
+                  </el-icon>
+                </el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item @click="handleUpdateStatus(order.id, 'TO_PICKUP')">
+                      Confirm
+                    </el-dropdown-item>
+                    <el-dropdown-item
+                      @click="handleUpdateStatus(order.id, 'CANCELLED')"
+                      style="color: var(--el-color-danger)"
+                    >
+                      Cancel
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
               <el-button
                 v-if="order.status === 'TO_PICKUP'"
                 type="primary"
