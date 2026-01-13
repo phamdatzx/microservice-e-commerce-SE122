@@ -35,7 +35,7 @@ const handleDelete = () => {
     <el-checkbox :value="props.product" class="cartCheckbox" />
     <el-image style="width: 80px; height: 80px" fit="cover" :src="props.product.imageUrl" />
     <div style="padding: 5px 20px 5px 10px; flex: 1">
-      <p class="product-name" style="margin-bottom: 5px">
+      <p class="two-line-ellipsis" style="margin-bottom: 5px">
         {{ props.product.productName }}
       </p>
       <p

@@ -428,20 +428,6 @@ const handleDeleteSelected = async () => {
 </template>
 
 <style lang="css" scoped>
-.product-name {
-  --line-height: 16px;
-  height: calc(var(--line-height) * 2);
-  line-height: var(--line-height);
-
-  color: #000000cc;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  line-clamp: 2;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .btn {
   background-color: #fff;
   border: none;
