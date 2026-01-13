@@ -373,7 +373,13 @@ const handleDeleteSelected = async () => {
             </span>
           </span>
           <el-button
-            style="font-size: 24px; padding: 32px 40px; color: var(--main-color)"
+            style="
+              font-size: 24px;
+              padding: 32px 40px;
+              color: var(--main-color);
+              margin-left: 4px;
+              margin-right: 4px;
+            "
             @click="handleCheckout"
             >Checkout</el-button
           >
