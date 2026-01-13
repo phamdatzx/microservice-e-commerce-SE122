@@ -9,7 +9,6 @@ interface SavedVoucher {
   id: string
   voucher_id: string
   used_count: number
-  max_uses_allowed: number
   voucher: {
     id: string
     code: string
@@ -21,6 +20,7 @@ interface SavedVoucher {
     min_order_value: number
     end_time: string
     status: string
+    usage_limit_per_user: number
   }
 }
 
@@ -50,7 +50,7 @@ const filteredVouchers = computed(() => {
   const now = new Date()
   return vouchers.value.filter((item) => {
     const isExpired = new Date(item.voucher.end_time) <= now
-    const isFullyUsed = item.used_count >= item.max_uses_allowed
+    const isFullyUsed = item.used_count >= item.voucher.usage_limit_per_user
 
     if (activeTab.value === 'all') {
       return true
@@ -144,7 +144,7 @@ onMounted(() => {
         class="voucher-card"
         :class="{
           'is-used':
-            item.used_count >= item.max_uses_allowed ||
+            item.used_count >= item.voucher.usage_limit_per_user ||
             new Date(item.voucher.end_time) <= new Date(),
         }"
       >
@@ -163,8 +163,8 @@ onMounted(() => {
               </div>
               <p class="voucher-desc">{{ item.voucher.description }}</p>
               <div class="usage-info">
-                Used: {{ item.used_count }} / {{ item.max_uses_allowed }}
-                <span v-if="item.used_count >= item.max_uses_allowed" class="used-badge"
+                Used: {{ item.used_count }} / {{ item.voucher.usage_limit_per_user }}
+                <span v-if="item.used_count >= item.voucher.usage_limit_per_user" class="used-badge"
                   >(Fully Used)</span
                 >
                 <span v-else-if="new Date(item.voucher.end_time) <= new Date()" class="used-badge"
