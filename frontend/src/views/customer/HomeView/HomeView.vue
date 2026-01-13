@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import Header from '@/components/Header.vue'
 import ProductItem from '@/components/ProductItem.vue'
 import RecentlyViewed from '@/components/RecentlyViewed.vue'
 
@@ -211,8 +210,6 @@ const activeTab = ref('best-seller')
 </script>
 
 <template>
-  <Header />
-
   <main class="main-container">
     <el-row :gutter="20" style="padding: 20px 0">
       <el-col :span="6">

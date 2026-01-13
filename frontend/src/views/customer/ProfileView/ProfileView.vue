@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import Header from '@/components/Header.vue'
 import { ref } from 'vue'
 import { ArrowRight } from '@element-plus/icons-vue'
 import { useRouter, useRoute } from 'vue-router'
@@ -29,8 +28,6 @@ const isActive = (path: string) => {
 </script>
 
 <template>
-  <Header />
-
   <div class="main-container">
     <el-row :gutter="28">
       <!-- Sidebar -->

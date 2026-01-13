@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import Header from '@/components/Header.vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import {
@@ -452,7 +451,6 @@ onMounted(async () => {
 </script>
 
 <template>
-  <Header />
   <div class="checkout-page">
     <div class="container">
       <h2 class="page-title">

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import Header from '@/components/Header.vue'
 import SellerHeader from './components/SellerHeader.vue'
 import SellerVouchers from './components/SellerVouchers.vue'
 import SellerRecommendations from './components/SellerRecommendations.vue'
@@ -90,8 +89,6 @@ const pagination = {
 
 <template>
   <div class="seller-page">
-    <Header />
-
     <main class="seller-main">
       <SellerHeader />
 

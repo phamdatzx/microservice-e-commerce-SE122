@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import ProductList from '@/components/ProductList.vue'
-import Header from '@/components/Header.vue'
 import RecentlyViewed from '@/components/RecentlyViewed.vue'
 import { ArrowDownBold, ArrowUpBold, Filter, Search } from '@element-plus/icons-vue'
 
@@ -246,7 +245,6 @@ const clearAll = () => {
 </script>
 
 <template>
-  <Header />
   <div class="search-view-main">
     <ProductList :products="products" :sort-options="sortOptions" :pagination="pagination">
       <!-- Top Slot -->

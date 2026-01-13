@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import Header from '@/components/Header.vue'
 import {
   ArrowLeft,
   Location,
@@ -118,8 +117,6 @@ const handleBack = () => {
 </script>
 
 <template>
-  <Header />
-
   <div class="order-tracking-page">
     <div class="main-container">
       <!-- Top Action Bar -->

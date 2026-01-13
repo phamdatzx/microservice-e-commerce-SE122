@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import Header from '@/components/Header.vue'
 import ProductItem from '@/components/ProductItem.vue'
 import { Delete } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
@@ -49,8 +48,6 @@ onMounted(() => {
 </script>
 
 <template>
-  <Header />
-
   <div class="main-container">
     <div class="page-header">
       <div class="title-section">

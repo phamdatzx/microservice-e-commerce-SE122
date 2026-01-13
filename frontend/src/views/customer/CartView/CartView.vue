@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import Header from '@/components/Header.vue'
 import type { CheckboxValueType } from 'element-plus'
-import { ref, useTemplateRef, watch, onMounted, computed } from 'vue'
+import { ref, useTemplateRef, watch, onMounted, computed, inject } from 'vue'
 import CartSellerProductWrapper from './components/CartSellerProductWrapper.vue'
 import { Ticket, Loading, ShoppingCart } from '@element-plus/icons-vue'
 import { ElNotification, ElMessageBox, ElMessage } from 'element-plus'
@@ -64,7 +63,7 @@ export interface CartSeller {
   products: Product[]
 }
 
-const headerRef = ref<InstanceType<typeof Header> | null>(null)
+const fetchCartCount = inject('fetchCartCount') as () => void
 
 const checkAll = ref(false)
 const checkedProducts = ref<Product[]>([])
@@ -215,7 +214,7 @@ const removeFromCart = async (cartItemId: string, showNotification = true) => {
         type: 'success',
       })
     }
-    headerRef.value?.fetchCartCount()
+    fetchCartCount?.()
   } catch (error) {
     console.error('Error removing from cart:', error)
     if (showNotification) {
@@ -267,8 +266,6 @@ const handleDeleteSelected = async () => {
 </script>
 
 <template>
-  <Header ref="headerRef" />
-
   <div class="main-container">
     <div
       class="cart-box-shadow border-radius"

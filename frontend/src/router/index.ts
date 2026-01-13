@@ -26,6 +26,7 @@ import UserView from '@/views/admin/UserView.vue'
 import ReportView from '@/views/admin/ReportView.vue'
 import OrderTrackingView from '@/views/customer/OrderTrackingView/OrderTrackingView.vue'
 import MyOrder from '@/views/customer/ProfileView/components/MyOrder.vue'
+import CustomerLayout from '@/views/customer/CustomerLayout.vue'
 
 const loginFormProps = {
   title: 'Welcome Back',
@@ -74,80 +75,86 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      component: CustomerHomeView,
-    },
-    {
-      path: '/product/:id?',
-      component: ProductDetailView,
-    },
-    {
-      path: '/cart',
-      component: CartView,
-    },
-    {
-      path: '/profile',
-      component: ProfileView,
+      component: CustomerLayout,
       children: [
         {
           path: '',
-          redirect: '/profile/account-info',
+          component: CustomerHomeView,
         },
         {
-          path: 'account-info',
-          name: 'account-info',
-          component: () => import('@/views/customer/ProfileView/components/AccountInfo.vue'),
+          path: 'product/:id?',
+          component: ProductDetailView,
         },
         {
-          path: 'orders',
-          name: 'my-orders',
-          component: () => import('@/views/customer/ProfileView/components/MyOrder.vue'),
+          path: 'cart',
+          component: CartView,
         },
         {
-          path: 'address',
-          name: 'my-address',
-          component: () => import('@/views/customer/ProfileView/components/MyAddress.vue'),
+          path: 'profile',
+          component: ProfileView,
+          children: [
+            {
+              path: '',
+              redirect: '/profile/account-info',
+            },
+            {
+              path: 'account-info',
+              name: 'account-info',
+              component: () => import('@/views/customer/ProfileView/components/AccountInfo.vue'),
+            },
+            {
+              path: 'orders',
+              name: 'my-orders',
+              component: () => import('@/views/customer/ProfileView/components/MyOrder.vue'),
+            },
+            {
+              path: 'address',
+              name: 'my-address',
+              component: () => import('@/views/customer/ProfileView/components/MyAddress.vue'),
+            },
+            {
+              path: 'change-password',
+              name: 'change-password',
+              component: () => import('@/views/customer/ProfileView/components/ChangePassword.vue'),
+            },
+            {
+              path: 'vouchers',
+              name: 'my-vouchers',
+              component: () => import('@/views/customer/ProfileView/components/MyVoucher.vue'),
+            },
+          ],
         },
         {
-          path: 'change-password',
-          name: 'change-password',
-          component: () => import('@/views/customer/ProfileView/components/ChangePassword.vue'),
+          path: 'checkout',
+          component: CheckoutView,
         },
         {
-          path: 'vouchers',
-          name: 'my-vouchers',
-          component: () => import('@/views/customer/ProfileView/components/MyVoucher.vue'),
+          path: 'checkout/success',
+          component: () => import('@/views/customer/CheckoutView/PaymentSuccessView.vue'),
+        },
+        {
+          path: 'checkout/failure',
+          component: () => import('@/views/customer/CheckoutView/PaymentFailureView.vue'),
+        },
+        {
+          path: 'order-tracking',
+          component: OrderTrackingView,
+        },
+        {
+          path: 'recently-viewed',
+          name: 'recently-viewed',
+          component: () => import('@/views/customer/RecentlyViewedView.vue'),
+        },
+        {
+          path: 'seller-page',
+          component: SellerView,
+        },
+        {
+          path: 'search',
+          name: 'search',
+          component: SearchView,
         },
       ],
-    },
-    {
-      path: '/checkout',
-      component: CheckoutView,
-    },
-    {
-      path: '/checkout/success',
-      component: () => import('@/views/customer/CheckoutView/PaymentSuccessView.vue'),
-    },
-    {
-      path: '/checkout/failure',
-      component: () => import('@/views/customer/CheckoutView/PaymentFailureView.vue'),
-    },
-    {
-      path: '/order-tracking',
-      component: OrderTrackingView,
-    },
-    {
-      path: '/recently-viewed',
-      name: 'recently-viewed',
-      component: () => import('@/views/customer/RecentlyViewedView.vue'),
-    },
-    {
-      path: '/seller-page',
-      component: SellerView,
-    },
-    {
-      path: '/search',
-      name: 'search',
-      component: SearchView,
     },
     {
       path: '/',

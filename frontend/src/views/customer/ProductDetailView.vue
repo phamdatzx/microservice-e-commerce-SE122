@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Splide, SplideSlide, Options } from '@splidejs/vue-splide'
-import Header from '@/components/Header.vue'
-import { onMounted, ref, computed, reactive, watch } from 'vue'
+import { onMounted, ref, computed, reactive, watch, inject } from 'vue'
 import { quantityFormatNumber } from '@/utils/quantityFormatNumber'
 import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
 import RedFlagIcon from '@/components/icons/RedFlagIcon.vue'
@@ -65,7 +64,7 @@ interface Product {
 
 const route = useRoute()
 const router = useRouter()
-const headerRef = ref<InstanceType<typeof Header> | null>(null)
+const fetchCartCount = inject('fetchCartCount') as (() => void) | undefined
 const productId = ref(route.params.id as string)
 const product = ref<Product | null>(null)
 const isLoading = ref(true)
@@ -308,7 +307,7 @@ const addToCart = async () => {
       message: 'Product added to cart successfully!',
       type: 'success',
     })
-    headerRef.value?.fetchCartCount()
+    fetchCartCount?.()
   } catch (error: any) {
     console.error('Error adding to cart:', error)
     ElNotification({
@@ -323,8 +322,6 @@ const addToCart = async () => {
 </script>
 
 <template>
-  <Header ref="headerRef" />
-
   <div class="main-container" v-if="product">
     <div class="box-shadow border-radius" style="padding: 20px; margin: 20px 0">
       <el-row :gutter="28">
