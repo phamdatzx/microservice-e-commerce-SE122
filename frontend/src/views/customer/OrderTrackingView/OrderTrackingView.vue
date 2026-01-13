@@ -17,7 +17,6 @@ import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
 
 const router = useRouter()
 
-// #region Mock Data
 const orderInfo = {
   id: '251229N1GDEMAU',
   status: 'DELIVERED SUCCESSFULLY',

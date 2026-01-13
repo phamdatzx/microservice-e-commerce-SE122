@@ -152,7 +152,6 @@ const openModal = (mode: 'add' | 'edit', row?: AdminCategory) => {
   }
 }
 
-// #region Handlers
 const handleAddCategory = () => {
   // Mock Implementation
   ElNotification({
@@ -208,7 +207,6 @@ const handleDeleteBtnClick = (row: AdminCategory) => {
   })
 }
 
-// #region Form
 interface RuleForm {
   category: string
   id: string

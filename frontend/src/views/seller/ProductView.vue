@@ -140,11 +140,7 @@ const fetchGeneralCategories = () => {
       }))
     })
     .catch(() => {
-      // Fallback
-      generalCategoryOptions.value = [
-        { value: '1', label: 'Fashion' },
-        { value: '2', label: 'Electronics' },
-      ]
+      generalCategoryOptions.value = []
     })
 }
 
@@ -158,15 +154,10 @@ const fetchSellerCategories = () => {
       }))
     })
     .catch(() => {
-      // Fallback
-      sellerCategoryOptions.value = [
-        { value: '1', label: 'Shirts' },
-        { value: '2', label: 'Pants' },
-      ]
+      sellerCategoryOptions.value = []
     })
 }
 
-//#region FORM
 interface RuleForm {
   id?: string
   images: UploadUserFile[]
@@ -248,9 +239,7 @@ const clearRuleForm = () => {
   ruleForm.images = []
   generateVariants() // Initialize with default variant
 }
-//#endregion
 
-//#region IMAGES UPLOAD
 const handleChange = (uploadFile: UploadFile, uploadFiles: UploadFiles) => {
   const rawFile = uploadFile.raw
 
@@ -346,7 +335,7 @@ const uploadVariantImages = async (
     },
   )
 }
-//#endregion
+
 const handleAddProduct = () => {
   const loading = ElLoading.service({
     lock: true,
@@ -501,7 +490,6 @@ const handleSortChange = ({ prop, order }: { prop: string; order: string }) => {
   } else if (order === 'descending') {
     sortDirection.value = 'desc'
   } else {
-    // defaults
     sortBy.value = 'name'
     sortDirection.value = 'asc'
     fetchProducts()
@@ -545,9 +533,6 @@ const getStatusTagContent = (status: string) => {
 }
 
 const getStatusTagType = (status: string) => {
-  // if (status === 'AVAILABLE') return 'success'
-  // else if (status === 'OUT_OF_STOCK') return 'danger'
-  // else if (status === 'HIDDEN') return 'info'
   return ''
 }
 
@@ -562,7 +547,6 @@ const getRowClassName = ({ row }: { row: Product }) => {
   return ''
 }
 
-//#region MODAL
 const openModal = (mode: DialogMode, product?: Product) => {
   dialogMode.value = mode
   dialogVisible.value = true
@@ -621,7 +605,6 @@ const handleDeleteBtnClick = (id: string, name: string) => {
   })
 }
 const handleDeleteProduct = (id: string, name: string) => {}
-//#endregion
 
 const addOptionGroup = () => {
   ruleForm.option_groups.push({ key: '', values: [] })
@@ -714,8 +697,9 @@ const generateVariants = () => {
 }
 
 const download = (images: ProductImage[], index: number) => {
-  if (!images[index]) return
+  if (!images || !images[index]) return
   const url = images[index].url
+  if (!url) return
   const suffix = url.slice(url.lastIndexOf('.'))
   const filename = Date.now() + suffix
 

@@ -18,7 +18,6 @@ import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
 
 const router = useRouter()
 
-// --- State ---
 const checkoutItems = ref<any[]>([])
 const addresses = ref<any[]>([])
 const selectedAddressId = ref('')
@@ -37,7 +36,6 @@ const vouchers = ref<any[]>([])
 const selectedVoucherId = ref('')
 const showVoucherDialog = ref(false)
 
-// --- Computed ---
 const subtotal = computed(() => {
   return checkoutItems.value.reduce((sum, item) => sum + item.price * (item.quantity || 1), 0)
 })
@@ -76,8 +74,6 @@ const total = computed(() => {
 const selectedAddress = computed(() => {
   return addresses.value.find((a) => a.id === selectedAddressId.value)
 })
-
-// --- Methods ---
 
 const fetchVouchers = async () => {
   try {

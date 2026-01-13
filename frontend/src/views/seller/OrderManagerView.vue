@@ -6,7 +6,6 @@ import { formatStatus } from '@/utils/formatStatus'
 import axios from 'axios'
 import { ElNotification, ElLoading } from 'element-plus'
 
-// --- Interfaces ---
 interface User {
   id: string
   username: string
@@ -48,7 +47,6 @@ interface Order {
   shipping_address: ShippingAddress
 }
 
-// --- State ---
 const activeTab = ref('all')
 const activeSubTab = ref('all')
 const searchKeyword = ref('')
@@ -64,8 +62,6 @@ const pageSize = ref(10)
 
 const token = localStorage.getItem('access_token') || ''
 const BE_API_URL = import.meta.env.VITE_BE_API_URL
-
-// --- Methods ---
 
 const fetchOrders = async () => {
   loading.value = true
@@ -108,14 +104,11 @@ const fetchOrders = async () => {
   }
 }
 
-// --- Watchers ---
 watch([activeTab, currentPage, pageSize, sortBy, sortOrder, searchKeyword], () => {
   fetchOrders()
   // Refresh counts when data might have changed or when switching tabs
   fetchAllTabCounts()
 })
-
-// --- Computed ---
 
 const tabCounts = reactive({
   all: 0,

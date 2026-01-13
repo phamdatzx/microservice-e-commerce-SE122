@@ -14,14 +14,11 @@ import {
 import { Line } from 'vue-chartjs'
 import { InfoFilled, ArrowRight } from '@element-plus/icons-vue'
 
-// Register ChartJS components
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend)
 
-// Filter State
 const timeRange = ref('today')
 const orderType = ref('confirmed')
 
-// Mock Data
 const salesData = ref({
   value: '12,500,000',
   comparison: 12.5,
@@ -34,7 +31,6 @@ const ordersData = ref({
   timeRange: 'vs 00:00-15:00 yesterday',
 })
 
-// Chart Data
 const chartData = computed(() => ({
   labels: ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00'],
   datasets: [
@@ -51,7 +47,7 @@ const chartData = computed(() => ({
       backgroundColor: '#E6A23C',
       data: [5, 8, 6, 12, 15, 13, 22, 18],
       tension: 0.4,
-      yAxisID: 'y1', // Use a second y-axis for orders if needed, though simple example might share
+      yAxisID: 'y1',
     },
   ],
 }))
@@ -67,9 +63,7 @@ const chartOptions: ChartOptions<'line'> = {
   scales: {
     y: {
       beginAtZero: true,
-      grid: {
-        // borderDash: [2, 4],
-      },
+      grid: {},
     },
     x: {
       grid: {

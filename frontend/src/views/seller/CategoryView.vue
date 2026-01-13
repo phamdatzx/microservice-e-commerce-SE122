@@ -55,7 +55,6 @@ const fetchCategories = () => {
     })
 }
 
-// #region Pagination & Filter
 const filteredData = computed(() => {
   if (!searchQuery.value) return categoryData.value
   return categoryData.value.filter((category) =>
@@ -79,7 +78,6 @@ const handleCurrentChange = (val: number) => {
 }
 // #endregion
 
-// #region Modal
 const openModal = (mode: 'add' | 'edit', row?: SellerCategory) => {
   dialogMode.value = mode
   dialogVisible.value = true
@@ -101,7 +99,6 @@ const openModal = (mode: 'add' | 'edit', row?: SellerCategory) => {
 }
 // #endregion
 
-// #region API Actions
 const handleAddCategory = () => {
   const loading = ElLoading.service({
     lock: true,
@@ -242,7 +239,6 @@ const handleDeleteCategory = (categoryId: string, categoryName: string) => {
 }
 // #endregion
 
-// #region Form
 interface RuleForm {
   category: string
   id: string

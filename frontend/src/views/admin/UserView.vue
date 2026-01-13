@@ -81,7 +81,6 @@ const openModal = (row: AdminUser) => {
   Object.assign(ruleForm, row) // Populate form
 }
 
-// #region Handlers
 const handleEditUser = () => {
   // Mock
   const index = userData.value.findIndex((u) => u.id === ruleForm.id)
@@ -112,7 +111,6 @@ const handleDeleteBtnClick = (row: AdminUser) => {
   })
 }
 
-// #region Form
 const ruleFormRef = ref<FormInstance>()
 const ruleForm = reactive({
   id: '',

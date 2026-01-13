@@ -13,7 +13,6 @@ import {
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
 
-// #region Interfaces
 interface ReportDetail {
   id: string
   reporterName: string
@@ -40,7 +39,6 @@ interface ReportedProduct {
 }
 // #endregion
 
-// #region State
 const reportedProducts = ref<ReportedProduct[]>([])
 const isLoading = ref(false)
 const searchQuery = ref('')
@@ -51,7 +49,6 @@ const currentPage = ref(1)
 const pageSize = ref(10)
 // #endregion
 
-// #region Mock Data & Fetch
 onMounted(() => {
   fetchReportedProducts()
 })
@@ -91,7 +88,6 @@ const fetchReportedProducts = () => {
 }
 // #endregion
 
-// #region Computed
 const filteredData = computed(() => {
   let data = reportedProducts.value
 
@@ -122,7 +118,6 @@ const paginatedData = computed(() => {
 })
 // #endregion
 
-// #region Actions
 const handleViewDetails = (row: ReportedProduct) => {
   selectedProduct.value = row
   dialogVisible.value = true

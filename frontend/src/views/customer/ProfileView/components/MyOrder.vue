@@ -47,7 +47,9 @@ const fetchOrders = async () => {
     })
 
     if (response.data && response.data.orders) {
+      console.log('Orders Response:', response.data)
       orders.value = response.data.orders
+      console.log('Populated Orders:', orders.value)
       totalItems.value = response.data.total_count
     } else {
       orders.value = []
@@ -74,7 +76,6 @@ onMounted(() => {
   fetchOrders()
 })
 
-// orders are now fetched filtered
 const filteredOrders = computed(() => orders.value)
 
 const orderTabs = [

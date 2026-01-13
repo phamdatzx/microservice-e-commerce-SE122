@@ -11,7 +11,6 @@ import {
 import { onMounted, reactive, ref, computed, watch } from 'vue'
 import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
 
-// --- Interfaces ---
 interface Voucher {
   id: string
   seller_id: string
@@ -40,7 +39,6 @@ interface SellerCategory {
   name: string
 }
 
-// --- State ---
 const voucherData = ref<Voucher[]>([])
 const categoryList = ref<SellerCategory[]>([])
 const isLoading = ref(false)
@@ -49,7 +47,6 @@ const dialogMode = ref<'add' | 'edit'>('add')
 const userId = ref(localStorage.getItem('user_id') || '')
 const token = localStorage.getItem('access_token') || ''
 
-// --- Form State ---
 const ruleFormRef = ref<FormInstance>()
 const ruleForm = reactive({
   id: '',
@@ -105,10 +102,8 @@ const rules = reactive<FormRules>({
   ],
 })
 
-// --- API URLs ---
 const VOUCHER_API_URL = 'http://localhost:81/api/product/vouchers'
 
-// --- Computed ---
 const isPercentage = computed(() => ruleForm.discount_type === 'PERCENTAGE')
 
 watch(
@@ -119,8 +114,6 @@ watch(
     }
   },
 )
-
-// --- Methods ---
 
 const fetchVouchers = async () => {
   isLoading.value = true
