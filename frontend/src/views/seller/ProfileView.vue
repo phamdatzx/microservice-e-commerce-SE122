@@ -4,9 +4,9 @@ import { useRoute } from 'vue-router'
 import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
 import axios from 'axios'
 import ProfileLayout from '@/components/ProfileLayout.vue'
-import AccountInfo from '@/views/customer/ProfileView/components/AccountInfo.vue'
-import ChangePassword from '@/views/customer/ProfileView/components/ChangePassword.vue'
-import MyAddress from '@/views/customer/ProfileView/components/MyAddress.vue'
+import AccountInfo from '@/components/profile/AccountInfo.vue'
+import ChangePassword from '@/components/profile/ChangePassword.vue'
+import MyAddress from '@/components/profile/MyAddress.vue'
 
 const name = ref('')
 const email = ref('')

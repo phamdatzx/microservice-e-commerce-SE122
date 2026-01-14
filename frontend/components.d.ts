@@ -11,9 +11,13 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AccountInfo: typeof import('./src/components/profile/AccountInfo.vue')['default']
     CarouselItem: typeof import('./src/components/CarouselItem.vue')['default']
+    ChangePassword: typeof import('./src/components/profile/ChangePassword.vue')['default']
+    CommuneSelect: typeof import('./src/components/profile/CommuneSelect.vue')['default']
     CustomerChat: typeof import('./src/components/CustomerChat.vue')['default']
     CustomerComment: typeof import('./src/components/CustomerComment.vue')['default']
+    DistrictSelect: typeof import('./src/components/profile/DistrictSelect.vue')['default']
     ElAside: typeof import('element-plus/es')['ElAside']
     ElAutocomplete: typeof import('element-plus/es')['ElAutocomplete']
     ElAvatar: typeof import('element-plus/es')['ElAvatar']
@@ -79,11 +83,13 @@ declare module 'vue' {
     IconVoucher: typeof import('./src/components/icons/IconVoucher.vue')['default']
     LocationIcon: typeof import('./src/components/icons/LocationIcon.vue')['default']
     MessengerIcon: typeof import('./src/components/icons/MessengerIcon.vue')['default']
+    MyAddress: typeof import('./src/components/profile/MyAddress.vue')['default']
     PinIcon: typeof import('./src/components/icons/PinIcon.vue')['default']
     PinterestIcon: typeof import('./src/components/icons/PinterestIcon.vue')['default']
     ProductItem: typeof import('./src/components/ProductItem.vue')['default']
     ProductList: typeof import('./src/components/ProductList.vue')['default']
     ProfileLayout: typeof import('./src/components/ProfileLayout.vue')['default']
+    ProvinceSelect: typeof import('./src/components/profile/ProvinceSelect.vue')['default']
     RecentlyViewed: typeof import('./src/components/RecentlyViewed.vue')['default']
     RedFlagIcon: typeof import('./src/components/icons/RedFlagIcon.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']

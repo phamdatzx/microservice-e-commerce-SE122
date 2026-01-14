@@ -100,7 +100,7 @@ const router = createRouter({
             {
               path: 'account-info',
               name: 'account-info',
-              component: () => import('@/views/customer/ProfileView/components/AccountInfo.vue'),
+              component: () => import('@/components/profile/AccountInfo.vue'),
             },
             {
               path: 'orders',
@@ -110,12 +110,12 @@ const router = createRouter({
             {
               path: 'address',
               name: 'my-address',
-              component: () => import('@/views/customer/ProfileView/components/MyAddress.vue'),
+              component: () => import('@/components/profile/MyAddress.vue'),
             },
             {
               path: 'change-password',
               name: 'change-password',
-              component: () => import('@/views/customer/ProfileView/components/ChangePassword.vue'),
+              component: () => import('@/components/profile/ChangePassword.vue'),
             },
             {
               path: 'vouchers',
