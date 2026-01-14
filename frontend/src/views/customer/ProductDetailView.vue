@@ -147,6 +147,44 @@ const currentStock = computed(() => {
   return product.value?.stock || 0
 })
 
+const ratings = ref<any[]>([])
+const ratingPage = ref(1)
+const ratingLimit = ref(10)
+const ratingTotal = ref(0)
+const isFetchingRatings = ref(false)
+
+const fetchRatings = async () => {
+  if (!productId.value) return
+  isFetchingRatings.value = true
+  try {
+    const response = await axios.get(
+      `${import.meta.env.VITE_BE_API_URL}/product/public/rating/product/${productId.value}`,
+      {
+        params: {
+          page: ratingPage.value,
+          limit: ratingLimit.value,
+        },
+      },
+    )
+    if (response.data) {
+      ratings.value = response.data.ratings
+      ratingTotal.value = response.data.total
+      if (product.value) {
+        product.value.rate_count = response.data.total
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching ratings:', error)
+  } finally {
+    isFetchingRatings.value = false
+  }
+}
+
+const handleRatingPageChange = (page: number) => {
+  ratingPage.value = page
+  fetchRatings()
+}
+
 const fetchProduct = async () => {
   if (!productId.value) return
   isLoading.value = true
@@ -226,12 +264,17 @@ watch(
       Object.keys(selectedOptions).forEach((key) => delete selectedOptions[key])
 
       fetchProduct()
+
+      // Reset and fetch ratings
+      ratingPage.value = 1
+      fetchRatings()
     }
   },
 )
 
 onMounted(() => {
   fetchProduct()
+  fetchRatings()
   syncSplides()
 })
 
@@ -541,7 +584,7 @@ const addToCart = async () => {
           </div>
         </el-tab-pane>
 
-        <el-tab-pane :label="`REVIEWS (${product.rate_count})`" name="reviews">
+        <el-tab-pane :label="`REVIEWS (${ratingTotal})`" name="reviews">
           <div
             style="
               padding: 20px;
@@ -582,23 +625,37 @@ const addToCart = async () => {
               </el-col>
             </el-row>
           </div>
-          <div v-if="product.rate_count === 0" style="text-align: center; padding: 40px">
+          <div
+            v-if="ratingTotal === 0 && !isFetchingRatings"
+            style="text-align: center; padding: 40px"
+          >
             No reviews yet.
           </div>
           <template v-else>
-            <UserComment
-              rating="4"
-              seller-response="Thank you for sharing a review of your recent experience. Our team at Lovito is committed
-            to providing high-quality products at affordable prices, and we are delighted to know that
-            we made a positive impression on you. We hope you will visit us again soon."
-            />
+            <div v-loading="isFetchingRatings">
+              <UserComment
+                v-for="rating in ratings"
+                :key="rating.id"
+                :rating="rating.star"
+                :userName="rating.user?.name || 'Anonymous'"
+                :userAvatar="rating.user?.image"
+                :date="new Date(rating.created_at).toLocaleString()"
+                :content="rating.content"
+                :imageUrls="rating.images ? rating.images.map((img: any) => img.url) : []"
+                :seller-response="rating.seller_response"
+                :variantName="rating.variant_name || ''"
+              />
+            </div>
           </template>
 
-          <div style="display: flex" v-if="product.rate_count > 0">
+          <div style="display: flex">
             <el-pagination
               background
               layout="prev, pager, next"
-              :total="product.rate_count"
+              :total="ratingTotal"
+              :page-size="ratingLimit"
+              v-model:current-page="ratingPage"
+              @current-change="handleRatingPageChange"
               size="large"
               style="margin: 28px auto 8px"
             />

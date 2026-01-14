@@ -1,11 +1,20 @@
 <script setup lang="ts">
-const props = defineProps(['rating', 'imageUrls', 'sellerResponse'])
+const props = defineProps([
+  'rating',
+  'imageUrls',
+  'sellerResponse',
+  'userName',
+  'userAvatar',
+  'date',
+  'content',
+  'variantName',
+])
 </script>
 
 <template>
   <div style="display: flex; padding: 20px 0 28px">
     <img
-      src="/src/assets/avatar.jpg"
+      :src="props.userAvatar"
       style="
         padding: 0 10px 0 20px;
         border-radius: 50%;
@@ -15,7 +24,7 @@ const props = defineProps(['rating', 'imageUrls', 'sellerResponse'])
       "
     />
     <div>
-      <p>ntduc24</p>
+      <p>{{ props.userName }}</p>
       <el-rate
         :model-value="props.rating"
         disabled
@@ -26,14 +35,16 @@ const props = defineProps(['rating', 'imageUrls', 'sellerResponse'])
         "
         size="small"
       />
-      <p style="color: #9c9c9c; font-size: 13px">2024-12-30 22:08 | Option: Gray, S</p>
-      <p style="margin-top: 8px">
-        The product is really beautiful, everyone. You should buy it quickly while you can because
-        it’s super pretty. Hurry while there’s still a subsidy/discount available
+      <p style="color: #9c9c9c; font-size: 13px">
+        {{ props.date }} <span v-if="props.variantName">| Option: {{ props.variantName }}</span>
+      </p>
+      <p style="margin-top: 8px; white-space: pre-wrap">
+        {{ props.content }}
       </p>
       <div>
         <el-image
           v-for="(imageUrl, index) in imageUrls"
+          :key="index"
           :initial-index="index"
           :src="imageUrl"
           style="
