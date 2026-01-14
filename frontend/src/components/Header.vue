@@ -35,6 +35,13 @@ onMounted(() => {
   }
 })
 
+const searchQuery = ref('')
+const handleSearch = () => {
+  if (searchQuery.value.trim()) {
+    router.push({ path: '/search', query: { q: searchQuery.value } })
+  }
+}
+
 const handleLogout = () => {
   localStorage.removeItem('access_token')
   isLoggedIn.value = false
@@ -71,8 +78,14 @@ defineExpose({
           </RouterLink>
 
           <div class="search-bar">
-            <input type="text" placeholder="Search anything..." class="search-input" />
-            <button class="search-btn">
+            <input
+              type="text"
+              placeholder="Search anything..."
+              class="search-input"
+              v-model="searchQuery"
+              @keyup.enter="handleSearch"
+            />
+            <button class="search-btn" @click="handleSearch">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="#fff"

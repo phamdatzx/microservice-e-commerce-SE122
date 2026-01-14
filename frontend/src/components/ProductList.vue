@@ -3,7 +3,7 @@ import ProductItem from '@/components/ProductItem.vue'
 import { ArrowDownBold, ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
 
 interface Product {
-  id: number
+  id: number | string
   name: string
   price: number
   imageUrl: string
@@ -26,6 +26,7 @@ defineProps<{
     total: number
     pageSize: number
   }
+  loading?: boolean
 }>()
 
 defineEmits(['sort-change', 'page-change'])
@@ -82,7 +83,7 @@ defineEmits(['sort-change', 'page-change'])
             <div v-if="pagination" class="pagination-summary">
               <span class="page-current">{{ pagination.current }}</span
               >/<span class="page-total">{{
-                Math.ceil(pagination.total / pagination.pageSize)
+                Math.ceil(pagination.total / pagination.pageSize) || 1
               }}</span>
               <div class="page-btns">
                 <button
@@ -106,8 +107,14 @@ defineEmits(['sort-change', 'page-change'])
             </div>
           </div>
 
+          <!-- Loading State -->
+          <div v-if="loading" class="loading-state">
+            <el-icon class="is-loading"><Loading /></el-icon>
+            <span>Loading products...</span>
+          </div>
+
           <!-- Grid -->
-          <div class="product-grid">
+          <div v-else-if="products.length > 0" class="product-grid">
             <ProductItem
               v-for="product in products"
               :key="product.id"
@@ -121,8 +128,33 @@ defineEmits(['sort-change', 'page-change'])
             />
           </div>
 
+          <!-- Empty State -->
+          <div v-else class="empty-state">
+            <div class="empty-icon-wrapper">
+              <svg
+                width="64"
+                height="64"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z"
+                  stroke="#e4e4e7"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </div>
+            <p class="empty-text">No products found</p>
+            <p class="empty-subtext">
+              Try adjusting your search or filters to find what you're looking for.
+            </p>
+          </div>
+
           <!-- Bottom Pagination -->
-          <div v-if="pagination" class="pagination-wrapper">
+          <div v-if="pagination && products.length > 0" class="pagination-wrapper">
             <el-pagination
               background
               layout="prev, pager, next"
@@ -137,6 +169,7 @@ defineEmits(['sort-change', 'page-change'])
         </main>
       </div>
       <!-- Close for .main-content -->
+      <slot name="bottom"></slot>
     </div>
     <!-- Close for .container -->
   </div>
@@ -289,5 +322,45 @@ defineEmits(['sort-change', 'page-change'])
 
 :deep(.custom-pagination .el-pager li.is-active) {
   background-color: var(--main-color) !important;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 0;
+  text-align: center;
+}
+
+.empty-icon-wrapper {
+  margin-bottom: 20px;
+}
+
+.empty-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: #3f3f46;
+  margin-bottom: 8px;
+}
+
+.empty-subtext {
+  font-size: 14px;
+  color: #71717a;
+  max-width: 400px;
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 0;
+  color: #71717a;
+  gap: 15px;
+}
+
+.loading-state .el-icon {
+  font-size: 24px;
 }
 </style>

@@ -375,7 +375,7 @@ const handleDeleteSelected = async () => {
       </div>
     </div>
 
-    <RecentlyViewed />
+    <RecentlyViewed style="margin-top: 20px" />
   </div>
 </template>
 
