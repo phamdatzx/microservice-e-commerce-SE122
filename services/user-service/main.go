@@ -24,17 +24,20 @@ func main() {
 
 
 	// Auto migrate
-	config.DB.AutoMigrate(&model.User{}, &model.Address{})
+	config.DB.AutoMigrate(&model.User{}, &model.Address{}, &model.UserFollow{})
 
 	//wiring dependencies
 	userRepo := repository.NewUserRepository(config.DB)
 	addressRepo := repository.NewAddressRepository(config.DB)
+	followRepo := repository.NewFollowRepository(config.DB)
 
 	userService := service.NewUserService(userRepo)
 	addressService := service.NewAddressService(addressRepo)
+	followService := service.NewFollowService(followRepo, userRepo)
 
 	userController := controller.NewUserController(userService)
 	addressController := controller.NewAddressController(addressService)
+	followController := controller.NewFollowController(followService)
 
 	r := gin.Default()
 	//r.Use(cors.Default())
@@ -43,6 +46,7 @@ func main() {
 	router.SetupRouter(r, &router.AppRouter{
 		UserController:    userController,
 		AddressController: addressController,
+		FollowController:  followController,
 	})
 
 	r.Run(":8085")

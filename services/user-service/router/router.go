@@ -11,6 +11,7 @@ import (
 type AppRouter struct {
 	UserController    *controller.UserController
 	AddressController *controller.AddressController
+	FollowController  *controller.FollowController
 }
 
 // SetupRouter builds the main Gin router and registers all module routes
@@ -26,6 +27,7 @@ func SetupRouter(engine *gin.Engine, appRouter *AppRouter) *gin.Engine {
 		// Each controller registers its own routes
 		RegisterUserRoutes(api, *appRouter.UserController)
 		RegisterAddressRoutes(api, appRouter.AddressController)
+		RegisterFollowRoutes(api, appRouter.FollowController)
 	}
 
 	//publicApi := engine.Group("/api/public")

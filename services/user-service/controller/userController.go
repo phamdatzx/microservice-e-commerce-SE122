@@ -266,5 +266,3 @@ func (c *UserController) UploadUserImage(ctx *gin.Context) {
 		"image_url": imageURL,
 	})
 }
-
-
