@@ -31,7 +31,7 @@ func main() {
 	addressRepo := repository.NewAddressRepository(config.DB)
 	followRepo := repository.NewFollowRepository(config.DB)
 
-	userService := service.NewUserService(userRepo)
+	userService := service.NewUserService(userRepo, followRepo)
 	addressService := service.NewAddressService(addressRepo)
 	followService := service.NewFollowService(followRepo, userRepo)
 

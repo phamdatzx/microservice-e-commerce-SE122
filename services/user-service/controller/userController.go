@@ -228,6 +228,27 @@ func (c *UserController) GetUserByID(ctx *gin.Context) {
 	utils.SuccessResponse(ctx, 200, "Get user successfully", response)
 }
 
+func (c *UserController) GetSellerByID(ctx *gin.Context) {
+	sellerId := ctx.Param("id")
+	if sellerId == "" {
+		ctx.Error(appError.NewAppError(400, "Seller ID is required"))
+		ctx.Abort()
+		return
+	}
+
+	// Get user ID from header (optional - for checking follow status)
+	userId := ctx.GetHeader("X-User-Id")
+
+	response, err := c.service.GetSellerByID(sellerId, userId)
+	if err != nil {
+		_ = ctx.Error(err)
+		ctx.Abort()
+		return
+	}
+
+	utils.SuccessResponse(ctx, 200, "Get seller successfully", response)
+}
+
 func (c *UserController) UploadUserImage(ctx *gin.Context) {
 	// Get user ID from header
 	userId := ctx.GetHeader("X-User-Id")
