@@ -1,25 +1,34 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import axios from 'axios'
 import { Loading } from '@element-plus/icons-vue'
+import { ElNotification } from 'element-plus'
 
 const props = defineProps<{
   name: string
   email: string
   phone: string
+  avatar?: string
 }>()
 
 const emit = defineEmits<{
   (e: 'update:name', value: string): void
   (e: 'update:email', value: string): void
   (e: 'update:phone', value: string): void
+  (e: 'update:avatar', value: string): void
 }>()
 
 const localName = ref(props.name)
 const localEmail = ref(props.email)
 const localPhone = ref(props.phone)
-const avatarPreview = ref('')
+const avatarPreview = ref(props.avatar || '')
+const selectedFile = ref<File | null>(null)
 const isLoading = ref(false)
+
+watch(localName, (newVal) => emit('update:name', newVal))
+watch(localEmail, (newVal) => emit('update:email', newVal))
+watch(localPhone, (newVal) => emit('update:phone', newVal))
+watch(avatarPreview, (newVal) => emit('update:avatar', newVal))
 
 const fetchUserInfo = async () => {
   const token = localStorage.getItem('access_token')
@@ -58,15 +67,65 @@ onMounted(() => {
   fetchUserInfo()
 })
 
-const handleAvatarChange = (file: any) => {
-  const reader = new FileReader()
-  reader.onload = (e: any) => {
-    avatarPreview.value = e.target.result
+const handleAvatarChange = async (file: any) => {
+  const isJPG =
+    file.raw.type === 'image/jpeg' || file.raw.type === 'image/png' || file.raw.type === 'image/jpg'
+
+  if (!isJPG) {
+    ElNotification({
+      title: 'Error',
+      message: 'Avatar must be JPG, JPEG or PNG format!',
+      type: 'error',
+    })
+    return
   }
-  reader.readAsDataURL(file.raw)
+
+  selectedFile.value = file.raw
+
+  // triggers upload immediately
+  await uploadAvatar()
+}
+
+const uploadAvatar = async () => {
+  const token = localStorage.getItem('access_token')
+  if (selectedFile.value && token) {
+    isLoading.value = true
+    try {
+      const formData = new FormData()
+      formData.append('image', selectedFile.value)
+
+      await axios.post(`${import.meta.env.VITE_BE_API_URL}/user/upload-image`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
+        },
+      })
+
+      ElNotification({
+        title: 'Success',
+        message: 'Avatar updated successfully',
+        type: 'success',
+      })
+
+      // Clear selected file after upload
+      selectedFile.value = null
+
+      // Refresh info to get new avatar URL if backend returns it or just rely on preview
+      fetchUserInfo()
+    } catch (error) {
+      console.error('Failed to upload image:', error)
+      ElNotification({
+        title: 'Error',
+        message: 'Failed to upload avatar',
+        type: 'error',
+      })
+      isLoading.value = false
+    }
+  }
 }
 
 const handleSave = () => {
+  // Update other info
   emit('update:name', localName.value)
   emit('update:email', localEmail.value)
   emit('update:phone', localPhone.value)
@@ -119,6 +178,7 @@ const handleSave = () => {
             :auto-upload="false"
             :show-file-list="false"
             :on-change="handleAvatarChange"
+            accept=".jpg,.jpeg,.png"
           >
             <el-button type="default" size="default" class="select-image-btn"
               >Select Image</el-button

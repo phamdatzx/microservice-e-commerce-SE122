@@ -104,6 +104,7 @@ const isActive = (path: string) => {
               v-model:name="name"
               v-model:email="email"
               v-model:phone="phone"
+              v-model:avatar="avatar"
             />
           </router-view>
         </div>
@@ -113,6 +114,11 @@ const isActive = (path: string) => {
 </template>
 
 <style scoped>
+.main-container {
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
 .sidebar {
   background-color: #fff;
   padding-bottom: 20px;
