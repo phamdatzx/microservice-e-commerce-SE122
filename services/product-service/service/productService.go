@@ -8,6 +8,9 @@ import (
 	"product-service/model"
 	"product-service/repository"
 	"product-service/utils"
+	"strings"
+
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 type ProductService interface {
@@ -20,6 +23,7 @@ type ProductService interface {
 	ProcessVariantImageUpload(productID string, fileMap map[string][]*multipart.FileHeader) (map[string]string, error)
 	GetProductsBySeller(sellerID string, params dto.GetProductsQueryParams) (*dto.PaginatedProductsResponse, error)
 	GetVariantsByIds(variantIDs []string) ([]dto.CartVariantDto, error)
+	SearchProducts(params dto.SearchProductsQueryParams) (*dto.PaginatedProductsResponse, error)
 }
 
 type productService struct {
@@ -226,4 +230,69 @@ func (s *productService) GetVariantsByIds(variantIDs []string) ([]dto.CartVarian
 	}
 
 	return result, nil
+}
+
+func (s *productService) SearchProducts(params dto.SearchProductsQueryParams) (*dto.PaginatedProductsResponse, error) {
+	// Build filter based on query parameters
+	filter := bson.M{}
+
+	// Price range filter
+	if params.MinPrice != nil || params.MaxPrice != nil {
+		priceFilter := bson.M{}
+		if params.MinPrice != nil {
+			// Product's max price should be >= min requested price
+			priceFilter["$gte"] = *params.MinPrice
+		}
+		if params.MaxPrice != nil {
+			// Product's min price should be <= max requested price
+			filter["price.min"] = bson.M{"$lte": *params.MaxPrice}
+		}
+		if params.MinPrice != nil {
+			filter["price.max"] = priceFilter
+		}
+	}
+
+	// Rating range filter
+	if params.MinRating != nil || params.MaxRating != nil {
+		ratingFilter := bson.M{}
+		if params.MinRating != nil {
+			ratingFilter["$gte"] = *params.MinRating
+		}
+		if params.MaxRating != nil {
+			ratingFilter["$lte"] = *params.MaxRating
+		}
+		filter["rating"] = ratingFilter
+	}
+
+	// Category IDs filter
+	if params.CategoryIDs != "" {
+		// Split comma-separated category IDs
+		categoryIDsArray := strings.Split(params.CategoryIDs, ",")
+		// Trim whitespace from each ID
+		for i := range categoryIDsArray {
+			categoryIDsArray[i] = strings.TrimSpace(categoryIDsArray[i])
+		}
+		// Filter products that contain at least one of the category IDs
+		filter["category_ids"] = bson.M{"$in": categoryIDsArray}
+	}
+
+	// Text search filter
+	sortByTextScore := false
+	if params.SearchQuery != "" {
+		filter["$text"] = bson.M{
+			"$search": params.SearchQuery,
+			"$diacriticSensitive": false,
+		}
+		sortByTextScore = true
+	}
+
+	// Call repository method
+	products, total, err := s.repo.SearchProducts(filter, params.GetSkip(), params.Limit, sortByTextScore)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build paginated response
+	response := dto.NewPaginatedProductsResponse(products, total, params.Page, params.Limit)
+	return response, nil
 }
