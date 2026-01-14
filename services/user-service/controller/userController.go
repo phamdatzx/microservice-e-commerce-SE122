@@ -228,3 +228,43 @@ func (c *UserController) GetUserByID(ctx *gin.Context) {
 	utils.SuccessResponse(ctx, 200, "Get user successfully", response)
 }
 
+func (c *UserController) UploadUserImage(ctx *gin.Context) {
+	// Get user ID from header
+	userId := ctx.GetHeader("X-User-Id")
+	if userId == "" {
+		ctx.Error(appError.NewAppError(401, "User ID not found in header"))
+		ctx.Abort()
+		return
+	}
+
+	// Parse multipart form
+	file, fileHeader, err := ctx.Request.FormFile("image")
+	if err != nil {
+		ctx.Error(appError.NewAppErrorWithErr(400, "Failed to get image file", err))
+		ctx.Abort()
+		return
+	}
+	defer file.Close()
+
+	// Validate file type (optional but recommended)
+	contentType := fileHeader.Header.Get("Content-Type")
+	if contentType != "image/jpeg" && contentType != "image/png" && contentType != "image/jpg" && contentType != "image/webp" {
+		ctx.Error(appError.NewAppError(400, "Invalid file type. Only JPEG, PNG, and WebP images are allowed"))
+		ctx.Abort()
+		return
+	}
+
+	// Call service to upload image
+	imageURL, err := c.service.UploadUserImage(userId, file, fileHeader)
+	if err != nil {
+		ctx.Error(err)
+		ctx.Abort()
+		return
+	}
+
+	utils.SuccessResponse(ctx, 200, "Image uploaded successfully", gin.H{
+		"image_url": imageURL,
+	})
+}
+
+

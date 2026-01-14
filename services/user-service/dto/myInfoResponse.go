@@ -7,6 +7,7 @@ type MyInfoResponse struct {
 	Name     string `json:"name"`
 	Email    string `json:"email"`
 	Role     string `json:"role"`
+	Image    string `json:"image"`
 	IsActive bool   `json:"is_active"`
 	IsVerify bool   `json:"is_verify"`
 	IsBanned bool   `json:"is_banned"`

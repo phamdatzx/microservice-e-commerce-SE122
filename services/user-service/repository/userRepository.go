@@ -13,6 +13,7 @@ type UserRepository interface {
 	GetUserByID(id string) (*model.User, error)
 	ActivateAccount(id string) error
 	Save(user *model.User) error
+	UpdateUserImage(userId string, imageURL string) error
 }
 
 type userRepository struct {
@@ -70,3 +71,15 @@ func (r *userRepository) ActivateAccount(id string) error {
 func (r *userRepository) Save(user *model.User) error {
 	return r.db.Save(user).Error
 }
+
+func (r *userRepository) UpdateUserImage(userId string, imageURL string) error {
+	var user model.User
+	err := r.db.First(&user, "id = ?", userId).Error
+	if err != nil {
+		return err
+	}
+
+	user.Image = imageURL
+	return r.db.Save(&user).Error
+}
+
