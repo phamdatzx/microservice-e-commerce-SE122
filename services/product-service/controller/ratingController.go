@@ -120,7 +120,25 @@ func (c *RatingController) GetRatingsByProductID(ctx *gin.Context) {
 		limit = 10
 	}
 
-	ratings, total, err := c.service.GetRatingsByProductID(productID, page, limit)
+	// Parse filter parameters
+	var star *int
+	var hasImage *bool
+
+	// Parse star filter (optional: 1-5)
+	if starStr := ctx.Query("star"); starStr != "" {
+		starVal, err := strconv.Atoi(starStr)
+		if err == nil && starVal >= 1 && starVal <= 5 {
+			star = &starVal
+		}
+	}
+
+	// Parse hasImage filter (optional: true/false)
+	if hasImageStr := ctx.Query("hasImage"); hasImageStr != "" {
+		hasImageVal := hasImageStr == "true" || hasImageStr == "1"
+		hasImage = &hasImageVal
+	}
+
+	ratings, total, err := c.service.GetRatingsByProductID(productID, page, limit, star, hasImage)
 	if err != nil {
 		ctx.Error(err)
 		return

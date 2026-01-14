@@ -14,7 +14,7 @@ type RatingRepository interface {
 	Create(rating *model.Rating) error
 	FindByID(id string) (*model.Rating, error)
 	FindAll() ([]model.Rating, error)
-	FindByProductID(productID string, skip, limit int) ([]model.Rating, int64, error)
+	FindByProductID(productID string, skip, limit int, star *int, hasImage *bool) ([]model.Rating, int64, error)
 	FindByUserID(userID string) ([]model.Rating, error)
 	Update(rating *model.Rating) error
 	Delete(id string) error
@@ -64,11 +64,22 @@ func (r *ratingRepository) FindAll() ([]model.Rating, error) {
 	return ratings, nil
 }
 
-func (r *ratingRepository) FindByProductID(productID string, skip, limit int) ([]model.Rating, int64, error) {
+func (r *ratingRepository) FindByProductID(productID string, skip, limit int, star *int, hasImage *bool) ([]model.Rating, int64, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	filter := bson.M{"product_id": productID}
+
+	// Add star filter if provided
+	if star != nil {
+		filter["star"] = *star
+	}
+
+	// Add hasImage filter if provided
+	if hasImage != nil && *hasImage {
+		// Filter ratings that have at least one image
+		filter["images"] = bson.M{"$exists": true, "$ne": []interface{}{}}
+	}
 
 	// Count total documents
 	total, err := r.collection.CountDocuments(ctx, filter)

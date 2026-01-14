@@ -19,7 +19,7 @@ type RatingService interface {
 	CreateRating(rating *model.Rating, files []*multipart.FileHeader) error
 	GetRatingByID(id string) (*model.Rating, error)
 	GetAllRatings() ([]model.Rating, error)
-	GetRatingsByProductID(productID string, page, limit int) ([]model.Rating, int64, error)
+	GetRatingsByProductID(productID string, page, limit int, star *int, hasImage *bool) ([]model.Rating, int64, error)
 	GetRatingsByUserID(userID string) ([]model.Rating, error)
 	UpdateRating(rating *model.Rating, files []*multipart.FileHeader) error
 	DeleteRating(id string) error
@@ -136,9 +136,9 @@ func (s *ratingService) GetAllRatings() ([]model.Rating, error) {
 	return s.repo.FindAll()
 }
 
-func (s *ratingService) GetRatingsByProductID(productID string, page, limit int) ([]model.Rating, int64, error) {
+func (s *ratingService) GetRatingsByProductID(productID string, page, limit int, star *int, hasImage *bool) ([]model.Rating, int64, error) {
 	skip := (page - 1) * limit
-	return s.repo.FindByProductID(productID, skip, limit)
+	return s.repo.FindByProductID(productID, skip, limit, star, hasImage)
 }
 
 func (s *ratingService) GetRatingsByUserID(userID string) ([]model.Rating, error) {
