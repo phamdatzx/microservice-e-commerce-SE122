@@ -20,7 +20,20 @@ type User struct {
 	IsVerify bool      `json:"is_verify" gorm:"column:is_verify;default:false"`
 	IsBanned bool      `json:"is_banned" gorm:"column:is_banned;default:false"`
 	Addresses []Address `json:"addresses" gorm:"foreignKey:UserID"`
+	SaleInfo  *SaleInfo `json:"seller_info" gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`}
+
+type SaleInfo struct {
+	ID uuid.UUID `gorm:"type:uuid;primaryKey;column:id"`
+
+	UserID uuid.UUID `gorm:"type:uuid;column:user_id;uniqueIndex"`
+
+	User User `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+
+	FollowCount    int     `gorm:"column:follow_count"`
+	RatingCount    int     `gorm:"column:rating_count"`
+	RatingAverage  float64 `gorm:"column:rating_average"`
 }
+
 
 // Hook tự động sinh UUID trước khi tạo record
 func (u *User) BeforeCreate(tx *gorm.DB) (err error) {
