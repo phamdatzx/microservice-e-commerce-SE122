@@ -28,13 +28,15 @@ type RatingService interface {
 
 type ratingService struct {
 	repo        repository.RatingRepository
+	productRepo repository.ProductRepository
 	orderClient *client.OrderServiceClient
 	userClient  *client.UserServiceClient
 }
 
-func NewRatingService(repo repository.RatingRepository, orderClient *client.OrderServiceClient, userClient *client.UserServiceClient) RatingService {
+func NewRatingService(repo repository.RatingRepository, productRepo repository.ProductRepository, orderClient *client.OrderServiceClient, userClient *client.UserServiceClient) RatingService {
 	return &ratingService{
 		repo:        repo,
+		productRepo: productRepo,
 		orderClient: orderClient,
 		userClient:  userClient,
 	}
@@ -99,12 +101,17 @@ func (s *ratingService) CreateRating(rating *model.Rating, files []*multipart.Fi
 		rating.Images = ratingImages
 	}
 
+	//update rating info in product
+	go s.UpdateRatingInfoInProduct(rating.ProductID, rating)
+
 	// Generate ID and timestamps
 	rating.ID = uuid.New().String()
 	rating.CreatedAt = time.Now()
 	rating.UpdatedAt = time.Now()
 
 	return s.repo.Create(rating)
+
+	
 }
 
 func (s *ratingService) GetRatingByID(id string) (*model.Rating, error) {
@@ -136,4 +143,16 @@ func (s *ratingService) AddRatingResponse(ratingID string, response model.Rating
 	// Generate ID for the response
 	response.ID = uuid.New().String()
 	return s.repo.AddRatingResponse(ratingID, response)
+}
+
+
+func (s *ratingService) UpdateRatingInfoInProduct(productID string, rating *model.Rating) error {
+	product,err := s.productRepo.FindByID(productID)
+	if err != nil {
+		return err
+	}
+	newCount := product.RateCount + 1
+	product.Rating = (product.Rating*float64(product.RateCount) + float64(rating.Star)) / float64(newCount)
+	product.RateCount = newCount
+	return s.productRepo.Update(product)
 }
