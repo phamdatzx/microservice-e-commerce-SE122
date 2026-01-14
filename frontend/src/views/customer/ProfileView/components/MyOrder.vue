@@ -1,9 +1,19 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { Search, ChatDotRound, Shop } from '@element-plus/icons-vue'
 import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
 import { formatStatus } from '@/utils/formatStatus'
 import axios from 'axios'
+
+const router = useRouter()
+
+const handleOrderClick = (order: any) => {
+  router.push({
+    path: `/order-tracking/${order.id}`,
+    state: { orderData: JSON.stringify(order) },
+  })
+}
 
 const activeOrderTab = ref('all')
 const orders = ref<any[]>([])
@@ -127,7 +137,12 @@ const orderTabs = [
         </div>
 
         <div class="order-items">
-          <div v-for="item in order.items" :key="item.variant_id" class="order-item">
+          <div
+            v-for="item in order.items"
+            :key="item.variant_id"
+            class="order-item"
+            @click="handleOrderClick(order)"
+          >
             <img
               :src="item.image || 'https://via.placeholder.com/80'"
               :alt="item.product_name"
@@ -267,6 +282,12 @@ const orderTabs = [
   display: flex;
   padding: 12px 0;
   border-bottom: 1px solid #f5f5f5;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.order-item:hover {
+  background-color: #fafafa;
 }
 
 .item-image {

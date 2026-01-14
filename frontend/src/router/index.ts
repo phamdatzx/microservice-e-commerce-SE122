@@ -137,7 +137,7 @@ const router = createRouter({
           component: () => import('@/views/customer/CheckoutView/PaymentFailureView.vue'),
         },
         {
-          path: 'order-tracking',
+          path: 'order-tracking/:id',
           component: OrderTrackingView,
         },
         {

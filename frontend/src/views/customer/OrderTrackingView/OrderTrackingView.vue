@@ -9,123 +9,330 @@ import {
   Van,
   Box,
   Star,
+  CircleCheck,
+  Loading,
 } from '@element-plus/icons-vue'
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
+import axios from 'axios'
+import { ElMessage } from 'element-plus'
 
 const router = useRouter()
+const route = useRoute()
+const isLoading = ref(false)
 
-const orderInfo = {
-  id: '251229N1GDEMAU',
-  status: 'DELIVERED SUCCESSFULLY',
+const order = ref<any>(null)
+const trackingInfo = ref<any>(null)
+
+const orderInfo = computed(() => ({
+  id: order.value?.id ? order.value.id.toUpperCase() : '',
+  status: order.value?.status || '',
+}))
+
+const steps = ref([
+  { title: 'Order Placed', time: '', completed: false, icon: Tickets, key: 'ready_to_pick' },
+  { title: 'Order Paid', time: '', completed: false, icon: Wallet, key: 'paid' }, // 'paid' isn't a GHN status, handled separately
+  { title: 'Handing over to carrier', time: '', completed: false, icon: Van, key: 'picked' },
+  { title: 'Out for delivery', time: '', completed: false, icon: Box, key: 'delivering' },
+  { title: 'Completed', time: '', completed: false, icon: CircleCheck, key: 'completed' }, // Internal status
+])
+
+const timeline = ref<any[]>([])
+
+const address = computed(() => ({
+  name: order.value?.shipping_address?.full_name || '',
+  phone: order.value?.shipping_address?.phone || '',
+  detail: order.value?.shipping_address
+    ? `${order.value.shipping_address.address_line}, ${order.value.shipping_address.ward}, ${order.value.shipping_address.district}, ${order.value.shipping_address.province}`
+    : '',
+}))
+
+const products = computed(() => {
+  if (!order.value?.items) return []
+  return order.value.items.map((item: any) => ({
+    id: item.variant_id,
+    name: item.product_name,
+    variant: item.variant_name,
+    price: item.price,
+    qty: item.quantity,
+    img: item.image || 'https://placehold.co/80x80',
+  }))
+})
+
+const costs = computed(() => [])
+
+const paymentMethod = computed(() => order.value?.payment_method || '')
+const total = computed(() => `${formatNumberWithDots(order.value?.total || 0)}đ`)
+
+const fetchOrder = async () => {
+  const orderId = route.params.id
+  if (!orderId) return
+
+  isLoading.value = true
+  try {
+    let orderData = null
+
+    // Check for state passed from MyOrder
+    if (history.state.orderData) {
+      try {
+        orderData = JSON.parse(history.state.orderData)
+        console.log('Using order data from state:', orderData)
+      } catch (e) {
+        console.error('Failed to parse order state', e)
+      }
+    }
+
+    if (!orderData) {
+      // Fallback: Fetch internal order details
+      const token = localStorage.getItem('access_token')
+      const orderResponse = await axios.get(`${import.meta.env.VITE_BE_API_URL}/order/${orderId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      orderData = orderResponse.data.data || orderResponse.data
+    }
+
+    order.value = orderData
+
+    // Update steps based on internal status first
+    updateStepsFromInternalStatus(orderData)
+
+    // 2. Fetch GHN Tracking if shipping_code exists
+    const shippingCode = orderData.shipping_code || orderData.delivery_code
+
+    if (shippingCode) {
+      await fetchGHNTracking(shippingCode)
+    }
+  } catch (error) {
+    console.error('Error fetching order:', error)
+    ElMessage.error('Failed to load order details')
+  } finally {
+    isLoading.value = false
+  }
 }
 
-const steps = [
-  { title: 'Order Placed', time: '22:59 29-12-2025', completed: true, icon: Tickets },
-  { title: 'Order Paid (95,285₫)', time: '23:00 29-12-2025', completed: true, icon: Wallet },
-  { title: 'Handed over to carrier', time: '15:38 30-12-2025', completed: true, icon: Van },
-  { title: 'Out for delivery', time: '', completed: true, icon: Box },
-  { title: 'Rating', time: '', completed: false, icon: Star },
-]
+const fetchGHNTracking = async (orderCode: string) => {
+  try {
+    const response = await axios.post(
+      'https://dev-online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/detail',
+      { order_code: orderCode },
+      {
+        headers: {
+          token: import.meta.env.VITE_GHN_TOKEN,
+          'Content-Type': 'application/json',
+        },
+      },
+    )
 
-const timeline = [
-  { time: '16:48 03-01-2026', title: 'Delivered', desc: 'Delivered successfully', type: 'success' },
-  {
-    time: '13:47 03-01-2026',
-    title: 'In transit',
-    desc: 'Your order will be delivered soon, please stay reachable.',
-    type: 'info',
-  },
-  {
-    time: '12:08 02-01-2026',
-    title: 'In transit',
-    desc: 'The order has arrived at the local sorting facility and will be delivered within the next 12 hours.',
-    type: 'info',
-  },
-  {
-    time: '06:37 31-12-2025',
-    title: 'In transit',
-    desc: 'The order has arrived at the local sorting facility and will be delivered within the next 12 hours.',
-    type: 'info',
-  },
-  {
-    time: '20:19 30-12-2025',
-    title: 'In transit',
-    desc: 'The order has arrived at the warehouse.',
-    type: 'info',
-  },
-  {
-    time: '18:55 30-12-2025',
-    title: 'In transit',
-    desc: 'The order has arrived at the post office.',
-    type: 'info',
-  },
-]
+    if (response.data.code === 200) {
+      const data = response.data.data
+      console.log('GHN Data:', data)
+      trackingInfo.value = data
 
-const address = {
-  name: 'Johnathan Doe',
-  phone: '(+84) 912 345 678',
-  detail: '123 Nguyen Hue Street, Ben Nghe Ward, District 1, Ho Chi Minh City',
+      // Update timeline from log
+      let ghnTimeline: any[] = []
+      if (data.log) {
+        ghnTimeline = data.log
+          .map((log: any) => ({
+            time: new Date(log.updated_date).toLocaleString(),
+            title: formatGHNStatus(log.status),
+            desc: getStatusDescription(log.status),
+            type: log.status === 'delivered' || log.status === 'returned' ? 'success' : 'info',
+          }))
+          .reverse()
+      }
+
+      // Append internal events (Order Placed, Payment)
+      const internalEvents = []
+
+      // Payment - only for STRIPE
+      if (order.value.payment_method === 'STRIPE') {
+        if (order.value.status !== 'TO_PAY') {
+          internalEvents.push({
+            time: '',
+            title: 'Order Paid',
+            desc: 'Payment has been confirmed',
+            type: 'success',
+          })
+        } else {
+          internalEvents.push({
+            time: new Date(order.value.created_at).toLocaleString(),
+            title: 'To Pay',
+            desc: 'Order is waiting for payment',
+            type: 'warning',
+          })
+        }
+      }
+
+      // Order Placed
+      internalEvents.push({
+        time: new Date(order.value.created_at).toLocaleString(),
+        title: 'Order Placed',
+        desc: 'Order has been created',
+        type: 'info',
+      })
+
+      timeline.value = [...ghnTimeline, ...internalEvents]
+
+      // Update steps based on GHN status
+      updateStepsFromGHN(data)
+    }
+  } catch (error) {
+    console.error('Error fetching tracking info:', error)
+  }
 }
 
-const products = [
-  {
-    id: 1,
-    name: 'Tempered Glass Screen Protector - Anti-Blue Light for iPhone 17 air 16 15 14 13 12 11 Pro max',
-    variant: 'HD, 12/12Pro',
-    price: 28800,
-    oldPrice: 50000,
-    qty: 1,
-    img: 'https://placehold.co/80x80',
-  },
-  {
-    id: 2,
-    name: 'Woven Wrist Strap for Phone Case - Compatible with iPhone OPPO Samsung Xiaomi',
-    variant: 'Pink',
-    price: 32800,
-    oldPrice: 57600,
-    qty: 1,
-    img: 'https://placehold.co/80x80',
-  },
-  {
-    id: 3,
-    name: '【FAST SHIPPING】Simple Clear Case, Non-yellowing for iPhone 17 air 16 15 14 13 12 11 Pro max',
-    variant: 'Transparent, 12Pro',
-    price: 52500,
-    oldPrice: 80000,
-    qty: 1,
-    img: 'https://placehold.co/80x80',
-  },
-]
+const formatGHNStatus = (status: string) => {
+  const map: Record<string, string> = {
+    ready_to_pick: 'Ready to Pick',
+    picking: 'Picking',
+    cancel: 'Cancelled',
+    picked: 'Picked',
+    storing: 'Storing',
+    transporting: 'Transporting',
+    sorting: 'Sorting',
+    delivering: 'Delivering',
+    delivered: 'Delivered',
+    delivery_fail: 'Delivery Failed',
+    waiting_to_return: 'Waiting to Return',
+    return: 'Returning',
+    returned: 'Returned',
+  }
+  return map[status] || status
+}
 
-const costs = [
-  { label: 'Merchandise Subtotal', value: '114,100₫' },
-  { label: 'Shipping Fee', value: '22,200₫' },
-  { label: 'Shipping Discount', value: '-22,200₫', icon: true },
-  { label: 'Platform Voucher', value: '-16,815₫' },
-  { label: 'Shop Voucher', value: '-2,000₫' },
-]
+const getStatusDescription = (status: string) => {
+  const descs: Record<string, string> = {
+    ready_to_pick: 'Shipping order has just been created',
+    picking: 'Shipper is coming to pick up the goods',
+    cancel: 'Shipping order has been cancelled',
+    picked: 'Shipper is picked the goods',
+    storing: 'The goods has been shipped to GHN sorting hub',
+    transporting: 'The goods are being rotated',
+    sorting: 'The goods are being classified',
+    delivering: 'Shipper is delivering the goods to customer',
+    delivered: 'The goods has been delivered to customer',
+    delivery_fail: "The goods hasn't been delivered to customer",
+    waiting_to_return: 'The goods are pending delivery',
+    return: 'The goods are waiting to return to seller',
+    returned: 'The goods has been returned to seller',
+  }
+  return descs[status] || 'Status updated'
+}
 
-const paymentMethod = 'Bank Account'
-const total = '95,285₫'
-// #endregion
+const updateStepsFromInternalStatus = (orderData: any) => {
+  const createdDate = new Date(orderData.created_at).toLocaleString()
+
+  if (steps.value[0]) {
+    steps.value[0].time = createdDate
+    steps.value[0].completed = true
+  }
+
+  // Update step title based on payment method
+  if (steps.value[1]) {
+    if (orderData.payment_method !== 'STRIPE') {
+      steps.value[1].title = 'Payment Information Confirmed'
+    } else {
+      steps.value[1].title = 'Order Paid'
+    }
+
+    if (orderData.status !== 'TO_PAY') {
+      steps.value[1].completed = true
+    }
+
+    // Highlight based on user request
+    if (orderData.status === 'TO_PICKUP') {
+      if (steps.value[2]) steps.value[2].completed = true
+    } else if (orderData.status === 'SHIPPING') {
+      if (steps.value[2]) steps.value[2].completed = true
+      if (steps.value[3]) steps.value[3].completed = true
+    } else if (orderData.status === 'COMPLETED') {
+      if (steps.value[2]) steps.value[2].completed = true
+      if (steps.value[3]) steps.value[3].completed = true
+      if (steps.value[4]) steps.value[4].completed = true
+    }
+  }
+
+  // Initialize timeline with internal events
+  const internalEvents = []
+
+  // Payment - only for STRIPE
+  if (orderData.payment_method === 'STRIPE') {
+    if (orderData.status !== 'TO_PAY') {
+      internalEvents.push({
+        time: '',
+        title: 'Order Paid',
+        desc: 'Payment has been confirmed',
+        type: 'success',
+      })
+    } else {
+      internalEvents.push({
+        time: createdDate,
+        title: 'To Pay',
+        desc: 'Order is waiting for payment',
+        type: 'warning',
+      })
+    }
+  }
+
+  internalEvents.push({
+    time: createdDate,
+    title: 'Order Placed',
+    desc: 'Order has been created',
+    type: 'info',
+  })
+
+  // Set timeline initially (GHN will prepend to this if fetched)
+  timeline.value = internalEvents
+}
+
+const updateStepsFromGHN = (ghnData: any) => {
+  // Map GHN logs/status to step completion
+  const logs = ghnData.log || []
+  const hasLog = (status: string) => logs.some((l: any) => l.status === status)
+
+  // Handed over (picked/storing)
+  const pickedLog = logs.find((l: any) => ['picked', 'storing', 'transporting'].includes(l.status))
+  if (pickedLog && steps.value[2]) {
+    steps.value[2].completed = true
+    steps.value[2].time = new Date(pickedLog.updated_date).toLocaleString()
+  }
+
+  // Out for delivery (delivering)
+  const deliveringLog = logs.find((l: any) => l.status === 'delivering')
+  if (deliveringLog && steps.value[3]) {
+    steps.value[3].completed = true
+    steps.value[3].time = new Date(deliveringLog.updated_date).toLocaleString()
+  }
+
+  // Completed/Rating (delivered)
+  const deliveredLog = logs.find((l: any) => l.status === 'delivered')
+  if (deliveredLog) {
+    if (steps.value[4]) steps.value[4].completed = true
+    if (steps.value[3]) steps.value[3].completed = true
+    if (steps.value[2]) steps.value[2].completed = true
+  }
+}
 
 const handleBack = () => {
   router.back()
 }
+
+onMounted(() => {
+  fetchOrder()
+})
 </script>
 
 <template>
-  <div class="order-tracking-page">
-    <div class="main-container">
+  <div class="order-tracking-page" v-loading="isLoading">
+    <div class="main-container" v-if="order">
       <!-- Top Action Bar -->
       <div class="tracking-top-bar">
         <el-button link :icon="ArrowLeft" @click="handleBack">BACK</el-button>
         <div class="order-meta">
-          <span>ORDER ID. {{ orderInfo.id }}</span>
+          <span>ORDER ID: {{ orderInfo.id }}</span>
           <span class="status-divider">|</span>
-          <span class="order-status-text">{{ orderInfo.status }}</span>
+          <span class="order-status-text">{{ orderInfo.status.replace('_', ' ') }}</span>
         </div>
       </div>
 
@@ -188,10 +395,6 @@ const handleBack = () => {
         </div>
 
         <div class="timeline-card card">
-          <div class="timeline-header">
-            <span class="carrier-name">SPX Express</span>
-            <span class="tracking-id">SPXVN05293562230C</span>
-          </div>
           <el-timeline>
             <el-timeline-item
               v-for="(item, index) in timeline"
@@ -208,9 +411,6 @@ const handleBack = () => {
               </div>
             </el-timeline-item>
           </el-timeline>
-          <div class="timeline-footer">
-            <el-button link type="primary">View more</el-button>
-          </div>
         </div>
       </div>
 
@@ -234,7 +434,6 @@ const handleBack = () => {
               <p class="p-qty">x{{ product.qty }}</p>
             </div>
             <div class="p-prices">
-              <span class="old-price">{{ formatNumberWithDots(product.oldPrice) }}₫</span>
               <span class="current-price">{{ formatNumberWithDots(product.price) }}₫</span>
             </div>
           </div>
@@ -242,13 +441,6 @@ const handleBack = () => {
 
         <div class="order-summary-footer">
           <div class="summary-table">
-            <div v-for="cost in costs" :key="cost.label" class="summary-line">
-              <span class="summary-label">
-                {{ cost.label }}
-                <el-icon v-if="cost.icon" class="info-icon"><Location /></el-icon>
-              </span>
-              <span class="summary-value">{{ cost.value }}</span>
-            </div>
             <div class="summary-line total-line">
               <span class="summary-label">Total Payment</span>
               <span class="total-value">{{ total }}</span>
@@ -546,7 +738,6 @@ const handleBack = () => {
 }
 
 .total-line {
-  border-top: 1px solid #eee;
   padding-top: 15px;
   font-size: 16px;
   color: #333;
