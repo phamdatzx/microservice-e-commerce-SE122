@@ -8,6 +8,8 @@ import (
 	"user-service/model"
 	"user-service/repository"
 	"user-service/utils"
+
+	"github.com/google/uuid"
 )
 
 type UserService interface {
@@ -20,6 +22,7 @@ type UserService interface {
 	CheckUsernameExists(request dto.CheckUsernameRequest) (dto.CheckUsernameResponse, error)
 	GetUserByID(userId string) (dto.UserResponse, error)
 	UploadUserImage(userId string, file multipart.File, fileHeader *multipart.FileHeader) (string, error)
+	UpdateSellerRating(request dto.UpdateRatingRequest) (dto.UpdateRatingResponse, error)
 }
 
 type userService struct {
@@ -219,3 +222,55 @@ func (s *userService) UploadUserImage(userId string, file multipart.File, fileHe
 	return imageURL, nil
 }
 
+func (s *userService) UpdateSellerRating(request dto.UpdateRatingRequest) (dto.UpdateRatingResponse, error) {
+	// Get current SaleInfo or create if not exists
+	saleInfo, err := s.repo.GetSaleInfoByUserID(request.SellerID)
+	if err != nil {
+		// If SaleInfo doesn't exist, create it
+		saleInfo = &model.SaleInfo{
+			UserID:        uuid.MustParse(request.SellerID),
+			RatingCount:   0,
+			RatingAverage: 0,
+			FollowCount:   0,
+		}
+	}
+
+	switch request.Operation {
+	case "create":
+		// Add new rating to average
+		totalRating := saleInfo.RatingAverage * float64(saleInfo.RatingCount)
+		saleInfo.RatingCount++
+		saleInfo.RatingAverage = (totalRating + request.Star) / float64(saleInfo.RatingCount)
+
+	case "update":
+		// Replace old rating with new one
+		if saleInfo.RatingCount > 0 {
+			totalRating := saleInfo.RatingAverage * float64(saleInfo.RatingCount)
+			totalRating = totalRating - request.OldStar + request.Star
+			saleInfo.RatingAverage = totalRating / float64(saleInfo.RatingCount)
+		}
+
+	case "delete":
+		// Remove rating from average
+		if saleInfo.RatingCount > 0 {
+			totalRating := saleInfo.RatingAverage * float64(saleInfo.RatingCount)
+			saleInfo.RatingCount--
+			if saleInfo.RatingCount > 0 {
+				saleInfo.RatingAverage = (totalRating - request.Star) / float64(saleInfo.RatingCount)
+			} else {
+				saleInfo.RatingAverage = 0
+			}
+		}
+	}
+
+	// Save updated SaleInfo
+	err = s.repo.UpdateSaleInfo(saleInfo)
+	if err != nil {
+		return dto.UpdateRatingResponse{}, customError.NewAppErrorWithErr(500, "Failed to update seller rating", err)
+	}
+
+	return dto.UpdateRatingResponse{
+		RatingCount:   saleInfo.RatingCount,
+		RatingAverage: saleInfo.RatingAverage,
+	}, nil
+}

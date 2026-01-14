@@ -155,19 +155,48 @@ func (c *RatingController) UpdateRating(ctx *gin.Context) {
 	id := ctx.Param("id")
 
 	var rating model.Rating
-	if err := ctx.ShouldBindJSON(&rating); err != nil {
-		ctx.Error(error.NewAppErrorWithErr(http.StatusBadRequest, "Invalid request body", err))
-		return
-	}
 	rating.ID = id
 
-	// Validate star rating if provided
-	if rating.Star < 1 || rating.Star > 5 {
+	// Parse multipart form
+	if err := ctx.Request.ParseMultipartForm(10 << 20); err != nil { // 10 MB max
+		ctx.Error(error.NewAppErrorWithErr(http.StatusBadRequest, "Failed to parse form", err))
+		return
+	}
+
+	// Get form fields
+	rating.ProductID = ctx.PostForm("product_id")
+	rating.VariantID = ctx.PostForm("variant_id")
+	rating.Content = ctx.PostForm("content")
+	starStr := ctx.PostForm("star")
+
+	// Validate required fields
+	if starStr == "" {
+		ctx.Error(error.NewAppError(http.StatusBadRequest, "Star rating is required"))
+		return
+	}
+
+	// Parse star rating
+	star, err := strconv.Atoi(starStr)
+	if err != nil || star < 1 || star > 5 {
 		ctx.Error(error.NewAppError(http.StatusBadRequest, "Star rating must be between 1 and 5"))
 		return
 	}
+	rating.Star = star
 
-	if err := c.service.UpdateRating(&rating); err != nil {
+	// Get image files (optional, can be multiple)
+	form, err := ctx.MultipartForm()
+	if err != nil && err != http.ErrMissingFile {
+		ctx.Error(error.NewAppErrorWithErr(http.StatusBadRequest, "Failed to get multipart form", err))
+		return
+	}
+
+	var files []*multipart.FileHeader
+	if form != nil {
+		files = form.File["image"] // Get all files with field name "image"
+	}
+
+	// Update rating with image uploads
+	if err := c.service.UpdateRating(&rating, files); err != nil {
 		ctx.Error(err)
 		return
 	}

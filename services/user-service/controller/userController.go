@@ -266,3 +266,38 @@ func (c *UserController) UploadUserImage(ctx *gin.Context) {
 		"image_url": imageURL,
 	})
 }
+
+func (c *UserController) UpdateSellerRating(ctx *gin.Context) {
+	var request dto.UpdateRatingRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Validate struct
+	if err := validate.Struct(request); err != nil {
+		var errors string
+		for _, err := range err.(validator.ValidationErrors) {
+			errors += err.Field() + " is invalid: " + err.Tag() + ", "
+		}
+		_ = ctx.Error(appError.NewAppError(400, errors))
+		ctx.Abort()
+		return
+	}
+
+	// Validate old_star for update operation
+	if request.Operation == "update" && request.OldStar == 0 {
+		ctx.Error(appError.NewAppError(400, "old_star is required for update operation"))
+		ctx.Abort()
+		return
+	}
+
+	response, err := c.service.UpdateSellerRating(request)
+	if err != nil {
+		_ = ctx.Error(err)
+		ctx.Abort()
+		return
+	}
+
+	utils.SuccessResponse(ctx, 200, "Seller rating updated successfully", response)
+}

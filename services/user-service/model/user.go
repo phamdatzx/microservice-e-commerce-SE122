@@ -27,17 +27,21 @@ type SaleInfo struct {
 
 	UserID uuid.UUID `gorm:"type:uuid;column:user_id;uniqueIndex"`
 
-	User User `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-
-	FollowCount    int     `gorm:"column:follow_count"`
-	RatingCount    int     `gorm:"column:rating_count"`
-	RatingAverage  float64 `gorm:"column:rating_average"`
+	FollowCount   int     `gorm:"column:follow_count;default:0"`
+	RatingCount   int     `gorm:"column:rating_count;default:0"`
+	RatingAverage float64 `gorm:"column:rating_average;default:0"`
 }
+
 
 
 // Hook tự động sinh UUID trước khi tạo record
 func (u *User) BeforeCreate(tx *gorm.DB) (err error) {
 	u.ID = uuid.New()
+	return
+}
+
+func (s *SaleInfo) BeforeCreate(tx *gorm.DB) (err error) {
+	s.ID = uuid.New()
 	return
 }
 

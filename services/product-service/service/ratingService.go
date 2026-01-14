@@ -21,7 +21,7 @@ type RatingService interface {
 	GetAllRatings() ([]model.Rating, error)
 	GetRatingsByProductID(productID string, page, limit int) ([]model.Rating, int64, error)
 	GetRatingsByUserID(userID string) ([]model.Rating, error)
-	UpdateRating(rating *model.Rating) error
+	UpdateRating(rating *model.Rating, files []*multipart.FileHeader) error
 	DeleteRating(id string) error
 	AddRatingResponse(ratingID string, response model.RatingResponse) error
 }
@@ -109,7 +109,21 @@ func (s *ratingService) CreateRating(rating *model.Rating, files []*multipart.Fi
 	rating.CreatedAt = time.Now()
 	rating.UpdatedAt = time.Now()
 
-	return s.repo.Create(rating)
+	err = s.repo.Create(rating)
+	if err != nil {
+		return err
+	}
+
+	// Get product to retrieve seller ID
+	product, err := s.productRepo.FindByID(rating.ProductID)
+	if err == nil && product.SellerID != "" {
+		// Notify user-service about the new rating asynchronously
+		go func() {
+			_ = s.userClient.UpdateSellerRating(product.SellerID, float64(rating.Star), "create", 0)
+		}()
+	}
+
+	return nil
 
 	
 }
@@ -131,12 +145,106 @@ func (s *ratingService) GetRatingsByUserID(userID string) ([]model.Rating, error
 	return s.repo.FindByUserID(userID)
 }
 
-func (s *ratingService) UpdateRating(rating *model.Rating) error {
-	return s.repo.Update(rating)
+func (s *ratingService) UpdateRating(rating *model.Rating, files []*multipart.FileHeader) error {
+	// Get the existing rating to retrieve the old star value
+	existingRating, err := s.repo.FindByID(rating.ID)
+	if err != nil {
+		return err
+	}
+
+	oldStar := existingRating.Star
+	
+	// Preserve user info from existing rating
+	rating.User = existingRating.User
+	
+	// Preserve ProductID and VariantID if not provided in update
+	if rating.ProductID == "" {
+		rating.ProductID = existingRating.ProductID
+	}
+	if rating.VariantID == "" {
+		rating.VariantID = existingRating.VariantID
+	}
+	
+	// Preserve created timestamp
+	rating.CreatedAt = existingRating.CreatedAt
+	
+	// Upload new images to S3 if provided
+	if len(files) > 0 {
+		var ratingImages []model.RatingImage
+		for _, fileHeader := range files {
+			file, err := fileHeader.Open()
+			if err != nil {
+				return appError.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to open image file", err)
+			}
+			defer file.Close()
+
+			imageURL, err := utils.UploadImageToS3(file, fileHeader, "ratings")
+			if err != nil {
+				return appError.NewAppErrorWithErr(http.StatusInternalServerError, "Failed to upload image", err)
+			}
+			
+			ratingImages = append(ratingImages, model.RatingImage{
+				ID:  uuid.New().String(),
+				URL: imageURL,
+			})
+		}
+		// Append new images to existing ones (or replace if you want different behavior)
+		rating.Images = append(existingRating.Images, ratingImages...)
+	} else {
+		// Keep existing images if no new images provided
+		rating.Images = existingRating.Images
+	}
+
+	// Set updated timestamp
+	rating.UpdatedAt = time.Now()
+	
+	err = s.repo.Update(rating)
+	if err != nil {
+		return err
+	}
+
+	// Update product rating info if star changed
+	if oldStar != rating.Star {
+		go s.UpdateRatingInfoForUpdate(rating.ProductID, oldStar, rating.Star)
+	}
+
+	// Get product to retrieve seller ID
+	product, err := s.productRepo.FindByID(rating.ProductID)
+	if err == nil && product.SellerID != "" && oldStar != rating.Star {
+		// Notify user-service about the rating update asynchronously
+		go func() {
+			_ = s.userClient.UpdateSellerRating(product.SellerID, float64(rating.Star), "update", float64(oldStar))
+		}()
+	}
+
+	return nil
 }
 
 func (s *ratingService) DeleteRating(id string) error {
-	return s.repo.Delete(id)
+	// Get the rating before deleting to retrieve star value and product ID
+	rating, err := s.repo.FindByID(id)
+	if err != nil {
+		return err
+	}
+
+	err = s.repo.Delete(id)
+	if err != nil {
+		return err
+	}
+
+	// Update product rating info after deletion
+	go s.UpdateRatingInfoForDelete(rating.ProductID, rating.Star)
+
+	// Get product to retrieve seller ID
+	product, err := s.productRepo.FindByID(rating.ProductID)
+	if err == nil && product.SellerID != "" {
+		// Notify user-service about the rating deletion asynchronously
+		go func() {
+			_ = s.userClient.UpdateSellerRating(product.SellerID, float64(rating.Star), "delete", 0)
+		}()
+	}
+
+	return nil
 }
 
 func (s *ratingService) AddRatingResponse(ratingID string, response model.RatingResponse) error {
@@ -154,5 +262,37 @@ func (s *ratingService) UpdateRatingInfoInProduct(productID string, rating *mode
 	newCount := product.RateCount + 1
 	product.Rating = (product.Rating*float64(product.RateCount) + float64(rating.Star)) / float64(newCount)
 	product.RateCount = newCount
+	return s.productRepo.Update(product)
+}
+
+func (s *ratingService) UpdateRatingInfoForUpdate(productID string, oldStar int, newStar int) error {
+	product, err := s.productRepo.FindByID(productID)
+	if err != nil {
+		return err
+	}
+	// Replace old star with new star in the average calculation
+	if product.RateCount > 0 {
+		totalRating := product.Rating * float64(product.RateCount)
+		totalRating = totalRating - float64(oldStar) + float64(newStar)
+		product.Rating = totalRating / float64(product.RateCount)
+	}
+	return s.productRepo.Update(product)
+}
+
+func (s *ratingService) UpdateRatingInfoForDelete(productID string, star int) error {
+	product, err := s.productRepo.FindByID(productID)
+	if err != nil {
+		return err
+	}
+	// Remove rating from average and decrement count
+	if product.RateCount > 0 {
+		totalRating := product.Rating * float64(product.RateCount)
+		product.RateCount--
+		if product.RateCount > 0 {
+			product.Rating = (totalRating - float64(star)) / float64(product.RateCount)
+		} else {
+			product.Rating = 0
+		}
+	}
 	return s.productRepo.Update(product)
 }

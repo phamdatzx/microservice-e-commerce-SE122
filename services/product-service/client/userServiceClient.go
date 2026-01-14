@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -62,4 +63,57 @@ func (c *UserServiceClient) GetUserByID(userID string) (*UserInfo, error) {
 	}
 
 	return &response.Data, nil
+}
+
+type UpdateRatingRequest struct {
+	SellerID  string  `json:"seller_id"`
+	Star      float64 `json:"star"`
+	Operation string  `json:"operation"`
+	OldStar   float64 `json:"old_star,omitempty"`
+}
+
+type UpdateRatingResponse struct {
+	RatingCount   int     `json:"rating_count"`
+	RatingAverage float64 `json:"rating_average"`
+}
+
+type RatingServiceResponse struct {
+	Status  int                  `json:"status"`
+	Message string               `json:"message"`
+	Data    UpdateRatingResponse `json:"data"`
+}
+
+func (c *UserServiceClient) UpdateSellerRating(sellerID string, star float64, operation string, oldStar float64) error {
+	url := fmt.Sprintf("%s/api/user/seller/rating", c.baseURL)
+
+	requestBody := UpdateRatingRequest{
+		SellerID:  sellerID,
+		Star:      star,
+		Operation: operation,
+		OldStar:   oldStar,
+	}
+
+	bodyBytes, err := json.Marshal(requestBody)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(bodyBytes))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("update seller rating failed with status %d: %s", resp.StatusCode, string(body))
+	}
+
+	return nil
 }

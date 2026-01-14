@@ -24,7 +24,7 @@ func main() {
 
 
 	// Auto migrate
-	config.DB.AutoMigrate(&model.User{}, &model.Address{}, &model.UserFollow{})
+	config.DB.AutoMigrate(&model.User{}, &model.Address{}, &model.UserFollow{}, &model.SaleInfo{} )
 
 	//wiring dependencies
 	userRepo := repository.NewUserRepository(config.DB)
