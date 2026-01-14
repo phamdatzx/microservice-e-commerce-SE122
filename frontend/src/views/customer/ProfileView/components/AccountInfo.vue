@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import axios from 'axios'
+import { Loading } from '@element-plus/icons-vue'
 
 const props = defineProps<{
   name: string
@@ -17,6 +19,44 @@ const localName = ref(props.name)
 const localEmail = ref(props.email)
 const localPhone = ref(props.phone)
 const avatarPreview = ref('')
+const isLoading = ref(false)
+
+const fetchUserInfo = async () => {
+  const token = localStorage.getItem('access_token')
+  if (!token) return
+
+  isLoading.value = true
+
+  try {
+    const response = await axios.get(`${import.meta.env.VITE_BE_API_URL}/user/my-info`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+
+    const userData = response.data.data
+
+    localName.value = userData.name || ''
+    localEmail.value = userData.email || ''
+    localPhone.value = userData.phone || ''
+    if (userData.image) {
+      avatarPreview.value = userData.image
+    }
+
+    // Sync with parent
+    emit('update:name', localName.value)
+    emit('update:email', localEmail.value)
+    emit('update:phone', localPhone.value)
+  } catch (error) {
+    console.error('Failed to fetch user info:', error)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+onMounted(() => {
+  fetchUserInfo()
+})
 
 const handleAvatarChange = (file: any) => {
   const reader = new FileReader()
@@ -37,19 +77,23 @@ const handleSave = () => {
   <div class="account-info">
     <h2 class="section-title">Account Info</h2>
 
-    <el-row :gutter="40">
+    <div v-if="isLoading" class="loading-state">
+      <el-icon class="is-loading"><Loading /></el-icon>
+    </div>
+
+    <el-row v-else :gutter="40">
       <el-col :span="16">
         <el-form label-position="top">
           <el-form-item label="Name" required>
-            <el-input v-model="localName" size="large" placeholder="Mark Cole" />
+            <el-input v-model="localName" size="large" placeholder="Enter your name" />
           </el-form-item>
 
           <el-form-item label="Email Address" required>
-            <el-input v-model="localEmail" size="large" placeholder="swoo@gmail.com" />
+            <el-input v-model="localEmail" size="large" placeholder="Enter your email" />
           </el-form-item>
 
           <el-form-item label="Phone Number (Optional)">
-            <el-input v-model="localPhone" size="large" placeholder="+1 0231 4554 452" />
+            <el-input v-model="localPhone" size="large" placeholder="Enter your phone number" />
           </el-form-item>
 
           <el-form-item>
@@ -67,7 +111,7 @@ const handleSave = () => {
       <el-col :span="8">
         <div class="avatar-upload-container">
           <div class="avatar-preview-wrapper">
-            <img :src="avatarPreview || '/src/assets/avatar.jpg'" alt="User Avatar" />
+            <img :src="avatarPreview" alt="User Avatar" />
           </div>
           <el-upload
             class="avatar-uploader"
@@ -160,5 +204,14 @@ const handleSave = () => {
 
 .upload-tip p {
   margin: 0;
+}
+
+.loading-state {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 100px 0;
+  font-size: 40px;
+  color: #888;
 }
 </style>

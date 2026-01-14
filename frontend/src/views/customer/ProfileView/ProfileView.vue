@@ -1,14 +1,48 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { ArrowRight } from '@element-plus/icons-vue'
+import { ref, onMounted } from 'vue'
+import { ArrowRight, Loading } from '@element-plus/icons-vue'
 import { useRouter, useRoute } from 'vue-router'
+import axios from 'axios'
 
 const router = useRouter()
 const route = useRoute()
 
-const name = ref('Mark Cole')
-const email = ref('swoo@gmail.com')
-const phone = ref('+1 0231 4554 452')
+const name = ref('')
+const email = ref('')
+const phone = ref('')
+const avatar = ref('')
+const isLoading = ref(false)
+
+const fetchUserInfo = async () => {
+  const token = localStorage.getItem('access_token')
+  if (!token) return
+
+  isLoading.value = true
+  try {
+    const response = await axios.get(`${import.meta.env.VITE_BE_API_URL}/user/my-info`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+
+    const userData = response.data.data
+
+    name.value = userData.name || ''
+    email.value = userData.email || ''
+    phone.value = userData.phone || ''
+    if (userData.image) {
+      avatar.value = userData.image
+    }
+  } catch (error) {
+    console.error('Failed to fetch user info:', error)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+onMounted(() => {
+  fetchUserInfo()
+})
 
 const menuItems = [
   { id: 'account-info', label: 'Account info', path: '/profile/account-info' },
@@ -34,11 +68,16 @@ const isActive = (path: string) => {
       <el-col :span="6">
         <div class="sidebar box-shadow border-radius">
           <div class="user-profile">
-            <div class="avatar-wrapper">
-              <img src="/src/assets/avatar.jpg" alt="User Avatar" />
+            <div v-if="isLoading" class="loading-state">
+              <el-icon class="is-loading"><Loading /></el-icon>
             </div>
-            <h3 class="user-name">{{ name }}</h3>
-            <p class="user-email">swoo@gmail.com</p>
+            <div v-else>
+              <div class="avatar-wrapper">
+                <img :src="avatar" alt="User Avatar" />
+              </div>
+              <h3 class="user-name">{{ name }}</h3>
+              <p class="user-email">{{ email }}</p>
+            </div>
           </div>
 
           <div class="sidebar-menu">
@@ -85,6 +124,15 @@ const isActive = (path: string) => {
   text-align: center;
   border-bottom: 1px solid #f0f0f0;
   background-color: #f9f9f9;
+}
+
+.loading-state {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 214px;
+  font-size: 24px;
+  color: #888;
 }
 
 .avatar-wrapper {
