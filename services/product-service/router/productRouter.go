@@ -15,6 +15,8 @@ func RegisterProductRoutes(rg *gin.RouterGroup, c controller.ProductController) 
 		product.GET("/public", c.GetAllProducts)
 		product.GET("/public/products/seller/:sellerId", c.GetProductsBySeller)
 		product.POST("/public/variants/batch", c.GetVariantsByIds)
+		product.GET("/public/search", c.SearchProducts)
+
 
 
 		// Protected routes - require seller role

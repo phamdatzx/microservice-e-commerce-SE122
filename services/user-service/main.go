@@ -19,6 +19,10 @@ func main() {
 	// Kết nối DB
 	config.ConnectDatabase()
 
+	//s3
+	config.InitS3()
+
+
 	// Auto migrate
 	config.DB.AutoMigrate(&model.User{}, &model.Address{})
 

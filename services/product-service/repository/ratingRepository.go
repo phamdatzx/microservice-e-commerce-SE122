@@ -19,6 +19,7 @@ type RatingRepository interface {
 	Update(rating *model.Rating) error
 	Delete(id string) error
 	AddRatingResponse(ratingID string, response model.RatingResponse) error
+	FindByProductIDAndUserID(productID string, userID string) (*model.Rating, error)
 }
 
 type ratingRepository struct {
@@ -148,4 +149,12 @@ func (r *ratingRepository) AddRatingResponse(ratingID string, response model.Rat
 		},
 	)
 	return err
+}
+
+func (r *ratingRepository) FindByProductIDAndUserID(productID string, userID string) (*model.Rating, error) {
+	var rating model.Rating
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	err := r.collection.FindOne(ctx, bson.M{"product_id": productID, "user._id": userID}).Decode(&rating)
+	return &rating, err
 }

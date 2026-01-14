@@ -19,6 +19,8 @@ func RegisterUserRoutes(rg *gin.RouterGroup, c controller.UserController) {
 		user.GET("/test-private", c.TestPrivate)
 		user.GET("/my-info", c.GetMyInfo)
 		user.GET("/public/:id", c.GetUserByID)
+		user.POST("/upload-image", c.UploadUserImage)
 	}
 }
+
 

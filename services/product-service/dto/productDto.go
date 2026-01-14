@@ -86,3 +86,31 @@ type ReserveStockRequest struct {
 type ReleaseStockRequest struct {
 	OrderID string `json:"order_id" binding:"required"`
 }
+
+// SearchProductsQueryParams represents query parameters for searching products
+type SearchProductsQueryParams struct {
+	Page        int     `form:"page"`
+	Limit       int     `form:"limit"`
+	MinPrice    *int    `form:"min_price"`
+	MaxPrice    *int    `form:"max_price"`
+	MinRating   *float64 `form:"min_rating"`
+	MaxRating   *float64 `form:"max_rating"`
+	CategoryIDs string  `form:"category_ids"` // comma-separated list
+	SearchQuery string  `form:"search_query"`
+}
+
+// SetDefaults sets default values for search query parameters
+func (p *SearchProductsQueryParams) SetDefaults() {
+	if p.Page <= 0 {
+		p.Page = 1
+	}
+	if p.Limit <= 0 {
+		p.Limit = 10
+	}
+}
+
+// GetSkip calculates the number of documents to skip for pagination
+func (p *SearchProductsQueryParams) GetSkip() int {
+	return (p.Page - 1) * p.Limit
+}
+

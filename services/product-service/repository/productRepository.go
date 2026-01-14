@@ -20,6 +20,7 @@ type ProductRepository interface {
 	FindBySeller(sellerID string, filter bson.M, skip, limit int, sortField string, sortDirection int) ([]model.Product, int64, error)
 	FindVariantsByIds(variantIDs []string) (map[string]*model.Product, error)
 	UpdateVariantStock(productID string, variantID string, stockDelta int) error
+	SearchProducts(filter bson.M, skip, limit int, sortByTextScore bool) ([]model.Product, int64, error)
 }
 
 type productRepository struct {
@@ -260,4 +261,52 @@ func (r *productRepository) UpdateVariantStock(productID string, variantID strin
 		},
 	)
 	return err
+}
+
+func (r *productRepository) SearchProducts(filter bson.M, skip, limit int, sortByTextScore bool) ([]model.Product, int64, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Count total documents matching the filter
+	total, err := r.collection.CountDocuments(ctx, filter)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Build aggregation pipeline
+	pipeline := make([]bson.M, 0)
+
+	// Add match stage
+	pipeline = append(pipeline, bson.M{"$match": filter})
+
+	// Add text score projection and sort if text search is being used
+	if sortByTextScore {
+		// Add text score to sort by relevance
+		pipeline = append(pipeline, bson.M{
+			"$addFields": bson.M{
+				"textScore": bson.M{"$meta": "textScore"},
+			},
+		})
+		pipeline = append(pipeline, bson.M{
+			"$sort": bson.M{"textScore": -1},
+		})
+	}
+
+	// Add pagination
+	pipeline = append(pipeline, bson.M{"$skip": skip})
+	pipeline = append(pipeline, bson.M{"$limit": limit})
+
+	// Execute aggregation
+	cursor, err := r.collection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer cursor.Close(ctx)
+
+	var products []model.Product
+	if err = cursor.All(ctx, &products); err != nil {
+		return nil, 0, err
+	}
+
+	return products, total, nil
 }

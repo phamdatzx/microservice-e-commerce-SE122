@@ -206,3 +206,23 @@ func (c *ProductController) GetVariantsByIds(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+func (c *ProductController) SearchProducts(ctx *gin.Context) {
+	// Parse query parameters
+	var params dto.SearchProductsQueryParams
+	if err := ctx.ShouldBindQuery(&params); err != nil {
+		ctx.Error(error.NewAppErrorWithErr(http.StatusBadRequest, "Invalid query parameters", err))
+		return
+	}
+
+	// Set default values
+	params.SetDefaults()
+
+	// Call service method
+	response, err := c.service.SearchProducts(params)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, response)
+}

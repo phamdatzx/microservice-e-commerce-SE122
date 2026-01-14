@@ -1,6 +1,8 @@
 package service
 
 import (
+	"fmt"
+	"mime/multipart"
 	"user-service/dto"
 	customError "user-service/error"
 	"user-service/model"
@@ -17,6 +19,7 @@ type UserService interface {
 	GetMyInfo(userId string) (dto.MyInfoResponse, error)
 	CheckUsernameExists(request dto.CheckUsernameRequest) (dto.CheckUsernameResponse, error)
 	GetUserByID(userId string) (dto.UserResponse, error)
+	UploadUserImage(userId string, file multipart.File, fileHeader *multipart.FileHeader) (string, error)
 }
 
 type userService struct {
@@ -138,6 +141,7 @@ func (s *userService) GetMyInfo(userId string) (dto.MyInfoResponse, error) {
 		Name:     user.Name,
 		Email:    user.Email,
 		Role:     user.Role,
+		Image:    user.Image,
 		IsActive: user.IsActive,
 		IsVerify: user.IsVerify,
 		IsBanned: user.IsBanned,
@@ -195,5 +199,23 @@ func (s *userService) GetUserByID(userId string) (dto.UserResponse, error) {
 		Image:    user.Image,
 		Address:  defaultAddress,
 	}, nil
+}
+
+func (s *userService) UploadUserImage(userId string, file multipart.File, fileHeader *multipart.FileHeader) (string, error) {
+	// Upload image to S3
+	imageURL, err := utils.UploadImageToS3(file, fileHeader, "users")
+	if err != nil {
+		return "", fmt.Errorf("failed to upload image to S3: %w", err)
+	}
+
+	// Update user's image field in database
+	err = s.repo.UpdateUserImage(userId, imageURL)
+	if err != nil {
+		// If database update fails, try to clean up the uploaded image
+		_ = utils.DeleteImageFromS3(imageURL)
+		return "", fmt.Errorf("failed to update user image: %w", err)
+	}
+
+	return imageURL, nil
 }
 

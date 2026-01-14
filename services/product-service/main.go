@@ -60,7 +60,7 @@ func main() {
 	ratingRepo := repository.NewRatingRepository(config.DB)
 	orderClient := client.NewOrderServiceClient()
 	userClient := client.NewUserServiceClient()
-	ratingService := service.NewRatingService(ratingRepo, orderClient, userClient)
+	ratingService := service.NewRatingService(ratingRepo,productRepo, orderClient, userClient)
 	ratingController := controller.NewRatingController(ratingService)
 
 	r := gin.Default()
