@@ -83,6 +83,7 @@ declare module 'vue' {
     PinterestIcon: typeof import('./src/components/icons/PinterestIcon.vue')['default']
     ProductItem: typeof import('./src/components/ProductItem.vue')['default']
     ProductList: typeof import('./src/components/ProductList.vue')['default']
+    ProfileLayout: typeof import('./src/components/ProfileLayout.vue')['default']
     RecentlyViewed: typeof import('./src/components/RecentlyViewed.vue')['default']
     RedFlagIcon: typeof import('./src/components/icons/RedFlagIcon.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']

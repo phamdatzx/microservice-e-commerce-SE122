@@ -1,19 +1,51 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
+import axios from 'axios'
+import ProfileLayout from '@/components/ProfileLayout.vue'
 import AccountInfo from '@/views/customer/ProfileView/components/AccountInfo.vue'
 import ChangePassword from '@/views/customer/ProfileView/components/ChangePassword.vue'
 import MyAddress from '@/views/customer/ProfileView/components/MyAddress.vue'
 
-const name = ref('Mark Cole')
-const email = ref('swoo@gmail.com')
-const phone = ref('+1 0231 4554 452')
+const name = ref('')
+const email = ref('')
+const phone = ref('')
+const avatar = ref('')
+const isLoading = ref(false)
 
 const route = useRoute()
 const activeMenu = ref('account-info')
 
+const fetchUserInfo = async () => {
+  const token = localStorage.getItem('access_token')
+  if (!token) return
+
+  isLoading.value = true
+  try {
+    const response = await axios.get(`${import.meta.env.VITE_BE_API_URL}/user/my-info`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+
+    const userData = response.data.data
+
+    name.value = userData.name || ''
+    email.value = userData.email || ''
+    phone.value = userData.phone || ''
+    if (userData.image) {
+      avatar.value = userData.image
+    }
+  } catch (error) {
+    console.error('Failed to fetch user info:', error)
+  } finally {
+    isLoading.value = false
+  }
+}
+
 onMounted(() => {
+  fetchUserInfo()
   if (route.query.tab) {
     activeMenu.value = route.query.tab as string
   }
@@ -33,139 +65,53 @@ const menuItems = [
   { id: 'my-address', label: 'My address' },
   { id: 'change-password', label: 'Change password' },
 ]
+
+const handleMenuClick = (item: any) => {
+  activeMenu.value = item.id
+}
+
+const userInfo = computed(() => ({
+  name: name.value,
+  email: email.value,
+  avatar: avatar.value,
+}))
 </script>
 
 <template>
-  <div class="main-container">
-    <el-row :gutter="28">
-      <!-- Sidebar -->
-      <el-col :span="6">
-        <div class="sidebar box-shadow border-radius">
-          <div class="user-profile">
-            <div class="avatar-wrapper">
-              <img src="/src/assets/avatar.jpg" alt="User Avatar" />
-            </div>
-            <h3 class="user-name">{{ name }}</h3>
-            <p class="user-email">swoo@gmail.com</p>
-          </div>
+  <ProfileLayout
+    :loading="isLoading"
+    :user="userInfo"
+    :menu-items="menuItems"
+    :active-item="activeMenu"
+    @menu-click="handleMenuClick"
+    style="margin-top: 0; margin-bottom: 0"
+  >
+    <div class="content-wrapper box-shadow border-radius">
+      <AccountInfo
+        v-if="activeMenu === 'account-info'"
+        v-model:name="name"
+        v-model:email="email"
+        v-model:phone="phone"
+        v-model:avatar="avatar"
+      />
 
-          <div class="sidebar-menu">
-            <div
-              v-for="item in menuItems"
-              :key="item.id"
-              class="menu-item"
-              :class="{ active: activeMenu === item.id }"
-              @click="activeMenu = item.id"
-            >
-              <span>{{ item.label }}</span>
-              <el-icon><ArrowRight /></el-icon>
-            </div>
-          </div>
+      <ChangePassword v-else-if="activeMenu === 'change-password'" />
+
+      <MyAddress v-else-if="activeMenu === 'my-address'" />
+
+      <!-- Fallback -->
+      <div v-else>
+        <h2 class="section-title">Coming Soon</h2>
+        <div style="padding: 40px; text-align: center; color: #999">
+          This section is under development.
         </div>
-      </el-col>
-
-      <!-- Main Content -->
-      <el-col :span="18">
-        <div class="content-area box-shadow border-radius">
-          <AccountInfo
-            v-if="activeMenu === 'account-info'"
-            v-model:name="name"
-            v-model:email="email"
-            v-model:phone="phone"
-          />
-
-          <ChangePassword v-else-if="activeMenu === 'change-password'" />
-
-          <MyAddress v-else-if="activeMenu === 'my-address'" />
-
-          <!-- Fallback -->
-          <div v-else>
-            <h2 class="section-title">Coming Soon</h2>
-            <div style="padding: 40px; text-align: center; color: #999">
-              This section is under development.
-            </div>
-          </div>
-        </div>
-      </el-col>
-    </el-row>
-  </div>
+      </div>
+    </div>
+  </ProfileLayout>
 </template>
 
 <style scoped>
-.main-container {
-  padding: 20px;
-}
-
-.sidebar {
-  background-color: #fff;
-  padding-bottom: 20px;
-  overflow: hidden;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
-}
-
-.user-profile {
-  padding: 30px 20px;
-  text-align: center;
-  border-bottom: 1px solid #f0f0f0;
-  background-color: #f9f9f9;
-}
-
-.avatar-wrapper {
-  width: 140px;
-  height: 140px;
-  margin: 0 auto 16px;
-  border-radius: 12px;
-  overflow: hidden;
-  background-color: #e0e0e0;
-}
-
-.avatar-wrapper img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.user-name {
-  font-size: 20px;
-  font-weight: 700;
-  color: #000;
-  margin-bottom: 4px;
-}
-
-.user-email {
-  font-size: 14px;
-  color: #888;
-}
-
-.sidebar-menu {
-  padding: 10px 15px;
-}
-
-.menu-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px 20px;
-  margin: 8px 0;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-weight: 500;
-  color: #444;
-}
-
-.menu-item:hover {
-  background-color: #f5f5f5;
-  color: var(--main-color);
-}
-
-.menu-item.active {
-  background-color: var(--main-color);
-  color: #fff;
-}
-
-.content-area {
+.content-wrapper {
   background-color: #fff;
   padding: 20px;
   border-radius: 8px;
