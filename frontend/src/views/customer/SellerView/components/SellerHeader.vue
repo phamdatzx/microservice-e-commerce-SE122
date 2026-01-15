@@ -1,5 +1,26 @@
 <script setup lang="ts">
-import { ArrowDown, Goods, Star, User } from '@element-plus/icons-vue'
+import { ArrowDown, Goods, Star, User, ChatDotRound } from '@element-plus/icons-vue'
+import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
+
+defineProps<{
+  sellerInfo: {
+    id: string
+    name: string
+    image: string
+    address: {
+      province: string
+    }
+    sale_info: {
+      follow_count: number
+      rating_count: number
+      rating_average: number
+      product_count: number
+      is_following: boolean
+    }
+  }
+}>()
+
+defineEmits(['toggle-follow'])
 </script>
 
 <template>
@@ -10,14 +31,23 @@ import { ArrowDown, Goods, Star, User } from '@element-plus/icons-vue'
         <div class="shop-banner-overlay"></div>
         <div class="shop-info-main">
           <div class="shop-logo-wrapper">
-            <img src="/src/assets/avatar.jpg" alt="Shop Logo" class="shop-logo" />
+            <img
+              :src="sellerInfo.image || '/src/assets/avatar.jpg'"
+              alt="Shop Logo"
+              class="shop-logo"
+            />
           </div>
           <div class="shop-details">
-            <h1 class="shop-name">Jean.one</h1>
+            <h1 class="shop-name">{{ sellerInfo.name }}</h1>
             <p class="shop-status">Online 2 minutes ago</p>
             <div class="shop-actions">
-              <button class="btn btn-outline-white"><span class="icon">+</span> Follow</button>
-              <button class="btn btn-outline-white"><span class="icon">💬</span> Chat</button>
+              <button class="btn btn-outline-white" @click="$emit('toggle-follow')">
+                <span class="icon">{{ sellerInfo.sale_info.is_following ? '✓' : '+' }}</span>
+                {{ sellerInfo.sale_info.is_following ? 'Following' : 'Follow' }}
+              </button>
+              <button class="btn btn-outline-white">
+                <el-icon><ChatDotRound /></el-icon> Chat
+              </button>
             </div>
           </div>
         </div>
@@ -27,23 +57,27 @@ import { ArrowDown, Goods, Star, User } from '@element-plus/icons-vue'
       <div class="shop-stats">
         <div class="stat-item">
           <div class="stat-value">
-            63 <el-icon><Goods /></el-icon>
+            {{ sellerInfo.sale_info.product_count || 0 }} <el-icon><Goods /></el-icon>
           </div>
           <div class="stat-label">Products</div>
         </div>
         <div class="stat-divider"></div>
         <div class="stat-item">
           <div class="stat-value">
-            8.3k <el-icon><User /></el-icon>
+            {{ formatNumberWithDots(sellerInfo.sale_info.follow_count) }}
+            <el-icon><User /></el-icon>
           </div>
           <div class="stat-label">Followers</div>
         </div>
         <div class="stat-divider"></div>
         <div class="stat-item">
           <div class="stat-value highlight">
-            4.8 <el-icon><Star /></el-icon>
+            {{ sellerInfo.sale_info.rating_average.toFixed(1) }} <el-icon><Star /></el-icon>
           </div>
-          <div class="stat-label">Rating <span class="rating-count">(21.3k Ratings)</span></div>
+          <div class="stat-label">
+            Rating
+            <span class="rating-count">({{ sellerInfo.sale_info.rating_count }} Ratings)</span>
+          </div>
         </div>
       </div>
     </div>
@@ -122,8 +156,7 @@ import { ArrowDown, Goods, Star, User } from '@element-plus/icons-vue'
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(2px);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .shop-info-main {
@@ -134,6 +167,7 @@ import { ArrowDown, Goods, Star, User } from '@element-plus/icons-vue'
   height: 100%;
   align-items: center;
   gap: 15px;
+  background-color: #e6f7ed; /* More visible Light Green */
 }
 
 .shop-logo-wrapper {
@@ -152,7 +186,7 @@ import { ArrowDown, Goods, Star, User } from '@element-plus/icons-vue'
 }
 
 .shop-details {
-  color: white;
+  color: #333;
   flex: 1;
 }
 
@@ -160,12 +194,12 @@ import { ArrowDown, Goods, Star, User } from '@element-plus/icons-vue'
   font-size: 20px;
   font-weight: 500;
   margin: 0;
-  color: white;
+  color: #222;
 }
 
 .shop-status {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.8);
+  color: #666;
   margin: 4px 0 10px 0;
 }
 
@@ -175,7 +209,8 @@ import { ArrowDown, Goods, Star, User } from '@element-plus/icons-vue'
 }
 
 .btn {
-  padding: 6px 12px;
+  height: 30px;
+  padding: 0 12px;
   border-radius: 2px;
   font-size: 12px;
   cursor: pointer;
@@ -184,16 +219,17 @@ import { ArrowDown, Goods, Star, User } from '@element-plus/icons-vue'
   justify-content: center;
   gap: 4px;
   transition: all 0.2s;
+  box-sizing: border-box;
 }
 
 .btn-outline-white {
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  color: white;
+  background: #fff;
+  border: 1px solid var(--main-color);
+  color: var(--main-color);
 }
 
 .btn-outline-white:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: #f0f7f4;
 }
 
 .shop-stats {

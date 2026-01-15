@@ -1,8 +1,42 @@
 <script setup lang="ts">
+import { ref, onMounted, computed, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import axios from 'axios'
 import SellerHeader from './components/SellerHeader.vue'
 import SellerVouchers from './components/SellerVouchers.vue'
 import SellerRecommendations from './components/SellerRecommendations.vue'
 import ProductList from '@/components/ProductList.vue'
+
+const route = useRoute()
+const sellerId = computed(() => route.params.sellerId as string)
+
+interface SellerInfo {
+  id: string
+  name: string
+  image: string
+  address: {
+    province: string
+  }
+  sale_info: {
+    follow_count: number
+    rating_count: number
+    rating_average: number
+    product_count: number // Added if available or will derive
+    is_following: boolean
+  }
+}
+
+const sellerInfo = ref<SellerInfo | null>(null)
+const products = ref<any[]>([])
+const vouchers = ref<any[]>([])
+const savedVoucherIds = ref<string[]>([])
+const isLoading = ref(false)
+const isFollowingState = ref<boolean | null>(null)
+const totalItems = ref(0)
+const currentPage = ref(1)
+const pageSize = ref(15)
+const sortBy = ref('sold_count')
+const sortDirection = ref('desc')
 
 const categories = [
   'Cargo Jeans ⭐',
@@ -17,89 +51,292 @@ const categories = [
   'Thermals ⭐',
 ]
 
-const products = [
-  {
-    id: 1,
-    name: 'Jeans for Men Skinny Fit White Plain Stretchable Office Stylish Fashion',
-    price: 149600,
-    imageUrl: '/src/assets/product-imgs/product1.png',
-    rating: 4.8,
-    location: 'Ho Chi Minh City',
-    discount: 28,
-  },
-  {
-    id: 2,
-    name: 'Cargo Jeans for Men Wide Leg Relaxed Fit Loose Fashion Trendy',
-    price: 175000,
-    imageUrl: '/src/assets/product-imgs/product1.png',
-    rating: 4.8,
-    location: 'Ha Noi',
-    discount: 32,
-  },
-  {
-    id: 3,
-    name: 'Skinny Jeans Men Black Washed Casual Comfort Fit Elastic',
-    price: 125000,
-    imageUrl: '/src/assets/product-imgs/product1.png',
-    rating: 4.8,
-    location: 'Da Nang',
-    discount: 37,
-  },
-  {
-    id: 4,
-    name: 'WASH RETRO Jeans Men Dark Grey Loose Fit Vintage Style',
-    price: 174999,
-    imageUrl: '/src/assets/product-imgs/product1.png',
-    rating: 4.8,
-    location: 'Ho Chi Minh City',
-    discount: 24,
-  },
-  {
-    id: 5,
-    name: 'Elastic Cuff Pants for Men Casual Streetwear Jogger Style',
-    price: 92900,
-    imageUrl: '/src/assets/product-imgs/product1.png',
-    rating: 4.9,
-    location: 'Binh Duong',
-    discount: 45,
-  },
-  {
-    id: 6,
-    name: 'Cargo Jeans for Men Wide Leg Relaxed Fit Loose Fashion Trendy',
-    price: 175000,
-    imageUrl: '/src/assets/product-imgs/product1.png',
-    rating: 4.8,
-    location: 'Ha Noi',
-    discount: 32,
-  },
-]
-
-const sortOptions = [
-  { label: 'Popular', value: 'popular', active: true },
-  { label: 'Latest', value: 'latest' },
-  { label: 'Top Sales', value: 'top-sales' },
-]
-
-const pagination = {
-  current: 1,
-  total: 100,
-  pageSize: 20,
+const fetchSellerInfo = async () => {
+  if (!sellerId.value) return
+  const token = localStorage.getItem('access_token')
+  const headers = token ? { Authorization: `Bearer ${token}` } : {}
+  try {
+    const response = await axios.get(
+      `${import.meta.env.VITE_BE_API_URL}/user/public/seller/${sellerId.value}`,
+      { headers },
+    )
+    if (response.data && response.data.data) {
+      sellerInfo.value = response.data.data
+      if (sellerInfo.value) {
+        sellerInfo.value.sale_info.product_count = totalItems.value
+        // Sync with our reliable follow state if we have it
+        if (isFollowingState.value !== null) {
+          sellerInfo.value.sale_info.is_following = isFollowingState.value
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching seller info:', error)
+  }
 }
+
+interface SellerProduct {
+  id: string
+  name: string
+  price: {
+    min: number
+    max: number
+  }
+  images: Array<{
+    url: string
+    order: number
+  }>
+  rating: number
+  sold_count: number
+}
+
+const fetchSellerProducts = async () => {
+  if (!sellerId.value) return
+  isLoading.value = true
+  try {
+    const response = await axios.get(
+      `${import.meta.env.VITE_BE_API_URL}/product/public/products/seller/${sellerId.value}`,
+      {
+        params: {
+          page: currentPage.value,
+          limit: pageSize.value,
+          sort_by: sortBy.value,
+          sort_direction: sortDirection.value,
+        },
+      },
+    )
+    if (response.data) {
+      products.value = response.data.products.map((p: SellerProduct) => ({
+        id: p.id,
+        name: p.name,
+        price: p.price.min,
+        imageUrl:
+          p.images?.sort((a, b) => a.order - b.order)[0]?.url ||
+          'https://placehold.co/300x300?text=No+Image',
+        rating: p.rating,
+        location: sellerInfo.value?.address?.province || 'Vietnam',
+        discount: 0,
+        soldCount: p.sold_count,
+      }))
+      totalItems.value = response.data.pagination.total_items
+      if (sellerInfo.value) {
+        sellerInfo.value.sale_info.product_count = response.data.pagination.total_items
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching seller products:', error)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+import { ElMessage } from 'element-plus'
+
+const fetchSellerVouchers = async () => {
+  if (!sellerId.value) return
+  try {
+    const response = await axios.get(
+      `${import.meta.env.VITE_BE_API_URL}/product/public/vouchers/seller/${sellerId.value}`,
+    )
+    if (response.data) {
+      vouchers.value = response.data
+    }
+  } catch (error) {
+    console.error('Error fetching seller vouchers:', error)
+  }
+}
+
+const fetchSavedVouchers = async () => {
+  const token = localStorage.getItem('access_token')
+  if (!token) return
+  try {
+    const response = await axios.get(`${import.meta.env.VITE_BE_API_URL}/product/saved-vouchers`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    if (response.data) {
+      savedVoucherIds.value = response.data.map((item: any) => item.voucher_id)
+    }
+  } catch (error) {
+    console.error('Error fetching saved vouchers:', error)
+  }
+}
+
+const checkFollowStatus = async () => {
+  const token = localStorage.getItem('access_token')
+  if (!token || !sellerId.value) return
+  try {
+    const response = await axios.get(
+      `${import.meta.env.VITE_BE_API_URL}/user/follow/${sellerId.value}/check`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    )
+    if (response.data && response.data.data) {
+      const isFollowing = response.data.data.is_following
+      isFollowingState.value = isFollowing
+      if (sellerInfo.value) {
+        sellerInfo.value.sale_info.is_following = isFollowing
+      }
+    }
+  } catch (error) {
+    console.error('Error checking follow status:', error)
+  }
+}
+
+const handleFollowToggle = async () => {
+  const token = localStorage.getItem('access_token')
+  if (!token) {
+    ElMessage.warning('Please login to follow sellers')
+    return
+  }
+
+  if (!sellerInfo.value) return
+
+  const isCurrentlyFollowing = sellerInfo.value.sale_info.is_following
+  const url = `${import.meta.env.VITE_BE_API_URL}/user/follow/${sellerId.value}`
+
+  try {
+    if (isCurrentlyFollowing) {
+      await axios.delete(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      isFollowingState.value = false
+      ElMessage.success('Unfollowed seller')
+    } else {
+      await axios.post(
+        url,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      )
+      isFollowingState.value = true
+      ElMessage.success('Followed seller')
+    }
+    // Refresh seller info to update follow count and status
+    fetchSellerInfo()
+    checkFollowStatus()
+  } catch (error: any) {
+    const errorMsg = error.response?.data?.message || 'Failed to update follow status'
+    ElMessage.error(errorMsg)
+  }
+}
+
+const handleSaveVoucher = async (voucherId: string) => {
+  const token = localStorage.getItem('access_token')
+  if (!token) {
+    ElMessage.warning('Please login to save vouchers')
+    return
+  }
+
+  try {
+    await axios.post(
+      `${import.meta.env.VITE_BE_API_URL}/product/saved-vouchers`,
+      {
+        voucher_id: voucherId,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    )
+    ElMessage.success('Voucher saved successfully!')
+    // Refresh vouchers and saved list to update UI
+    fetchSellerVouchers()
+    fetchSavedVouchers()
+  } catch (error: any) {
+    const errorMsg = error.response?.data?.message || 'Failed to save voucher'
+    ElMessage.error(errorMsg)
+  }
+}
+
+const handlePageChange = (page: number) => {
+  currentPage.value = page
+  fetchSellerProducts()
+}
+
+const handleSortChange = (value: string) => {
+  if (value === 'price-asc') {
+    sortBy.value = 'price'
+    sortDirection.value = 'asc'
+  } else if (value === 'price-desc') {
+    sortBy.value = 'price'
+    sortDirection.value = 'desc'
+  } else {
+    sortBy.value = value
+    sortDirection.value = 'desc'
+  }
+  currentPage.value = 1
+  fetchSellerProducts()
+}
+
+onMounted(() => {
+  fetchSellerInfo()
+  fetchSellerProducts()
+  fetchSellerVouchers()
+  fetchSavedVouchers()
+  checkFollowStatus()
+})
+
+const sortOptions = computed(() => [
+  { label: 'Top Sales', value: 'sold_count', active: sortBy.value === 'sold_count' },
+  { label: 'Rating', value: 'rating', active: sortBy.value === 'rating' },
+])
+
+const pagination = computed(() => ({
+  current: currentPage.value,
+  total: totalItems.value,
+  pageSize: pageSize.value,
+}))
+
+watch(
+  totalItems,
+  (val) => {
+    if (sellerInfo.value) {
+      sellerInfo.value.sale_info.product_count = val
+    }
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
   <div class="seller-page">
     <main class="seller-main">
-      <SellerHeader />
+      <SellerHeader
+        v-if="sellerInfo"
+        :seller-info="sellerInfo"
+        @toggle-follow="handleFollowToggle"
+      />
 
       <div class="content-bg">
-        <SellerVouchers />
+        <SellerVouchers
+          :vouchers="vouchers"
+          :saved-voucher-ids="savedVoucherIds"
+          @save="handleSaveVoucher"
+        />
 
         <div class="container">
           <SellerRecommendations />
         </div>
 
-        <ProductList :products="products" :sort-options="sortOptions" :pagination="pagination">
+        <ProductList
+          :products="products"
+          :sort-options="sortOptions"
+          :pagination="pagination"
+          :loading="isLoading"
+          @page-change="handlePageChange"
+          @sort-change="handleSortChange"
+        >
           <template #sidebar>
             <div class="sidebar-header">
               <span class="sidebar-icon">≡</span>
@@ -184,7 +421,7 @@ const pagination = {
   color: #fff;
 }
 
-:deep(.custom-pagination.is-background .el-pager li:not(.is-disabled):hover) {
+:deep(.custom-pagination.is-background .el-pager li:not(.is-disabled):not(.is-active):hover) {
   color: var(--main-color);
 }
 </style>

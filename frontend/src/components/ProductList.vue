@@ -10,6 +10,7 @@ interface Product {
   rating: number
   location: string
   discount: number
+  soldCount?: number
 }
 
 interface SortOption {
@@ -125,6 +126,7 @@ defineEmits(['sort-change', 'page-change'])
               :rating="product.rating"
               :location="product.location"
               :discount="product.discount"
+              :soldCount="product.soldCount"
             />
           </div>
 

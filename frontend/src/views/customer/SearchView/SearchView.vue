@@ -137,16 +137,17 @@ const fetchProducts = async () => {
     totalItems.value = response.data.pagination.total_items
 
     // Transform to display format
-    products.value = rawProducts.map((p) => ({
+    products.value = rawProducts.map((p: any) => ({
       id: p.id,
       name: p.name,
       price: p.price.min, // Use min price for display
       imageUrl:
-        p.images.sort((a, b) => a.order - b.order)[0]?.url ||
+        p.images?.sort((a: any, b: any) => a.order - b.order)[0]?.url ||
         'https://placehold.co/300x300?text=No+Image',
       rating: p.rating,
       location: 'Vietnam', // Backend doesn't have location yet
       discount: 0, // Backend doesn't have discount yet
+      soldCount: p.sold_count,
     }))
   } catch (error) {
     console.error('Failed to fetch products:', error)

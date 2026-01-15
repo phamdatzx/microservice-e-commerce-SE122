@@ -146,7 +146,7 @@ const router = createRouter({
           component: () => import('@/views/customer/RecentlyViewedView.vue'),
         },
         {
-          path: 'seller-page',
+          path: 'seller-page/:sellerId',
           component: SellerView,
         },
         {

@@ -93,6 +93,7 @@ const recommendedProducts = [
   justify-content: space-between;
   align-items: center;
   padding: 0 5px;
+  margin-bottom: 12px;
 }
 
 .section-title {
