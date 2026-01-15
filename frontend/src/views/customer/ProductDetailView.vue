@@ -418,7 +418,7 @@ const addToCart = async () => {
                 show-score
                 style="--el-rate-fill-color: var(--main-color)"
                 text-color="var(--main-color)"
-                score-template="{value} points"
+                :score-template="`${Number(product.rating).toFixed(1)} points`"
               />
               <el-divider direction="vertical" />
               <div>{{ quantityFormatNumber(product.rate_count) }} reviews</div>
@@ -604,7 +604,8 @@ const addToCart = async () => {
                 "
               >
                 <span style="font-size: 28px; font-weight: 600"
-                  >{{ product.rating }}<span style="font-size: 24px"> out of 5</span></span
+                  >{{ Number(product.rating).toFixed(1)
+                  }}<span style="font-size: 24px"> out of 5</span></span
                 >
                 <el-rate
                   v-model="product.rating"

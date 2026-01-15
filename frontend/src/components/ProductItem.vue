@@ -37,7 +37,7 @@ const props = defineProps(['imageUrl', 'name', 'price', 'rating', 'location', 'd
       <div style="display: flex; justify-content: space-between">
         <div>
           <StarIcon style="margin-right: 4px" />
-          <span>{{ props.rating }}</span>
+          <span>{{ Number(props.rating).toFixed(1) }}</span>
         </div>
         <div>
           <LocationIcon style="margin-right: 4px" />
