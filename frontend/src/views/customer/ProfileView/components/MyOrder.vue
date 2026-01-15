@@ -123,9 +123,11 @@ const orderTabs = [
         <div class="order-header">
           <div class="shop-info">
             <span class="shop-name">{{ order.seller?.name || 'Shop' }}</span>
-            <el-button :icon="ChatDotRound" size="small" link>Chat</el-button>
+            <el-button :icon="ChatDotRound" size="small" link class="shop-action-btn"
+              >Chat</el-button
+            >
             <el-divider direction="vertical" />
-            <el-button :icon="Shop" size="small" link>View Shop</el-button>
+            <el-button :icon="Shop" size="small" link class="shop-action-btn">View Shop</el-button>
           </div>
           <div class="order-status">
             <span class="shipping-status"
@@ -390,5 +392,13 @@ const orderTabs = [
 
 .pagination-container :deep(.el-pagination.is-background .el-pager li.is-active) {
   background-color: var(--main-color) !important;
+}
+
+.shop-action-btn {
+  color: #666;
+}
+
+.shop-action-btn:hover {
+  color: var(--main-color) !important;
 }
 </style>

@@ -2,14 +2,18 @@
 import type { CheckboxValueType } from 'element-plus'
 import { ref, useTemplateRef, watch } from 'vue'
 import { type CartSeller, type Product } from '../CartView.vue'
-import { ChatLineRound } from '@element-plus/icons-vue'
+import { ChatDotRound, Shop } from '@element-plus/icons-vue'
 import CartProduct from './CartProduct.vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 interface Props {
   seller: CartSeller
 }
 const props = withDefaults(defineProps<Props>(), {
   seller: () => ({
+    sellerId: '',
     sellerName: '',
     products: [],
   }),
@@ -56,9 +60,19 @@ defineExpose({ checkedProducts, handleCheckAll, handleUncheckAll })
         class="cartCheckbox"
       />
       <h4 style="font-weight: 500">{{ props.seller.sellerName }}</h4>
-      <el-button type="plain" circle style="margin-left: 8px">
-        <el-icon size="large"><ChatLineRound /></el-icon>
-      </el-button>
+      <div style="margin-left: 12px; display: flex; align-items: center">
+        <el-button :icon="ChatDotRound" size="small" link class="shop-action-btn">Chat</el-button>
+        <el-divider direction="vertical" />
+        <el-button
+          :icon="Shop"
+          size="small"
+          link
+          class="shop-action-btn"
+          @click="router.push(`/seller/${props.seller.sellerId}`)"
+        >
+          View Shop
+        </el-button>
+      </div>
     </div>
     <el-divider style="margin: 0 0 15px 0" />
     <el-checkbox-group v-model="checkedProducts" @change="handleCheckedProductsChange">
@@ -71,3 +85,13 @@ defineExpose({ checkedProducts, handleCheckAll, handleUncheckAll })
     </el-checkbox-group>
   </div>
 </template>
+
+<style scoped>
+.shop-action-btn {
+  color: #666;
+}
+
+.shop-action-btn:hover {
+  color: var(--main-color) !important;
+}
+</style>
