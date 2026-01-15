@@ -29,39 +29,36 @@ defineExpose({
   >
     <div style="display: flex; margin-bottom: 12px">
       <h3 style="font-weight: bold">YOU RECENTLY VIEWED</h3>
-      <RouterLink
-        to="/recently-viewed"
-        style="position: relative; top: 3px; margin-left: 20px; color: #999; font-size: 13px"
-      >
-        View All
-      </RouterLink>
+      <RouterLink to="/recently-viewed" class="view-all-btn"> View All </RouterLink>
     </div>
 
-    <Splide
-      v-if="recentlyViewedProducts.length"
-      :options="{
-        rewind: true,
-        perPage: 5,
-        gap: '1rem',
-        breakpoints: {
-          1024: { perPage: 4 },
-          768: { perPage: 2 },
-          480: { perPage: 1 },
-        },
-      }"
-    >
-      <SplideSlide v-for="item in recentlyViewedProducts" :key="item.id">
-        <ProductItem
-          :image-url="item.imageUrl"
-          :name="item.name"
-          :price="item.price"
-          :rating="item.rating"
-          :location="item.location"
-          :discount="item.discount"
-          :id="item.id"
-        />
-      </SplideSlide>
-    </Splide>
+    <div v-if="recentlyViewedProducts.length">
+      <Splide
+        :options="{
+          rewind: true,
+          perPage: 5,
+          gap: '1rem',
+          breakpoints: {
+            1024: { perPage: 4 },
+            768: { perPage: 2 },
+            480: { perPage: 1 },
+          },
+        }"
+      >
+        <SplideSlide v-for="item in recentlyViewedProducts" :key="item.id">
+          <ProductItem
+            :image-url="item.imageUrl"
+            :name="item.name"
+            :price="item.price"
+            :rating="item.rating"
+            :location="item.location"
+            :discount="item.discount"
+            :id="item.id"
+            style="padding-bottom: 12px"
+          />
+        </SplideSlide>
+      </Splide>
+    </div>
 
     <div v-else style="text-align: center; color: #999; padding: 40px">
       <el-icon size="40" style="margin-bottom: 12px; opacity: 0.5"><ShoppingCart /></el-icon>
@@ -82,5 +79,34 @@ defineExpose({
 h3 {
   font-size: 18px;
   color: #1a1a1a;
+}
+
+:deep(.splide__track) {
+  padding: 20px 20px !important;
+  margin: -20px -20px;
+}
+
+:deep(.splide__slide) {
+  padding: 4px;
+}
+
+.view-all-btn {
+  position: relative;
+  top: 4px;
+  margin-left: 20px;
+  color: #999;
+  font-size: 14px;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.view-all-btn:hover {
+  color: var(--main-color);
+}
+</style>
+
+<style>
+.recently-viewed-section .splide__pagination__page {
+  top: 8px;
 }
 </style>
