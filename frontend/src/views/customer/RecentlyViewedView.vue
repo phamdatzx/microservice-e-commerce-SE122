@@ -75,6 +75,7 @@ onMounted(() => {
           :md="6"
           :lg="4.8"
           class="el-col-4-8"
+          style="margin-bottom: 20px"
         >
           <ProductItem
             :id="item.id"
@@ -103,7 +104,7 @@ onMounted(() => {
 .main-container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 40px 20px;
+  padding: 40px 20px 12px;
 }
 
 .page-header {
@@ -111,7 +112,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: flex-start;
   border-bottom: 1px solid #eee;
-  padding-bottom: 12px;
+  padding-bottom: 16px;
 }
 
 .page-title {
