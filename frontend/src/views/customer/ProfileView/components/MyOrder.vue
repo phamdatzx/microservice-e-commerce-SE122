@@ -127,7 +127,14 @@ const orderTabs = [
               >Chat</el-button
             >
             <el-divider direction="vertical" />
-            <el-button :icon="Shop" size="small" link class="shop-action-btn">View Shop</el-button>
+            <el-button
+              :icon="Shop"
+              size="small"
+              link
+              class="shop-action-btn"
+              @click="router.push(`/seller-page/${order.seller.id}`)"
+              >View Shop</el-button
+            >
           </div>
           <div class="order-status">
             <span class="shipping-status"

@@ -68,7 +68,7 @@ defineExpose({ checkedProducts, handleCheckAll, handleUncheckAll })
           size="small"
           link
           class="shop-action-btn"
-          @click="router.push(`/seller/${props.seller.sellerId}`)"
+          @click="router.push(`/seller-page/${props.seller.sellerId}`)"
         >
           View Shop
         </el-button>
