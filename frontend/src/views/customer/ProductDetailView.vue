@@ -621,7 +621,6 @@ const addToCart = async () => {
                 <button class="rating-filter-btn">3 Stars</button>
                 <button class="rating-filter-btn">2 Stars</button>
                 <button class="rating-filter-btn">1 Star</button>
-                <button class="rating-filter-btn">Has Comment</button>
                 <button class="rating-filter-btn">Has Pictures</button>
               </el-col>
             </el-row>
