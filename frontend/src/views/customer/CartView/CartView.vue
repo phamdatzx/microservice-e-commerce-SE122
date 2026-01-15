@@ -45,6 +45,7 @@ export interface CartItemAPI {
 
 export interface Product {
   id: string
+  productId: string
   imageUrl: string
   productName: string
   productOption: string
@@ -98,6 +99,7 @@ const fetchCart = async () => {
 
       acc[sellerId].products.push({
         id: item.id,
+        productId: item.product.id,
         imageUrl: item.variant.image || 'https://placehold.co/100x100?text=No+Image',
         productName: item.product.name,
         productOption: Object.values(item.variant.options).join(', '),

@@ -19,6 +19,7 @@ const props = withDefaults(defineProps<Props>(), {
     sellerName: '',
     sellerId: '',
     variantId: '',
+    productId: '',
     stock: 0,
   }),
 })
@@ -33,11 +34,15 @@ const handleDelete = () => {
 <template>
   <div style="padding: 15px 20px; display: flex; align-items: center">
     <el-checkbox :value="props.product" class="cartCheckbox" />
-    <el-image style="width: 80px; height: 80px" fit="cover" :src="props.product.imageUrl" />
+    <RouterLink :to="`/product/${props.product.productId}`">
+      <el-image style="width: 80px; height: 80px" fit="cover" :src="props.product.imageUrl" />
+    </RouterLink>
     <div style="padding: 5px 20px 5px 10px; flex: 1">
-      <p class="two-line-ellipsis" style="margin-bottom: 5px">
-        {{ props.product.productName }}
-      </p>
+      <RouterLink :to="`/product/${props.product.productId}`" class="product-name-link">
+        <p class="two-line-ellipsis" style="margin-bottom: 5px">
+          {{ props.product.productName }}
+        </p>
+      </RouterLink>
       <p
         style="line-height: 16px"
         :style="{
@@ -73,3 +78,15 @@ const handleDelete = () => {
     </span>
   </div>
 </template>
+
+<style scoped>
+.product-name-link {
+  text-decoration: none;
+  color: inherit;
+  transition: color 0.2s;
+}
+
+.product-name-link:hover {
+  color: var(--main-color);
+}
+</style>
