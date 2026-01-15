@@ -152,19 +152,28 @@ const ratingPage = ref(1)
 const ratingLimit = ref(10)
 const ratingTotal = ref(0)
 const isFetchingRatings = ref(false)
+const activeRatingFilter = ref('all') // 'all', '5', '4', '3', '2', '1', 'has_pictures'
 
 const fetchRatings = async () => {
   if (!productId.value) return
   isFetchingRatings.value = true
   try {
+    const params: any = {
+      page: ratingPage.value,
+      limit: ratingLimit.value,
+    }
+
+    if (activeRatingFilter.value !== 'all') {
+      if (activeRatingFilter.value === 'has_pictures') {
+        params.hasImage = true
+      } else {
+        params.star = parseInt(activeRatingFilter.value)
+      }
+    }
+
     const response = await axios.get(
       `${import.meta.env.VITE_BE_API_URL}/product/public/rating/product/${productId.value}`,
-      {
-        params: {
-          page: ratingPage.value,
-          limit: ratingLimit.value,
-        },
-      },
+      { params },
     )
     if (response.data) {
       ratings.value = response.data.ratings
@@ -182,6 +191,12 @@ const fetchRatings = async () => {
 
 const handleRatingPageChange = (page: number) => {
   ratingPage.value = page
+  fetchRatings()
+}
+
+const handleFilterChange = (filter: string) => {
+  activeRatingFilter.value = filter
+  ratingPage.value = 1
   fetchRatings()
 }
 
@@ -615,13 +630,55 @@ const addToCart = async () => {
                 />
               </el-col>
               <el-col :span="18">
-                <button class="rating-filter-btn active">All</button>
-                <button class="rating-filter-btn">5 Stars</button>
-                <button class="rating-filter-btn">4 Stars</button>
-                <button class="rating-filter-btn">3 Stars</button>
-                <button class="rating-filter-btn">2 Stars</button>
-                <button class="rating-filter-btn">1 Star</button>
-                <button class="rating-filter-btn">Has Pictures</button>
+                <button
+                  class="rating-filter-btn"
+                  :class="{ active: activeRatingFilter === 'all' }"
+                  @click="handleFilterChange('all')"
+                >
+                  All
+                </button>
+                <button
+                  class="rating-filter-btn"
+                  :class="{ active: activeRatingFilter === '5' }"
+                  @click="handleFilterChange('5')"
+                >
+                  5 Stars
+                </button>
+                <button
+                  class="rating-filter-btn"
+                  :class="{ active: activeRatingFilter === '4' }"
+                  @click="handleFilterChange('4')"
+                >
+                  4 Stars
+                </button>
+                <button
+                  class="rating-filter-btn"
+                  :class="{ active: activeRatingFilter === '3' }"
+                  @click="handleFilterChange('3')"
+                >
+                  3 Stars
+                </button>
+                <button
+                  class="rating-filter-btn"
+                  :class="{ active: activeRatingFilter === '2' }"
+                  @click="handleFilterChange('2')"
+                >
+                  2 Stars
+                </button>
+                <button
+                  class="rating-filter-btn"
+                  :class="{ active: activeRatingFilter === '1' }"
+                  @click="handleFilterChange('1')"
+                >
+                  1 Star
+                </button>
+                <button
+                  class="rating-filter-btn"
+                  :class="{ active: activeRatingFilter === 'has_pictures' }"
+                  @click="handleFilterChange('has_pictures')"
+                >
+                  Has Pictures
+                </button>
               </el-col>
             </el-row>
           </div>
