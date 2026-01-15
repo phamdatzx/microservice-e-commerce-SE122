@@ -31,7 +31,6 @@ const products = ref<any[]>([])
 const vouchers = ref<any[]>([])
 const savedVoucherIds = ref<string[]>([])
 const isLoading = ref(false)
-const isFollowingState = ref<boolean | null>(null)
 const totalItems = ref(0)
 const currentPage = ref(1)
 const pageSize = ref(15)
@@ -64,10 +63,6 @@ const fetchSellerInfo = async () => {
       sellerInfo.value = response.data.data
       if (sellerInfo.value) {
         sellerInfo.value.sale_info.product_count = totalItems.value
-        // Sync with our reliable follow state if we have it
-        if (isFollowingState.value !== null) {
-          sellerInfo.value.sale_info.is_following = isFollowingState.value
-        }
       }
     }
   } catch (error) {
@@ -163,30 +158,6 @@ const fetchSavedVouchers = async () => {
   }
 }
 
-const checkFollowStatus = async () => {
-  const token = localStorage.getItem('access_token')
-  if (!token || !sellerId.value) return
-  try {
-    const response = await axios.get(
-      `${import.meta.env.VITE_BE_API_URL}/user/follow/${sellerId.value}/check`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    )
-    if (response.data && response.data.data) {
-      const isFollowing = response.data.data.is_following
-      isFollowingState.value = isFollowing
-      if (sellerInfo.value) {
-        sellerInfo.value.sale_info.is_following = isFollowing
-      }
-    }
-  } catch (error) {
-    console.error('Error checking follow status:', error)
-  }
-}
-
 const handleFollowToggle = async () => {
   const token = localStorage.getItem('access_token')
   if (!token) {
@@ -206,7 +177,6 @@ const handleFollowToggle = async () => {
           Authorization: `Bearer ${token}`,
         },
       })
-      isFollowingState.value = false
       ElMessage.success('Unfollowed seller')
     } else {
       await axios.post(
@@ -218,12 +188,10 @@ const handleFollowToggle = async () => {
           },
         },
       )
-      isFollowingState.value = true
       ElMessage.success('Followed seller')
     }
     // Refresh seller info to update follow count and status
     fetchSellerInfo()
-    checkFollowStatus()
   } catch (error: any) {
     const errorMsg = error.response?.data?.message || 'Failed to update follow status'
     ElMessage.error(errorMsg)
@@ -284,7 +252,6 @@ onMounted(() => {
   fetchSellerProducts()
   fetchSellerVouchers()
   fetchSavedVouchers()
-  checkFollowStatus()
 })
 
 const sortOptions = computed(() => [

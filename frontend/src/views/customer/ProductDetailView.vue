@@ -15,6 +15,7 @@ import ShippingIcon from '@/components/icons/ShippingIcon.vue'
 import UserComment from '../../components/UserComment.vue'
 import ProductItem from '@/components/ProductItem.vue'
 import RecentlyViewed from '@/components/RecentlyViewed.vue'
+import ProductSellerInfo from '@/components/ProductSellerInfo.vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import { ElNotification } from 'element-plus'
@@ -62,11 +63,25 @@ interface Product {
   variants: Variant[]
 }
 
+interface SellerInfo {
+  id: string
+  name: string
+  image: string
+  sale_info: {
+    follow_count: number
+    rating_count: number
+    rating_average: number
+    product_count: number
+    is_following: boolean
+  }
+}
+
 const route = useRoute()
 const router = useRouter()
 const fetchCartCount = inject('fetchCartCount') as (() => void) | undefined
 const productId = ref(route.params.id as string)
 const product = ref<Product | null>(null)
+const sellerInfo = ref<SellerInfo | null>(null)
 const isLoading = ref(true)
 const isAddingToCart = ref(false)
 const productList = ref<any[]>([]) // For related products
@@ -227,6 +242,23 @@ const fetchProduct = async () => {
   if (product.value) {
     saveToRecentlyViewed(product.value)
     recentlyViewedRef.value?.loadRecentlyViewed()
+    fetchSellerInfo(product.value.seller_id)
+  }
+}
+
+const fetchSellerInfo = async (sellerId: string) => {
+  const token = localStorage.getItem('access_token')
+  const headers = token ? { Authorization: `Bearer ${token}` } : {}
+  try {
+    const response = await axios.get(
+      `${import.meta.env.VITE_BE_API_URL}/user/public/seller/${sellerId}`,
+      { headers },
+    )
+    if (response.data && response.data.data) {
+      sellerInfo.value = response.data.data
+    }
+  } catch (error) {
+    console.error('Error fetching seller info:', error)
   }
 }
 
@@ -434,7 +466,7 @@ const addToCart = async () => {
                 show-score
                 style="--el-rate-fill-color: var(--main-color)"
                 text-color="var(--main-color)"
-                :score-template="`${Number(product.rating).toFixed(1)} points`"
+                :score-template="`${Number(product.rating || 0).toFixed(1)}`"
               />
               <el-divider direction="vertical" />
               <div>{{ quantityFormatNumber(product.rate_count) }} reviews</div>
@@ -575,7 +607,13 @@ const addToCart = async () => {
       </el-row>
     </div>
 
-    <div class="box-shadow border-radius" style="padding: 20px; margin-bottom: 20px">
+    <!-- Seller Info Section -->
+    <ProductSellerInfo v-if="sellerInfo" :seller-info="sellerInfo" />
+
+    <div
+      class="box-shadow border-radius"
+      style="padding: 20px; margin-bottom: 20px; background-color: #fff"
+    >
       <el-tabs v-model="activeTab">
         <el-tab-pane label="DESCRIPTION" name="description">
           <div

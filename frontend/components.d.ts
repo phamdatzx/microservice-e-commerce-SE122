@@ -88,6 +88,7 @@ declare module 'vue' {
     PinterestIcon: typeof import('./src/components/icons/PinterestIcon.vue')['default']
     ProductItem: typeof import('./src/components/ProductItem.vue')['default']
     ProductList: typeof import('./src/components/ProductList.vue')['default']
+    ProductSellerInfo: typeof import('./src/components/ProductSellerInfo.vue')['default']
     ProfileLayout: typeof import('./src/components/ProfileLayout.vue')['default']
     ProvinceSelect: typeof import('./src/components/profile/ProvinceSelect.vue')['default']
     RecentlyViewed: typeof import('./src/components/RecentlyViewed.vue')['default']
