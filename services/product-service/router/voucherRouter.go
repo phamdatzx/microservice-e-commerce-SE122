@@ -15,4 +15,10 @@ func RegisterVoucherRoutes(rg *gin.RouterGroup, c *controller.VoucherController)
 		voucher.PUT("/:id", c.Update)
 		voucher.DELETE("/:id", c.Delete)
 	}
+
+	// Public routes
+	voucherPublic := rg.Group("/public/vouchers")
+	{
+		voucherPublic.GET("/seller/:sellerId", c.GetVouchersBySellerPublic)
+	}
 }
