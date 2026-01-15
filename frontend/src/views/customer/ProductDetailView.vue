@@ -251,6 +251,7 @@ const saveToRecentlyViewed = (p: Product) => {
     rating: p.rating,
     location: 'Vietnam', // Mock location as it's not in the product data
     discount: 0, // Mock discount
+    soldCount: p.sold_count,
   }
 
   // Remove existing

@@ -12,6 +12,7 @@ interface Product {
   rating: number
   location: string
   discount: number
+  soldCount: number
 }
 
 const recentlyViewed = ref<Product[]>([])
@@ -85,6 +86,7 @@ onMounted(() => {
             :rating="item.rating"
             :location="item.location"
             :discount="item.discount"
+            :sold-count="item.soldCount"
           />
         </el-col>
       </el-row>
