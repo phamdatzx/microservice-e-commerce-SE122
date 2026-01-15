@@ -188,6 +188,18 @@ func (s *productService) GetProductsBySeller(sellerID string, params dto.GetProd
 		sortDirection = -1
 	}
 
+	// Handle special price sorting logic
+	// If sorting by price:
+	// - ascending: use price.min
+	// - descending: use price.max
+	if sortField == "price" {
+		if sortDirection == 1 { // ascending
+			sortField = "price.min"
+		} else { // descending
+			sortField = "price.max"
+		}
+	}
+
 	// Call repository method
 	products, total, err := s.repo.FindBySeller(sellerID, filter, params.GetSkip(), params.Limit, sortField, sortDirection)
 	if err != nil {
