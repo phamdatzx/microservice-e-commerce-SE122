@@ -156,5 +156,25 @@ func (c *VoucherController) Delete(ctx *gin.Context) {
 		return
 	}
 
+
 	ctx.JSON(http.StatusOK, gin.H{"message": "Delete voucher successfully"})
+}
+
+func (c *VoucherController) GetVouchersBySellerPublic(ctx *gin.Context) {
+	sellerID := ctx.Param("sellerId")
+	if sellerID == "" {
+		ctx.Error(appError.NewAppError(400, "Seller ID is required"))
+		ctx.Abort()
+		return
+	}
+
+	// For public route, userID is empty (no authentication)
+	response, err := c.service.GetVouchersBySeller(sellerID, "")
+	if err != nil {
+		_ = ctx.Error(err)
+		ctx.Abort()
+		return
+	}
+
+	ctx.JSON(http.StatusOK, response)
 }

@@ -11,9 +11,12 @@ type UserRepository interface {
 	CheckUserExists(username string) (bool, error)
 	GetUserByUsername(username string) (*model.User, error)
 	GetUserByID(id string) (*model.User, error)
+	GetSellerByID(id string) (*model.User, error)
 	ActivateAccount(id string) error
 	Save(user *model.User) error
 	UpdateUserImage(userId string, imageURL string) error
+	GetSaleInfoByUserID(userId string) (*model.SaleInfo, error)
+	UpdateSaleInfo(saleInfo *model.SaleInfo) error
 }
 
 type userRepository struct {
@@ -55,6 +58,15 @@ func (r *userRepository) GetUserByID(id string) (*model.User, error) {
 	return &user, nil
 }
 
+func (r *userRepository) GetSellerByID(id string) (*model.User, error) {
+	var user model.User
+	err := r.db.Preload("SaleInfo").Preload("Addresses").First(&user, "id = ?", id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
 func (r *userRepository) ActivateAccount(id string) error {
 	var user model.User
 	err := r.db.First(&user, "id = ?", id).Error
@@ -83,3 +95,15 @@ func (r *userRepository) UpdateUserImage(userId string, imageURL string) error {
 	return r.db.Save(&user).Error
 }
 
+func (r *userRepository) GetSaleInfoByUserID(userId string) (*model.SaleInfo, error) {
+	var saleInfo model.SaleInfo
+	err := r.db.First(&saleInfo, "user_id = ?", userId).Error
+	if err != nil {
+		return nil, err
+	}
+	return &saleInfo, nil
+}
+
+func (r *userRepository) UpdateSaleInfo(saleInfo *model.SaleInfo) error {
+	return r.db.Save(saleInfo).Error
+}
