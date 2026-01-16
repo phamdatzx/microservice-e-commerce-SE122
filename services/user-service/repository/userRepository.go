@@ -19,6 +19,7 @@ type UserRepository interface {
 	GetSaleInfoByUserID(userId string) (*model.SaleInfo, error)
 	UpdateSaleInfo(saleInfo *model.SaleInfo) error
 	UpdateProductCount(userId string, increment bool) (*model.SaleInfo, error)
+	UpdateFollowCount(userId string, increment bool) (*model.SaleInfo, error)
 }
 
 type userRepository struct {
@@ -136,6 +137,43 @@ func (r *userRepository) UpdateProductCount(userId string, increment bool) (*mod
 	} else {
 		if saleInfo.ProductCount > 0 {
 			saleInfo.ProductCount--
+		}
+	}
+
+	// Save updated SaleInfo
+	if err := r.db.Save(&saleInfo).Error; err != nil {
+		return nil, err
+	}
+
+	return &saleInfo, nil
+}
+
+func (r *userRepository) UpdateFollowCount(userId string, increment bool) (*model.SaleInfo, error) {
+	// Get or create SaleInfo for the user
+	var saleInfo model.SaleInfo
+	err := r.db.First(&saleInfo, "user_id = ?", userId).Error
+	
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			// Create new SaleInfo if doesn't exist
+			saleInfo = model.SaleInfo{
+				UserID:      uuid.MustParse(userId),
+				FollowCount: 0,
+			}
+			if err := r.db.Create(&saleInfo).Error; err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	}
+
+	// Update follow count
+	if increment {
+		saleInfo.FollowCount++
+	} else {
+		if saleInfo.FollowCount > 0 {
+			saleInfo.FollowCount--
 		}
 	}
 
