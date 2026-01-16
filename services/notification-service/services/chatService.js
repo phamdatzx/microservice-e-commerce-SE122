@@ -1,11 +1,12 @@
 import { Conversation, Message } from '../models/index.js';
 import { PAGINATION } from '../utils/constants.js';
+import { userServiceClient } from '../clients/userServiceClient.js';
 
 /**
  * Find or create a conversation between a user and a seller
  * @param {string} userId - Customer user ID
  * @param {string} sellerId - Seller user ID
- * @returns {Promise<Object>} Conversation object
+ * @returns {Promise<Object>} Conversation object with user details
  */
 export const findOrCreateConversation = async (userId, sellerId) => {
   try {
@@ -13,7 +14,7 @@ export const findOrCreateConversation = async (userId, sellerId) => {
     let conversation = await Conversation.findOne({
       userId,
       sellerId,
-    });
+    }).lean();
 
     // Create new conversation if it doesn't exist
     if (!conversation) {
@@ -24,10 +25,28 @@ export const findOrCreateConversation = async (userId, sellerId) => {
         lastUpdated: new Date(),
         unreadCount: 0,
       });
+      conversation = conversation.toObject();
       console.log(`✅ Created new conversation between user ${userId} and seller ${sellerId}`);
     }
 
-    return conversation;
+    // Fetch customer and seller information
+    const [customerInfo, sellerInfo] = await Promise.all([
+      userServiceClient.getUserById(userId).catch(err => {
+        console.error(`Failed to fetch customer ${userId}:`, err.message);
+        return null;
+      }),
+      userServiceClient.getUserById(sellerId).catch(err => {
+        console.error(`Failed to fetch seller ${sellerId}:`, err.message);
+        return null;
+      }),
+    ]);
+
+    // Return conversation with user details
+    return {
+      ...conversation,
+      customer: customerInfo,
+      seller: sellerInfo,
+    };
   } catch (error) {
     console.error('Error in findOrCreateConversation:', error);
     throw error;
@@ -39,7 +58,7 @@ export const findOrCreateConversation = async (userId, sellerId) => {
  * @param {string} userId - User ID (can be customer or seller)
  * @param {number} page - Page number
  * @param {number} limit - Items per page
- * @returns {Promise<Object>} Paginated conversations
+ * @returns {Promise<Object>} Paginated conversations with user details
  */
 export const getUserConversations = async (userId, page = PAGINATION.DEFAULT_PAGE, limit = PAGINATION.DEFAULT_LIMIT) => {
   try {
@@ -60,8 +79,30 @@ export const getUserConversations = async (userId, page = PAGINATION.DEFAULT_PAG
       }),
     ]);
 
+    // Fetch user info for all conversations in parallel
+    const enrichedConversations = await Promise.all(
+      conversations.map(async (conversation) => {
+        const [customerInfo, sellerInfo] = await Promise.all([
+          userServiceClient.getUserById(conversation.userId).catch(err => {
+            console.error(`Failed to fetch customer ${conversation.userId}:`, err.message);
+            return null;
+          }),
+          userServiceClient.getUserById(conversation.sellerId).catch(err => {
+            console.error(`Failed to fetch seller ${conversation.sellerId}:`, err.message);
+            return null;
+          }),
+        ]);
+
+        return {
+          ...conversation,
+          customer: customerInfo,
+          seller: sellerInfo,
+        };
+      })
+    );
+
     return {
-      conversations,
+      conversations: enrichedConversations,
       pagination: {
         page,
         limit: effectiveLimit,

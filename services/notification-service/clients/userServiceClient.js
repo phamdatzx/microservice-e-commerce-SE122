@@ -50,6 +50,38 @@ class UserServiceClient {
       throw new Error(`Token verification failed: ${error.message}`);
     }
   }
+
+  /**
+   * Get user information by ID
+   * @param {string} userId - User ID to fetch
+   * @returns {Promise<Object>} - User information
+   * @throws {Error} - If request fails
+   */
+  async getUserById(userId) {
+    try {
+      const url = `${this.baseURL}/api/user/public/${userId}`;
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(`Failed to get user: ${response.status} - ${errorData}`);
+      }
+
+      const result = await response.json();
+      
+      // Return the data field from the response
+      return result.data || null;
+    } catch (error) {
+      console.error('❌ Get user error:', error.message);
+      throw new Error(`Failed to get user: ${error.message}`);
+    }
+  }
 }
 
 // Export singleton instance
