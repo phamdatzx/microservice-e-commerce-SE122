@@ -5,7 +5,7 @@ import chatRoutes from './chatRoutes.js';
 const router = express.Router();
 
 // Mount routes
-router.use('/notifications', notificationRoutes);
-router.use('/chat', chatRoutes);
+router.use('/notification', notificationRoutes);
+router.use('/notification/chat', chatRoutes);
 
 export default router;
