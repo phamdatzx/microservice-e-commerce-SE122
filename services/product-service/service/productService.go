@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"mime/multipart"
+	"product-service/client"
 	"product-service/dto"
 	appError "product-service/error"
 	"product-service/model"
@@ -27,15 +28,30 @@ type ProductService interface {
 }
 
 type productService struct {
-	repo repository.ProductRepository
+	repo       repository.ProductRepository
+	userClient *client.UserServiceClient
 }
 
-func NewProductService(repo repository.ProductRepository) ProductService {
-	return &productService{repo: repo}
+func NewProductService(repo repository.ProductRepository, userClient *client.UserServiceClient) ProductService {
+	return &productService{
+		repo:       repo,
+		userClient: userClient,
+	}
 }
 
 func (s *productService) CreateProduct(product *model.Product) error {
-	return s.repo.Create(product)
+	err := s.repo.Create(product)
+	if err != nil {
+		return err
+	}
+
+	// Increment product count for seller
+	if err := s.userClient.UpdateProductCount(product.SellerID, "increment"); err != nil {
+		// Log error but don't fail the product creation
+		fmt.Printf("Failed to update product count for seller %s: %v\n", product.SellerID, err)
+	}
+
+	return nil
 }
 
 func (s *productService) GetProductByID(id string) (*model.Product, error) {
@@ -51,7 +67,24 @@ func (s *productService) UpdateProduct(product *model.Product) error {
 }
 
 func (s *productService) DeleteProduct(id string) error {
-	return s.repo.Delete(id)
+	// Get product to retrieve seller ID
+	product, err := s.repo.FindByID(id)
+	if err != nil {
+		return err
+	}
+
+	err = s.repo.Delete(id)
+	if err != nil {
+		return err
+	}
+
+	// Decrement product count for seller
+	if err := s.userClient.UpdateProductCount(product.SellerID, "decrement"); err != nil {
+		// Log error but don't fail the product deletion
+		fmt.Printf("Failed to update product count for seller %s: %v\n", product.SellerID, err)
+	}
+
+	return nil
 }
 
 func (s *productService) ProcessProductImageUpload(productID string, files []*multipart.FileHeader) ([]model.ProductImages, error) {

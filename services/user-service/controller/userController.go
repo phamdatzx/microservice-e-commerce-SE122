@@ -322,3 +322,31 @@ func (c *UserController) UpdateSellerRating(ctx *gin.Context) {
 
 	utils.SuccessResponse(ctx, 200, "Seller rating updated successfully", response)
 }
+
+func (c *UserController) UpdateProductCount(ctx *gin.Context) {
+	var request dto.UpdateProductCountRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Validate struct
+	if err := validate.Struct(request); err != nil {
+		var errors string
+		for _, err := range err.(validator.ValidationErrors) {
+			errors += err.Field() + " is invalid: " + err.Tag() + ", "
+		}
+		_ = ctx.Error(appError.NewAppError(400, errors))
+		ctx.Abort()
+		return
+	}
+
+	response, err := c.service.UpdateProductCount(request)
+	if err != nil {
+		_ = ctx.Error(err)
+		ctx.Abort()
+		return
+	}
+
+	utils.SuccessResponse(ctx, 200, "Product count updated successfully", response)
+}

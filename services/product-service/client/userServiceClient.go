@@ -117,3 +117,51 @@ func (c *UserServiceClient) UpdateSellerRating(sellerID string, star float64, op
 
 	return nil
 }
+
+type UpdateProductCountRequest struct {
+	SellerID  string `json:"seller_id"`
+	Operation string `json:"operation"` // "increment" or "decrement"
+}
+
+type UpdateProductCountResponse struct {
+	ProductCount int `json:"product_count"`
+}
+
+type ProductCountServiceResponse struct {
+	Status  int                        `json:"status"`
+	Message string                     `json:"message"`
+	Data    UpdateProductCountResponse `json:"data"`
+}
+
+func (c *UserServiceClient) UpdateProductCount(sellerID string, operation string) error {
+	url := fmt.Sprintf("%s/api/user/seller/product-count", c.baseURL)
+
+	requestBody := UpdateProductCountRequest{
+		SellerID:  sellerID,
+		Operation: operation,
+	}
+
+	bodyBytes, err := json.Marshal(requestBody)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(bodyBytes))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("update product count failed with status %d: %s", resp.StatusCode, string(body))
+	}
+
+	return nil
+}

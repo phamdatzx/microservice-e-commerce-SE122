@@ -28,6 +28,7 @@ type SaleInfo struct {
 	UserID uuid.UUID `gorm:"type:uuid;column:user_id;uniqueIndex"`
 
 	FollowCount   int     `gorm:"column:follow_count;default:0"`
+	ProductCount  int     `gorm:"column:product_count;default:0"`
 	RatingCount   int     `gorm:"column:rating_count;default:0"`
 	RatingAverage float64 `gorm:"column:rating_average;default:0"`
 }

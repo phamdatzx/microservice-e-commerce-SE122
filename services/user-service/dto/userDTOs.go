@@ -15,6 +15,7 @@ type SaleInfoResponse struct {
 	RatingCount   int     `json:"rating_count"`
 	RatingAverage float64 `json:"rating_average"`
 	IsFollowing   bool    `json:"is_following"`
+	ProductCount  int     `json:"product_count"`
 }
 
 type SellerResponse struct {

@@ -26,7 +26,8 @@ func main() {
 
 	// Wiring dependencies - Product
 	productRepo := repository.NewProductRepository(config.DB)
-	productService := service.NewProductService(productRepo)
+	userClient := client.NewUserServiceClient()
+	productService := service.NewProductService(productRepo, userClient)
 	productController := controller.NewProductController(productService)
 
 	// Wiring dependencies - Category
@@ -59,7 +60,6 @@ func main() {
 	// Wiring dependencies - Rating
 	ratingRepo := repository.NewRatingRepository(config.DB)
 	orderClient := client.NewOrderServiceClient()
-	userClient := client.NewUserServiceClient()
 	ratingService := service.NewRatingService(ratingRepo,productRepo, orderClient, userClient)
 	ratingController := controller.NewRatingController(ratingService)
 

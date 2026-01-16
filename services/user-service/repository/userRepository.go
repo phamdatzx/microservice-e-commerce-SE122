@@ -3,6 +3,7 @@ package repository
 import (
 	"user-service/model"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -17,6 +18,7 @@ type UserRepository interface {
 	UpdateUserImage(userId string, imageURL string) error
 	GetSaleInfoByUserID(userId string) (*model.SaleInfo, error)
 	UpdateSaleInfo(saleInfo *model.SaleInfo) error
+	UpdateProductCount(userId string, increment bool) (*model.SaleInfo, error)
 }
 
 type userRepository struct {
@@ -106,4 +108,41 @@ func (r *userRepository) GetSaleInfoByUserID(userId string) (*model.SaleInfo, er
 
 func (r *userRepository) UpdateSaleInfo(saleInfo *model.SaleInfo) error {
 	return r.db.Save(saleInfo).Error
+}
+
+func (r *userRepository) UpdateProductCount(userId string, increment bool) (*model.SaleInfo, error) {
+	// Get or create SaleInfo for the user
+	var saleInfo model.SaleInfo
+	err := r.db.First(&saleInfo, "user_id = ?", userId).Error
+	
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			// Create new SaleInfo if doesn't exist
+			saleInfo = model.SaleInfo{
+				UserID:       uuid.MustParse(userId),
+				ProductCount: 0,
+			}
+			if err := r.db.Create(&saleInfo).Error; err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	}
+
+	// Update product count
+	if increment {
+		saleInfo.ProductCount++
+	} else {
+		if saleInfo.ProductCount > 0 {
+			saleInfo.ProductCount--
+		}
+	}
+
+	// Save updated SaleInfo
+	if err := r.db.Save(&saleInfo).Error; err != nil {
+		return nil, err
+	}
+
+	return &saleInfo, nil
 }
