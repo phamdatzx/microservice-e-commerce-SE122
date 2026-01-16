@@ -10,7 +10,9 @@ import { registerNotificationHandlers } from './notificationSocket.js';
 export const initializeSocketHandlers = (io) => {
   io.on(SOCKET_EVENTS.CONNECTION, (socket) => {
     const userId = socket.userId;
-    console.log(`🔌 User ${userId} connected (socket ${socket.id})`);
+    const username = socket.username;
+
+    console.log(`🔌 User ${userId} (${username}) connected (socket ${socket.id})`);
 
     // Register user socket mapping
     registerUserSocket(userId, socket.id);
