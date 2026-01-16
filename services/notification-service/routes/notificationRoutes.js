@@ -1,23 +1,21 @@
 import express from 'express';
-import {
-  sendNotification,
-  getNotifications,
-  getNotificationById,
-  markAsRead,
-} from '../controllers/notificationController.js';
+import * as notificationController from '../controllers/notificationController.js';
 
 const router = express.Router();
 
-// POST /api/notifications - Send a new notification
-router.post('/', sendNotification);
+// Create notification (for other services to call)
+router.post('/', notificationController.createNotification);
 
-// GET /api/notifications - Get all notifications (with filters)
-router.get('/', getNotifications);
+// Get user's notifications
+router.get('/', notificationController.getUserNotifications);
 
-// GET /api/notifications/:id - Get a specific notification
-router.get('/:id', getNotificationById);
+// Get unread count (specific route before :notificationId)
+router.get('/unread-count', notificationController.getUnreadCount);
 
-// PATCH /api/notifications/:id/read - Mark notification as read
-router.patch('/:id/read', markAsRead);
+// Mark all as read
+router.patch('/read-all', notificationController.markAllNotificationsAsRead);
+
+// Mark specific notification as read
+router.patch('/:notificationId/read', notificationController.markNotificationAsRead);
 
 export default router;

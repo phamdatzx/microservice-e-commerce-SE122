@@ -1,4 +1,5 @@
 import express from 'express';
+import { createServer } from 'http';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -6,12 +7,30 @@ import dotenv from 'dotenv';
 import routes from './routes/index.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import connectDatabase from './config/database.js';
+import { initializeSocket } from './config/socket.js';
+import { socketAuth } from './middleware/socketAuth.js';
+import { initializeSocketHandlers } from './sockets/index.js';
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Create HTTP server
+const httpServer = createServer(app);
+
+// Initialize Socket.io
+const io = initializeSocket(httpServer);
+
+// Apply socket authentication middleware
+io.use(socketAuth);
+
+// Initialize socket event handlers
+initializeSocketHandlers(io);
+
+// Store io instance in app locals for access in routes
+app.locals.io = io;
 
 // Middleware
 app.use(helmet()); // Security headers
@@ -50,9 +69,10 @@ const startServer = async () => {
     await connectDatabase();
 
     // Start server
-    app.listen(PORT, () => {
+    httpServer.listen(PORT, () => {
       console.log(`🚀 Notification Service running on port ${PORT}`);
       console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🔌 WebSocket server ready`);
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);

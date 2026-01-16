@@ -1,85 +1,193 @@
-import { asyncHandler } from '../middleware/asyncHandler.js';
-import { AppError } from '../middleware/errorHandler.js';
 import * as notificationService from '../services/notificationService.js';
+import { PAGINATION, ERROR_MESSAGES } from '../utils/constants.js';
 
-// @desc    Send a new notification
-// @route   POST /api/notifications
-// @access  Private
-export const sendNotification = asyncHandler(async (req, res) => {
-  const { userId, type, title, message, data } = req.body;
+/**
+ * Create a new notification (called by other services)
+ * POST /api/notifications
+ * Body: { userId, type, title, message, data }
+ */
+export const createNotification = async (req, res) => {
+  try {
+    const { userId, type, title, message, data } = req.body;
 
-  // Validation
-  if (!userId || !type || !message) {
-    throw new AppError('userId, type, and message are required', 400);
+    if (!userId || !type || !title || !message) {
+      return res.status(400).json({
+        success: false,
+        error: 'userId, type, title, and message are required',
+      });
+    }
+
+    const notification = await notificationService.createNotification(
+      userId,
+      type,
+      title,
+      message,
+      data
+    );
+
+    // Emit notification via WebSocket if io instance is available
+    if (req.app.locals.io) {
+      const { emitToNotificationRoom } = await import('../utils/socketHelpers.js');
+      const { SOCKET_EVENTS } = await import('../utils/constants.js');
+      emitToNotificationRoom(req.app.locals.io, userId, SOCKET_EVENTS.NEW_NOTIFICATION, notification);
+    }
+
+    return res.status(201).json({
+      success: true,
+      data: notification,
+    });
+  } catch (error) {
+    console.error('Error in createNotification:', error);
+    return res.status(500).json({
+      success: false,
+      error: ERROR_MESSAGES.SERVER_ERROR,
+    });
   }
+};
 
-  const notification = await notificationService.sendNotification({
-    userId,
-    type,
-    title,
-    message,
-    data,
-  });
+/**
+ * Get user's notifications
+ * GET /api/notifications
+ * Query params: page, limit, isRead
+ */
+export const getUserNotifications = async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+    const page = parseInt(req.query.page) || PAGINATION.DEFAULT_PAGE;
+    const limit = parseInt(req.query.limit) || PAGINATION.DEFAULT_LIMIT;
+    const isRead = req.query.isRead === 'true' ? true : req.query.isRead === 'false' ? false : null;
 
-  res.status(201).json({
-    success: true,
-    data: notification,
-  });
-});
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: ERROR_MESSAGES.UNAUTHORIZED,
+      });
+    }
 
-// @desc    Get all notifications
-// @route   GET /api/notifications
-// @access  Private
-export const getNotifications = asyncHandler(async (req, res) => {
-  const { userId, isRead, type, limit = 20, offset = 0 } = req.query;
+    const result = await notificationService.getUserNotifications(userId, page, limit, isRead);
 
-  const notifications = await notificationService.getNotifications({
-    userId,
-    isRead: isRead === 'true' ? true : isRead === 'false' ? false : undefined,
-    type,
-    limit: parseInt(limit),
-    offset: parseInt(offset),
-  });
-
-  res.status(200).json({
-    success: true,
-    count: notifications.length,
-    data: notifications,
-  });
-});
-
-// @desc    Get notification by ID
-// @route   GET /api/notifications/:id
-// @access  Private
-export const getNotificationById = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-
-  const notification = await notificationService.getNotificationById(id);
-
-  if (!notification) {
-    throw new AppError('Notification not found', 404);
+    return res.status(200).json({
+      success: true,
+      data: result.notifications,
+      pagination: result.pagination,
+    });
+  } catch (error) {
+    console.error('Error in getUserNotifications:', error);
+    return res.status(500).json({
+      success: false,
+      error: ERROR_MESSAGES.SERVER_ERROR,
+    });
   }
+};
 
-  res.status(200).json({
-    success: true,
-    data: notification,
-  });
-});
+/**
+ * Mark a notification as read
+ * PATCH /api/notifications/:notificationId/read
+ */
+export const markNotificationAsRead = async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+    const { notificationId } = req.params;
 
-// @desc    Mark notification as read
-// @route   PATCH /api/notifications/:id/read
-// @access  Private
-export const markAsRead = asyncHandler(async (req, res) => {
-  const { id } = req.params;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: ERROR_MESSAGES.UNAUTHORIZED,
+      });
+    }
 
-  const notification = await notificationService.markAsRead(id);
+    const notification = await notificationService.markAsRead(notificationId, userId);
 
-  if (!notification) {
-    throw new AppError('Notification not found', 404);
+    if (!notification) {
+      return res.status(404).json({
+        success: false,
+        error: ERROR_MESSAGES.NOT_FOUND,
+      });
+    }
+
+    // Emit update via WebSocket if io instance is available
+    if (req.app.locals.io) {
+      const { emitToNotificationRoom } = await import('../utils/socketHelpers.js');
+      const { SOCKET_EVENTS } = await import('../utils/constants.js');
+      emitToNotificationRoom(req.app.locals.io, userId, SOCKET_EVENTS.NOTIFICATION_UPDATED, {
+        notificationId,
+        isRead: true,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: notification,
+    });
+  } catch (error) {
+    console.error('Error in markNotificationAsRead:', error);
+    return res.status(500).json({
+      success: false,
+      error: ERROR_MESSAGES.SERVER_ERROR,
+    });
   }
+};
 
-  res.status(200).json({
-    success: true,
-    data: notification,
-  });
-});
+/**
+ * Mark all notifications as read
+ * PATCH /api/notifications/read-all
+ */
+export const markAllNotificationsAsRead = async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: ERROR_MESSAGES.UNAUTHORIZED,
+      });
+    }
+
+    const count = await notificationService.markAllAsRead(userId);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        markedAsRead: count,
+      },
+    });
+  } catch (error) {
+    console.error('Error in markAllNotificationsAsRead:', error);
+    return res.status(500).json({
+      success: false,
+      error: ERROR_MESSAGES.SERVER_ERROR,
+    });
+  }
+};
+
+/**
+ * Get unread notification count
+ * GET /api/notifications/unread-count
+ */
+export const getUnreadCount = async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: ERROR_MESSAGES.UNAUTHORIZED,
+      });
+    }
+
+    const count = await notificationService.getUnreadCount(userId);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        unreadCount: count,
+      },
+    });
+  } catch (error) {
+    console.error('Error in getUnreadCount:', error);
+    return res.status(500).json({
+      success: false,
+      error: ERROR_MESSAGES.SERVER_ERROR,
+    });
+  }
+};

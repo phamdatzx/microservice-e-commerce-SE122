@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notification Service Test Client</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 600;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            width: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .messages {
+            max-height: 400px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        .message {
+            background: white;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .message-type {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        .message-content {
+            color: #666;
+            font-size: 14px;
+        }
+        .message-time {
+            color: #999;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔔 Notification Service Test Client</h1>
+        
+        <div class="grid">
+            <!-- Connection -->
+            <div class="card">
+                <h2>🔌 Connection</h2>
+                <div class="input-group">
+                    <label>User ID:</label>
+                    <input type="text" id="userId" value="user123" placeholder="Enter user ID">
+                </div>
+                <div class="input-group">
+                    <label>Server URL:</label>
+                    <input type="text" id="serverUrl" value="http://localhost:3000" placeholder="http://localhost:3000">
+                </div>
+                <button onclick="connect()">Connect</button>
+                <button onclick="disconnect()" style="margin-top: 10px; background: #dc3545;">Disconnect</button>
+                <div id="connectionStatus" class="status disconnected" style="margin-top: 15px;">
+                    ❌ Disconnected
+                </div>
+            </div>
+
+            <!-- Chat -->
+            <div class="card">
+                <h2>💬 Chat</h2>
+                <div class="input-group">
+                    <label>Seller ID:</label>
+                    <input type="text" id="sellerId" value="seller456" placeholder="Enter seller ID">
+                </div>
+                <button onclick="joinConversation()">Join Conversation</button>
+                
+                <div class="input-group" style="margin-top: 15px;">
+                    <label>Message:</label>
+                    <textarea id="messageContent" rows="3" placeholder="Type your message..."></textarea>
+                </div>
+                <button onclick="sendMessage()">Send Message</button>
+                <button onclick="markAsRead()" style="margin-top: 10px; background: #28a745;">Mark as Read</button>
+            </div>
+
+            <!-- Notifications -->
+            <div class="card">
+                <h2>🔔 Notifications</h2>
+                <button onclick="joinNotifications()">Join Notifications</button>
+                
+                <div class="input-group" style="margin-top: 15px;">
+                    <label>Create Test Notification:</label>
+                    <select id="notifType">
+                        <option value="order">Order</option>
+                        <option value="payment">Payment</option>
+                        <option value="product">Product</option>
+                        <option value="system">System</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Title:</label>
+                    <input type="text" id="notifTitle" value="Test Notification" placeholder="Notification title">
+                </div>
+                <div class="input-group">
+                    <label>Message:</label>
+                    <textarea id="notifMessage" rows="2" placeholder="Notification message"></textarea>
+                </div>
+                <button onclick="createNotification()">Create Notification</button>
+            </div>
+        </div>
+
+        <!-- Events Log -->
+        <div class="card">
+            <h2>📋 Events Log</h2>
+            <button onclick="clearLog()" style="width: auto; background: #6c757d;">Clear Log</button>
+            <div id="eventsLog" class="messages"></div>
+        </div>
+    </div>
+
+    <script>
+        let socket = null;
+        let currentConversationId = null;
+
+        function log(type, content) {
+            const logDiv = document.getElementById('eventsLog');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message';
+            messageDiv.innerHTML = `
+                <div class="message-type">${type}</div>
+                <div class="message-content">${JSON.stringify(content, null, 2)}</div>
+                <div class="message-time">${new Date().toLocaleTimeString()}</div>
+            `;
+            logDiv.insertBefore(messageDiv, logDiv.firstChild);
+        }
+
+        function updateStatus(connected) {
+            const statusDiv = document.getElementById('connectionStatus');
+            if (connected) {
+                statusDiv.className = 'status connected';
+                statusDiv.textContent = '✅ Connected';
+            } else {
+                statusDiv.className = 'status disconnected';
+                statusDiv.textContent = '❌ Disconnected';
+            }
+        }
+
+        function connect() {
+            const userId = document.getElementById('userId').value;
+            const serverUrl = document.getElementById('serverUrl').value;
+
+            if (!userId) {
+                alert('Please enter a user ID');
+                return;
+            }
+
+            socket = io(serverUrl, {
+                query: { userId }
+            });
+
+            socket.on('connect', () => {
+                log('CONNECTED', { socketId: socket.id, userId });
+                updateStatus(true);
+            });
+
+            socket.on('disconnect', () => {
+                log('DISCONNECTED', {});
+                updateStatus(false);
+            });
+
+            socket.on('error', (error) => {
+                log('ERROR', error);
+            });
+
+            // Chat events
+            socket.on('conversation-joined', (data) => {
+                log('CONVERSATION_JOINED', data);
+                currentConversationId = data.conversationId;
+            });
+
+            socket.on('new-message', (data) => {
+                log('NEW_MESSAGE', data);
+            });
+
+            socket.on('message-sent', (data) => {
+                log('MESSAGE_SENT', data);
+            });
+
+            socket.on('user-typing', (data) => {
+                log('USER_TYPING', data);
+            });
+
+            socket.on('messages-updated', (data) => {
+                log('MESSAGES_UPDATED', data);
+            });
+
+            // Notification events
+            socket.on('notifications-joined', (data) => {
+                log('NOTIFICATIONS_JOINED', data);
+            });
+
+            socket.on('new-notification', (data) => {
+                log('NEW_NOTIFICATION', data);
+            });
+
+            socket.on('notification-updated', (data) => {
+                log('NOTIFICATION_UPDATED', data);
+            });
+        }
+
+        function disconnect() {
+            if (socket) {
+                socket.disconnect();
+                socket = null;
+                updateStatus(false);
+            }
+        }
+
+        function joinConversation() {
+            if (!socket) {
+                alert('Please connect first');
+                return;
+            }
+
+            const sellerId = document.getElementById('sellerId').value;
+            if (!sellerId) {
+                alert('Please enter a seller ID');
+                return;
+            }
+
+            socket.emit('join-conversation', { sellerId });
+        }
+
+        function sendMessage() {
+            if (!socket) {
+                alert('Please connect first');
+                return;
+            }
+
+            if (!currentConversationId) {
+                alert('Please join a conversation first');
+                return;
+            }
+
+            const content = document.getElementById('messageContent').value;
+            if (!content) {
+                alert('Please enter a message');
+                return;
+            }
+
+            socket.emit('send-message', {
+                conversationId: currentConversationId,
+                content
+            });
+
+            document.getElementById('messageContent').value = '';
+        }
+
+        function markAsRead() {
+            if (!socket) {
+                alert('Please connect first');
+                return;
+            }
+
+            if (!currentConversationId) {
+                alert('Please join a conversation first');
+                return;
+            }
+
+            socket.emit('message-read', {
+                conversationId: currentConversationId
+            });
+        }
+
+        function joinNotifications() {
+            if (!socket) {
+                alert('Please connect first');
+                return;
+            }
+
+            socket.emit('join-notifications');
+        }
+
+        async function createNotification() {
+            const userId = document.getElementById('userId').value;
+            const serverUrl = document.getElementById('serverUrl').value;
+            const type = document.getElementById('notifType').value;
+            const title = document.getElementById('notifTitle').value;
+            const message = document.getElementById('notifMessage').value;
+
+            if (!title || !message) {
+                alert('Please enter title and message');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${serverUrl}/api/notifications`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        userId,
+                        type,
+                        title,
+                        message,
+                        data: { test: true }
+                    })
+                });
+
+                const result = await response.json();
+                log('NOTIFICATION_CREATED', result);
+            } catch (error) {
+                log('ERROR', error.message);
+            }
+        }
+
+        function clearLog() {
+            document.getElementById('eventsLog').innerHTML = '';
+        }
+    </script>
+</body>
+</html>
