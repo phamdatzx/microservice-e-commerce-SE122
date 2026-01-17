@@ -24,6 +24,7 @@ type UserService interface {
 	GetSellerByID(sellerId string, userId string) (dto.SellerResponse, error)
 	UploadUserImage(userId string, file multipart.File, fileHeader *multipart.FileHeader) (string, error)
 	UpdateSellerRating(request dto.UpdateRatingRequest) (dto.UpdateRatingResponse, error)
+	UpdateProductCount(request dto.UpdateProductCountRequest) (dto.UpdateProductCountResponse, error)
 }
 
 type userService struct {
@@ -332,8 +333,24 @@ func (s *userService) GetSellerByID(sellerId string, userId string) (dto.SellerR
 			RatingCount:   seller.SaleInfo.RatingCount,
 			RatingAverage: seller.SaleInfo.RatingAverage,
 			IsFollowing:   isFollowing,
+			ProductCount:  seller.SaleInfo.ProductCount,
 		}
 	}
 
 	return response, nil
+}
+
+func (s *userService) UpdateProductCount(request dto.UpdateProductCountRequest) (dto.UpdateProductCountResponse, error) {
+	// Determine if we should increment or decrement
+	increment := request.Operation == "increment"
+	
+	// Update product count
+	saleInfo, err := s.repo.UpdateProductCount(request.SellerID, increment)
+	if err != nil {
+		return dto.UpdateProductCountResponse{}, customError.NewAppErrorWithErr(500, "Failed to update product count", err)
+	}
+
+	return dto.UpdateProductCountResponse{
+		ProductCount: saleInfo.ProductCount,
+	}, nil
 }

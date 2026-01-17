@@ -73,7 +73,20 @@ func (s *followService) FollowSeller(userID string, sellerID string) error {
 		SellerID: sellerUUID,
 	}
 
-	return s.repo.Create(follow)
+	err = s.repo.Create(follow)
+	if err != nil {
+		return err
+	}
+
+	// Update seller's follow count
+	_, err = s.userRepo.UpdateFollowCount(sellerID, true)
+	if err != nil {
+		// Log error but don't fail the follow operation
+		// The follow relationship is already created
+		return appError.NewAppErrorWithErr(500, "failed to update follow count", err)
+	}
+
+	return nil
 }
 
 func (s *followService) UnfollowSeller(userID string, sellerID string) error {
@@ -95,7 +108,20 @@ func (s *followService) UnfollowSeller(userID string, sellerID string) error {
 		return appError.NewAppError(400, "not following this seller")
 	}
 
-	return s.repo.Delete(userID, sellerID)
+	err = s.repo.Delete(userID, sellerID)
+	if err != nil {
+		return err
+	}
+
+	// Update seller's follow count
+	_, err = s.userRepo.UpdateFollowCount(sellerID, false)
+	if err != nil {
+		// Log error but don't fail the unfollow operation
+		// The follow relationship is already deleted
+		return appError.NewAppErrorWithErr(500, "failed to update follow count", err)
+	}
+
+	return nil
 }
 
 func (s *followService) IsFollowing(userID string, sellerID string) (bool, error) {

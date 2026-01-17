@@ -22,6 +22,7 @@ func RegisterUserRoutes(rg *gin.RouterGroup, c controller.UserController) {
 		user.GET("/public/seller/:id", c.GetSellerByID)
 		user.POST("/upload-image", c.UploadUserImage)
 		user.POST("/seller/rating", c.UpdateSellerRating)
+		user.POST("/seller/product-count", c.UpdateProductCount)
 	}
 }
 

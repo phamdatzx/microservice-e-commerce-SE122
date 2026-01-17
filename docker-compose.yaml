@@ -140,6 +140,44 @@ services:
       - "traefik.http.services.order-service.loadbalancer.server.port=8085"
     restart: unless-stopped
 
+  # Notification service
+  notification-service:
+    build: ./services/notification-service
+    container_name: notification-service
+    env_file:
+      - ./services/notification-service/.env
+    ports:
+      - "8188:8085"
+    networks:
+      - app-network
+    labels:
+      - "traefik.enable=true"
+
+      # Public routes - CORS only (higher priority)
+      - "traefik.http.routers.notification-service-public.rule=PathPrefix(`/api/notification/public`)"
+      - "traefik.http.routers.notification-service-public.entrypoints=web"
+      - "traefik.http.routers.notification-service-public.service=notification-service"
+      - "traefik.http.routers.notification-service-public.middlewares=cors-headers"
+      - "traefik.http.routers.notification-service-public.priority=100"
+
+      # Socket.IO route
+      - "traefik.http.routers.notification-service-socket.rule=PathPrefix(`/socket.io`)"
+      - "traefik.http.routers.notification-service-socket.entrypoints=web"
+      - "traefik.http.routers.notification-service-socket.service=notification-service"
+      - "traefik.http.routers.notification-service-socket.middlewares=cors-headers"
+      - "traefik.http.routers.notification-service-socket.priority=110"
+
+      # Protected routes - CORS + Authentication
+      - "traefik.http.routers.notification-service-private.rule=PathPrefix(`/api/notification`)"
+      - "traefik.http.routers.notification-service-private.entrypoints=web"
+      - "traefik.http.routers.notification-service-private.service=notification-service"
+      - "traefik.http.routers.notification-service-private.middlewares=cors-headers,forward-auth"
+      - "traefik.http.routers.notification-service-private.priority=90"
+
+      # Service definition
+      - "traefik.http.services.notification-service.loadbalancer.server.port=8085"
+    restart: unless-stopped
+
 networks:
   app-network:
     driver: bridge
