@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import CustomerChat from '@/components/CustomerChat.vue'
+import ChatWindow from '@/components/ChatWindow.vue'
 </script>
 
 <template>
   <div class="seller-chat-view">
-    <CustomerChat :is-embedded="true" />
+    <ChatWindow :is-embedded="true" />
   </div>
 </template>
 

@@ -14,6 +14,7 @@ declare module 'vue' {
     AccountInfo: typeof import('./src/components/profile/AccountInfo.vue')['default']
     CarouselItem: typeof import('./src/components/CarouselItem.vue')['default']
     ChangePassword: typeof import('./src/components/profile/ChangePassword.vue')['default']
+    ChatWindow: typeof import('./src/components/ChatWindow.vue')['default']
     CommuneSelect: typeof import('./src/components/profile/CommuneSelect.vue')['default']
     CustomerChat: typeof import('./src/components/CustomerChat.vue')['default']
     CustomerComment: typeof import('./src/components/CustomerComment.vue')['default']

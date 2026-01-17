@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import CustomerChat from './CustomerChat.vue'
+import ChatWindow from './ChatWindow.vue'
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
@@ -234,7 +234,7 @@ defineExpose({
     </div>
   </header>
 
-  <CustomerChat />
+  <ChatWindow v-if="isLoggedIn" />
 </template>
 
 <style scoped>
