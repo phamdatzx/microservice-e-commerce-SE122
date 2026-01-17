@@ -475,7 +475,9 @@ const addToCart = async () => {
             </div>
             <el-button :icon="RedFlagIcon">Report</el-button>
           </div>
-          <div style="font-weight: 600; font-size: 28px">{{ currentPrice }}đ</div>
+          <div style="font-weight: 600; font-size: 28px; padding: 10px 0 12px">
+            {{ currentPrice }}đ
+          </div>
           <div style="margin-bottom: 16px" v-if="false">
             <!-- Example of special offers if any -->
             <el-divider style="margin: 20px 0" />
