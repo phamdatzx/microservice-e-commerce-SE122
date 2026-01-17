@@ -12,6 +12,7 @@ import IconLogout from './icons/IconLogout.vue'
 const router = useRouter()
 const isLoggedIn = ref(false)
 const cartCount = ref(0)
+const userInfo = ref<any>(null)
 const API_URL = `${import.meta.env.VITE_BE_API_URL}/order/cart/count`
 
 const fetchCartCount = async () => {
@@ -28,10 +29,25 @@ const fetchCartCount = async () => {
   }
 }
 
+const fetchUserInfo = async () => {
+  const token = localStorage.getItem('access_token')
+  if (!token) return
+
+  try {
+    const response = await axios.get(`${import.meta.env.VITE_BE_API_URL}/user/my-info`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    userInfo.value = response.data.data
+  } catch (error) {
+    console.error('Error fetching user info:', error)
+  }
+}
+
 onMounted(() => {
   isLoggedIn.value = !!localStorage.getItem('access_token')
   if (isLoggedIn.value) {
     fetchCartCount()
+    fetchUserInfo()
   }
 })
 
@@ -50,6 +66,7 @@ const handleLogout = () => {
 
 defineExpose({
   fetchCartCount,
+  fetchUserInfo,
 })
 </script>
 
@@ -172,14 +189,17 @@ defineExpose({
               <div class="action-item user-profile">
                 <div class="avatar-wrapper">
                   <img
-                    src="https://ui-avatars.com/api/?name=User&background=22c55e&color=fff"
+                    :src="
+                      userInfo?.image ||
+                      `https://ui-avatars.com/api/?name=${userInfo?.name || 'User'}&background=22c55e&color=fff`
+                    "
                     alt="Avatar"
                     class="avatar"
                   />
                 </div>
                 <div class="text-content">
                   <span class="label">MY ACCOUNT</span>
-                  <span class="main-text">Hello, User</span>
+                  <span class="main-text">Hello, {{ userInfo?.name || 'User' }}</span>
                 </div>
               </div>
 
