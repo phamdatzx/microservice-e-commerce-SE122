@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessageBox } from 'element-plus'
+import axios from 'axios'
 import {
   Search,
   Close,
@@ -36,100 +37,121 @@ const activeFilter = ref('All')
 const imageInputRef = ref<HTMLInputElement | null>(null)
 const videoInputRef = ref<HTMLInputElement | null>(null)
 const isContentHidden = ref(false)
+const contacts = ref<any[]>([])
 
-const toggleChat = () => {
-  if (props.isEmbedded) return
-  isChatVisible.value = !isChatVisible.value
+const fetchConversations = async () => {
+  const token = localStorage.getItem('access_token')
+  if (!token) return
+
+  try {
+    const response = await axios.get(
+      `${import.meta.env.VITE_BE_API_URL}/notification/chat/conversations`,
+      {
+        params: { limit: 1000 },
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    )
+
+    if (response.data && response.data.data) {
+      contacts.value = response.data.data.map((conv: any) => {
+        const otherParty = props.isEmbedded ? conv.customer : conv.seller
+        return {
+          id: conv._id,
+          name: otherParty.name || otherParty.username,
+          lastMessage: conv.lastMessage || 'No messages yet',
+          time: formatTime(conv.lastUpdated),
+          unread: conv.unreadCount || 0,
+          avatarUrl: otherParty.image,
+          avatarInitials: getInitials(otherParty.name || otherParty.username),
+          isPinned: false, // API doesn't seem to have pinned status yet
+          isRead: conv.unreadCount === 0,
+          isMuted: false,
+          messages: [], // User said they'll handle messages later
+          order: conv.order || null, // API might provide order info
+          raw: conv,
+        }
+      })
+
+      // Select first contact if none selected
+      if (contacts.value.length > 0 && !activeContact.value) {
+        selectContact(contacts.value[0])
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching conversations:', error)
+  }
 }
 
-const toggleContent = () => {
-  isContentHidden.value = !isContentHidden.value
+const fetchMessages = async (conversationId: string) => {
+  const token = localStorage.getItem('access_token')
+  if (!token) return
+
+  try {
+    const response = await axios.get(
+      `${import.meta.env.VITE_BE_API_URL}/notification/chat/conversations/${conversationId}/messages`,
+      {
+        params: { limit: 1000 },
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    )
+
+    if (response.data && response.data.data) {
+      const contact = contacts.value.find((c) => c.id === conversationId)
+      if (contact) {
+        contact.messages = response.data.data.map((msg: any) => {
+          const isMe =
+            msg.senderId === (props.isEmbedded ? contact.raw.sellerId : contact.raw.userId)
+          return {
+            id: msg._id,
+            text: msg.content,
+            sender: isMe ? 'receiver' : 'sender',
+            time: new Date(msg.createdAt).toLocaleTimeString('en-US', {
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false,
+            }),
+            date: formatDateSeparator(msg.createdAt),
+          }
+        })
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching messages:', error)
+  }
 }
 
-const contacts = ref([
-  {
-    id: 1,
-    name: 'Jean.one',
-    lastMessage: 'Okay, I will ship it today.',
-    time: '13:12',
-    unread: 2,
-    avatar: 'JO',
-    isPinned: true,
-    isRead: false,
-    isMuted: false,
-    messages: [
-      {
-        id: 1,
-        text: 'Hello, is this item available?',
-        sender: 'receiver',
-        time: '10:05',
-        date: 'Yesterday',
-      },
-      {
-        id: 2,
-        text: 'Yes, it is! Would you like to order?',
-        sender: 'sender',
-        time: '10:10',
-        date: 'Yesterday',
-      },
-      {
-        id: 3,
-        text: 'Hello shop, can you ship this order as soon as possible for me?',
-        sender: 'receiver',
-        time: '13:12',
-        date: 'Today',
-      },
-      {
-        id: 4,
-        text: 'Okay, I will ship it today.',
-        sender: 'sender',
-        time: '13:15',
-        date: 'Today',
-      },
-      { id: 5, text: 'Thank you!', sender: 'receiver', time: '13:20', date: 'Today' },
-    ],
-  },
-  {
-    id: 2,
-    name: 'Global Tech Store',
-    lastMessage: 'Your order has been shipped.',
-    time: 'Yesterday',
-    unread: 0,
-    avatar: 'GT',
-    isPinned: false,
-    isRead: true,
-    isMuted: false,
-    messages: [
-      {
-        id: 1,
-        text: 'Your order has been shipped.',
-        sender: 'sender',
-        time: '09:00',
-        date: 'Yesterday',
-      },
-    ],
-  },
-  {
-    id: 3,
-    name: 'ElectroHub',
-    lastMessage: 'Thank you for your purchase!',
-    time: '20/12/25',
-    unread: 0,
-    avatar: 'EH',
-    isPinned: false,
-    isRead: true,
-    isMuted: false,
-    messages: [
-      {
-        id: 1,
-        text: 'Thank you for your purchase!',
-        sender: 'sender',
-        time: '15:30',
-        date: '20/12/25',
-      },
-    ],
-  },
-])
+const formatDateSeparator = (dateStr: string) => {
+  const date = new Date(dateStr)
+  const now = new Date()
+  const yesterday = new Date(now)
+  yesterday.setDate(now.getDate() - 1)
+
+  if (date.toDateString() === now.toDateString()) return 'Today'
+  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday'
+  return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
+}
+
+const formatTime = (dateStr: string) => {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  const now = new Date()
+
+  if (date.toDateString() === now.toDateString()) {
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+  }
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+const getInitials = (name: string) => {
+  return name
+    ? name
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
+    : '?'
+}
 
 const filteredContacts = computed(() => {
   return contacts.value.filter((contact) => {
@@ -143,10 +165,30 @@ const filteredContacts = computed(() => {
   })
 })
 
-const activeContact = ref<(typeof contacts.value)[0] | null | undefined>(contacts.value[0])
+const totalUnreadCount = computed(() => {
+  return contacts.value.reduce((total, contact) => total + contact.unread, 0)
+})
+
+onMounted(() => {
+  fetchConversations()
+})
+
+const toggleChat = () => {
+  if (props.isEmbedded) return
+  isChatVisible.value = !isChatVisible.value
+}
+
+const toggleContent = () => {
+  isContentHidden.value = !isContentHidden.value
+}
+
+const activeContact = ref<any>(null)
 
 const selectContact = (contact: any) => {
   activeContact.value = contact
+  if (contact && contact.messages.length === 0) {
+    fetchMessages(contact.id)
+  }
 }
 
 const toggleReadStatus = () => {
@@ -228,9 +270,6 @@ const onVideoSelected = (event: Event) => {
 }
 
 const getMsgClass = (msg: any) => {
-  if (props.isEmbedded) {
-    return msg.sender === 'sender' ? 'receiver' : 'sender'
-  }
   return msg.sender
 }
 </script>
@@ -246,7 +285,9 @@ const getMsgClass = (msg: any) => {
     >
       <el-icon class="chat-icon"><ChatDotRound /></el-icon>
       <span class="chat-text">Chat</span>
-      <span class="unread-badge">5</span>
+      <span v-if="totalUnreadCount > 0" class="unread-badge">{{
+        totalUnreadCount > 99 ? '99+' : totalUnreadCount
+      }}</span>
     </button>
 
     <!-- Chat Window -->
@@ -257,7 +298,7 @@ const getMsgClass = (msg: any) => {
     >
       <div class="chat-header">
         <div class="header-info">
-          <span class="header-title">Chat (5)</span>
+          <span class="header-title">Chat ({{ totalUnreadCount }})</span>
         </div>
         <div class="header-actions">
           <el-icon v-if="!isEmbedded" class="action-icon" @click="toggleContent">
@@ -299,7 +340,10 @@ const getMsgClass = (msg: any) => {
               :class="{ active: activeContact?.id === contact.id }"
               @click="selectContact(contact)"
             >
-              <div class="avatar">{{ contact.avatar }}</div>
+              <div v-if="contact.avatarUrl" class="avatar-img-wrapper">
+                <img :src="contact.avatarUrl" class="avatar-image" />
+              </div>
+              <div v-else class="avatar">{{ contact.avatarInitials }}</div>
               <div class="contact-info">
                 <div class="name-time">
                   <span class="name one-line-ellipsis">{{ contact.name }}</span>
@@ -390,18 +434,32 @@ const getMsgClass = (msg: any) => {
                     <span>{{ msg.date }}</span>
                   </div>
 
-                  <!-- Show order card after Yesterday separator -->
-                  <div v-if="msg.date === 'Yesterday' && index === 0" class="order-info-card">
+                  <!-- Show order card at the top of the chat if available -->
+                  <div v-if="index === 0 && activeContact.order" class="order-info-card">
                     <div class="order-info-header">
                       <span v-if="isEmbedded">Customer is chatting with you about this order</span>
                       <span v-else>You are chatting with the Seller about this order</span>
                     </div>
                     <div class="order-info-body">
-                      <img src="../assets/product-imgs/product1.png" class="order-item-img" />
+                      <img
+                        :src="
+                          activeContact.order.image ||
+                          activeContact.order.item_image ||
+                          '../assets/product-imgs/product1.png'
+                        "
+                        class="order-item-img"
+                      />
                       <div class="order-details">
-                        <div class="order-id">Order ID: 2506190B9AHV4B</div>
-                        <div class="order-total">Total Order: 161,784₫</div>
-                        <div class="order-status">Completed</div>
+                        <div class="order-id">
+                          Order ID: {{ activeContact.order.id || activeContact.order._id }}
+                        </div>
+                        <div class="order-total">
+                          Total Order:
+                          {{ activeContact.order.total_price || activeContact.order.total }}đ
+                        </div>
+                        <div class="order-status" style="text-transform: capitalize">
+                          {{ activeContact.order.status }}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -656,6 +714,20 @@ const getMsgClass = (msg: any) => {
   font-weight: 600;
   font-size: 14px;
   flex-shrink: 0;
+}
+
+.avatar-img-wrapper {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .contact-info {
