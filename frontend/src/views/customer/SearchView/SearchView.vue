@@ -73,13 +73,12 @@ const products = ref<DisplayProduct[]>([])
 const isLoading = ref(false)
 const totalItems = ref(0)
 
-const sortOptions = [
-  { label: 'Relevance', value: 'relevance' },
-  { label: 'Latest', value: 'latest' },
-  { label: 'Top Sales', value: 'top_sales' },
-]
+const sortOptions = computed(() => [
+  { label: 'Top Sales', value: 'top_sales', active: currentSort.value === 'top_sales' },
+  { label: 'Rating', value: 'rating', active: currentSort.value === 'rating' },
+])
 
-const currentSort = ref('relevance')
+const currentSort = ref('top_sales')
 
 const pagination = computed(() => ({
   current: Number(route.query.page) || 1,
@@ -123,8 +122,12 @@ const fetchProducts = async () => {
     } else if (currentSort.value === 'price_desc') {
       params.sort_by = 'price'
       params.sort_direction = 'desc'
-    } else if (currentSort.value === 'relevance') {
-      // Default behavior
+    } else if (currentSort.value === 'rating') {
+      params.sort_by = 'rating'
+      params.sort_direction = 'desc'
+    } else if (currentSort.value === 'top_sales') {
+      params.sort_by = 'sold_count'
+      params.sort_direction = 'desc'
     }
 
     console.log('Fetching products with params:', params)
@@ -181,9 +184,23 @@ const handleSortChange = (val: string) => {
     currentSort.value = 'price_desc'
   }
 
-  // Update URL for sorting if desired, or just refetch
-  // For now, let's just refetch with local state mapping
-  fetchProducts()
+  // Sync with URL
+  const query: any = { ...route.query, sort_by: undefined, sort_direction: undefined, page: 1 }
+  if (currentSort.value === 'price_asc') {
+    query.sort_by = 'price'
+    query.sort_direction = 'asc'
+  } else if (currentSort.value === 'price_desc') {
+    query.sort_by = 'price'
+    query.sort_direction = 'desc'
+  } else if (currentSort.value === 'rating') {
+    query.sort_by = 'rating'
+    query.sort_direction = 'desc'
+  } else if (currentSort.value === 'top_sales') {
+    query.sort_by = 'sold_count'
+    query.sort_direction = 'desc'
+  }
+
+  router.push({ query })
 }
 
 const handlePageChange = (page: number) => {
@@ -200,6 +217,17 @@ watch(
     priceMin.value = route.query.min_price ? Number(route.query.min_price) : undefined
     priceMax.value = route.query.max_price ? Number(route.query.max_price) : undefined
     selectedRating.value = route.query.min_rating ? Number(route.query.min_rating) : undefined
+
+    // Sync currentSort based on URL
+    if (route.query.sort_by === 'price') {
+      currentSort.value = route.query.sort_direction === 'asc' ? 'price_asc' : 'price_desc'
+    } else if (route.query.sort_by === 'rating') {
+      currentSort.value = 'rating'
+    } else if (route.query.sort_by === 'sold_count') {
+      currentSort.value = 'top_sales'
+    } else {
+      currentSort.value = 'top_sales'
+    }
 
     fetchProducts()
   },
