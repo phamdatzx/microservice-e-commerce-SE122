@@ -7,6 +7,11 @@ import { formatStatus } from '@/utils/formatStatus'
 import axios from 'axios'
 
 const router = useRouter()
+const isLoggedIn = ref(false)
+
+onMounted(() => {
+  isLoggedIn.value = !!localStorage.getItem('access_token')
+})
 
 const handleOrderClick = (order: any) => {
   router.push({
@@ -123,7 +128,12 @@ const orderTabs = [
         <div class="order-header">
           <div class="shop-info">
             <span class="shop-name">{{ order.seller?.name || 'Shop' }}</span>
-            <el-button :icon="ChatDotRound" size="small" link class="shop-action-btn"
+            <el-button
+              v-if="isLoggedIn"
+              :icon="ChatDotRound"
+              size="small"
+              link
+              class="shop-action-btn"
               >Chat</el-button
             >
             <el-divider direction="vertical" />
@@ -182,15 +192,15 @@ const orderTabs = [
             <template v-if="order.status === 'TO_PAY'">
               <el-button type="primary" size="large">Pay Order</el-button>
               <el-button size="large">Cancel Order</el-button>
-              <el-button size="large">Contact Seller</el-button>
+              <el-button v-if="isLoggedIn" size="large">Contact Seller</el-button>
             </template>
             <template v-else-if="order.status === 'TO_CONFIRM'">
               <el-button size="large">Cancel Order</el-button>
-              <el-button size="large">Contact Seller</el-button>
+              <el-button v-if="isLoggedIn" size="large">Contact Seller</el-button>
             </template>
             <template v-else-if="order.status === 'TO_PICKUP'">
               <el-button size="large">Cancel Order</el-button>
-              <el-button size="large">Contact Seller</el-button>
+              <el-button v-if="isLoggedIn" size="large">Contact Seller</el-button>
             </template>
             <template v-else-if="order.status === 'SHIPPING'">
               <el-button type="primary" size="large">Order Received</el-button>

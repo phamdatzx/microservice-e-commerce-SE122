@@ -20,6 +20,7 @@ import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 const route = useRoute()
+const isLoggedIn = ref(false)
 const isLoading = ref(false)
 
 const order = ref<any>(null)
@@ -319,6 +320,7 @@ const handleBack = () => {
 }
 
 onMounted(() => {
+  isLoggedIn.value = !!localStorage.getItem('access_token')
   fetchOrder()
 })
 </script>
@@ -380,7 +382,7 @@ onMounted(() => {
       <!-- Secondary Actions -->
       <div class="secondary-actions">
         <el-button plain class="sec-btn">Return/Refund Request</el-button>
-        <el-button plain class="sec-btn">Contact Seller</el-button>
+        <el-button v-if="isLoggedIn" plain class="sec-btn">Contact Seller</el-button>
       </div>
 
       <!-- Delivery / Address Info -->
@@ -420,7 +422,7 @@ onMounted(() => {
           <div class="shop-info">
             <!-- Removals: "Favorite" badge removed -->
             <span class="shop-name">Coolsen Electronics</span>
-            <el-button link :icon="ChatDotRound" class="chat-btn">Chat</el-button>
+            <el-button v-if="isLoggedIn" link :icon="ChatDotRound" class="chat-btn">Chat</el-button>
             <el-button link :icon="Shop" class="view-shop-btn">View Shop</el-button>
           </div>
         </div>

@@ -2,6 +2,7 @@
 import { ChatDotRound, Shop, Goods, User, Star, Plus, Check } from '@element-plus/icons-vue'
 import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
 import { useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue'
 
 interface SellerInfo {
   id: string
@@ -32,6 +33,11 @@ const props = withDefaults(
 
 const emit = defineEmits(['toggle-follow'])
 const router = useRouter()
+const isLoggedIn = ref(false)
+
+onMounted(() => {
+  isLoggedIn.value = !!localStorage.getItem('access_token')
+})
 </script>
 
 <template>
@@ -66,7 +72,12 @@ const router = useRouter()
                 {{ sellerInfo.sale_info.is_following ? 'Following' : 'Follow' }}
               </el-button>
             </template>
-            <el-button color="var(--main-color)" plain :icon="ChatDotRound" size="default"
+            <el-button
+              v-if="isLoggedIn"
+              color="var(--main-color)"
+              plain
+              :icon="ChatDotRound"
+              size="default"
               >Chat Now</el-button
             >
             <el-button

@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import type { CheckboxValueType } from 'element-plus'
-import { ref, useTemplateRef, watch } from 'vue'
+import { ref, useTemplateRef, watch, onMounted } from 'vue'
 import { type CartSeller, type Product } from '../CartView.vue'
 import { ChatDotRound, Shop } from '@element-plus/icons-vue'
 import CartProduct from './CartProduct.vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
+const isLoggedIn = ref(false)
+
+onMounted(() => {
+  isLoggedIn.value = !!localStorage.getItem('access_token')
+})
 
 interface Props {
   seller: CartSeller
@@ -61,7 +66,9 @@ defineExpose({ checkedProducts, handleCheckAll, handleUncheckAll })
       />
       <h4 style="font-weight: 500">{{ props.seller.sellerName }}</h4>
       <div style="margin-left: 12px; display: flex; align-items: center">
-        <el-button :icon="ChatDotRound" size="small" link class="shop-action-btn">Chat</el-button>
+        <el-button v-if="isLoggedIn" :icon="ChatDotRound" size="small" link class="shop-action-btn"
+          >Chat</el-button
+        >
         <el-divider direction="vertical" />
         <el-button
           :icon="Shop"
