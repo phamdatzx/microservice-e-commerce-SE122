@@ -310,7 +310,7 @@ watch(
       </template>
 
       <template #bottom>
-        <RecentlyViewed style="margin-top: 40px" />
+        <RecentlyViewed style="margin-top: 20px" />
       </template>
     </ProductList>
   </div>
