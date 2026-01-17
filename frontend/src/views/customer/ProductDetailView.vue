@@ -780,6 +780,7 @@ const addToCart = async () => {
             :rating="item.rating"
             :location="item.location"
             :discount="item.discount"
+            :sold-count="item.soldCount"
             :id="item.id"
           />
         </el-col>

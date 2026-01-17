@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
+import { quantityFormatNumber } from '@/utils/quantityFormatNumber'
 import LocationIcon from './icons/LocationIcon.vue'
 import StarIcon from './icons/StarIcon.vue'
 import { Picture } from '@element-plus/icons-vue'
@@ -68,9 +69,7 @@ const props = defineProps([
             "
           >
             Sold
-            {{
-              props.soldCount >= 1000 ? (props.soldCount / 1000).toFixed(1) + 'k' : props.soldCount
-            }}
+            {{ quantityFormatNumber(props.soldCount) }}
           </div>
         </div>
         <div style="display: flex; align-items: center">
