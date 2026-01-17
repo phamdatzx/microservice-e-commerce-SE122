@@ -7,6 +7,8 @@ import '@splidejs/vue-splide/css'
 import { ref, onMounted } from 'vue'
 import { ShoppingCart } from '@element-plus/icons-vue'
 import CategoryItem from './components/CategoryItem.vue'
+import SellerFollowItem from './components/SellerFollowItem.vue'
+import axios from 'axios'
 
 const categories = [
   'Laptops',
@@ -204,7 +206,29 @@ const productList = [
   },
 ]
 
-onMounted(() => {})
+const followedSellers = ref<any[]>([])
+
+const fetchFollowedSellers = async () => {
+  const token = localStorage.getItem('access_token')
+  if (!token) return
+
+  try {
+    const response = await axios.get(`${import.meta.env.VITE_BE_API_URL}/user/follow`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    if (response.data && response.data.data) {
+      followedSellers.value = response.data.data
+    }
+  } catch (error) {
+    console.error('Error fetching followed sellers:', error)
+  }
+}
+
+onMounted(() => {
+  fetchFollowedSellers()
+})
 
 const activeTab = ref('best-seller')
 </script>
@@ -240,6 +264,41 @@ const activeTab = ref('best-seller')
         <div></div>
       </el-col>
     </el-row>
+
+    <!-- Followed Sellers Section -->
+    <div
+      v-if="followedSellers.length > 0"
+      class="box-shadow border-radius followed-sellers"
+      style="background-color: #fff; padding: 20px 20px 32px; margin-bottom: 20px"
+    >
+      <div style="display: flex; margin-bottom: 24px">
+        <h3 style="font-weight: bold">FOLLOWED SELLERS</h3>
+      </div>
+
+      <Splide
+        :options="{
+          rewind: true,
+          perPage: 8,
+          gap: '2rem',
+          pagination: false,
+          arrows: followedSellers.length > 8,
+          breakpoints: {
+            1200: { perPage: 6 },
+            992: { perPage: 4 },
+            768: { perPage: 3 },
+            576: { perPage: 2 },
+          },
+        }"
+      >
+        <SplideSlide v-for="seller in followedSellers" :key="seller.id">
+          <SellerFollowItem
+            :image-url="seller.image"
+            :name="seller.full_name || seller.username"
+            :id="seller.user_id"
+          />
+        </SplideSlide>
+      </Splide>
+    </div>
 
     <div
       class="box-shadow border-radius top-categories"
