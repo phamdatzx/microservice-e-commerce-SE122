@@ -31,6 +31,7 @@ const products = ref<any[]>([])
 const vouchers = ref<any[]>([])
 const savedVoucherIds = ref<string[]>([])
 const isLoading = ref(false)
+const isFollowLoading = ref(false)
 const totalItems = ref(0)
 const currentPage = ref(1)
 const pageSize = ref(15)
@@ -61,9 +62,6 @@ const fetchSellerInfo = async () => {
     )
     if (response.data && response.data.data) {
       sellerInfo.value = response.data.data
-      if (sellerInfo.value) {
-        sellerInfo.value.sale_info.product_count = totalItems.value
-      }
     }
   } catch (error) {
     console.error('Error fetching seller info:', error)
@@ -114,9 +112,6 @@ const fetchSellerProducts = async () => {
         soldCount: p.sold_count,
       }))
       totalItems.value = response.data.pagination.total_items
-      if (sellerInfo.value) {
-        sellerInfo.value.sale_info.product_count = response.data.pagination.total_items
-      }
     }
   } catch (error) {
     console.error('Error fetching seller products:', error)
@@ -170,6 +165,7 @@ const handleFollowToggle = async () => {
   const isCurrentlyFollowing = sellerInfo.value.sale_info.is_following
   const url = `${import.meta.env.VITE_BE_API_URL}/user/follow/${sellerId.value}`
 
+  isFollowLoading.value = true
   try {
     if (isCurrentlyFollowing) {
       await axios.delete(url, {
@@ -191,10 +187,12 @@ const handleFollowToggle = async () => {
       ElMessage.success('Followed seller')
     }
     // Refresh seller info to update follow count and status
-    fetchSellerInfo()
+    await fetchSellerInfo()
   } catch (error: any) {
     const errorMsg = error.response?.data?.message || 'Failed to update follow status'
     ElMessage.error(errorMsg)
+  } finally {
+    isFollowLoading.value = false
   }
 }
 
@@ -264,16 +262,6 @@ const pagination = computed(() => ({
   total: totalItems.value,
   pageSize: pageSize.value,
 }))
-
-watch(
-  totalItems,
-  (val) => {
-    if (sellerInfo.value) {
-      sellerInfo.value.sale_info.product_count = val
-    }
-  },
-  { immediate: true },
-)
 </script>
 
 <template>
@@ -282,6 +270,7 @@ watch(
       <SellerHeader
         v-if="sellerInfo"
         :seller-info="sellerInfo"
+        :is-follow-loading="isFollowLoading"
         @toggle-follow="handleFollowToggle"
       />
 
