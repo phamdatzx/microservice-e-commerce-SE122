@@ -437,7 +437,34 @@ func (s *orderService) HandleCheckoutSessionCompleted(ctx context.Context, order
 	// Update order status to TO_CONFIRM
 	order.Status = "TO_CONFIRM"
 
-	return s.repo.UpdateOrder(order)
+	err = s.repo.UpdateOrder(order)
+	if err != nil {
+		return err
+	}
+
+	// Send notification to seller about the paid order
+	orderData := map[string]interface{}{
+		"orderId":      order.ID,
+		"total":        order.Total + float64(order.DeliveryFee),
+		"itemCount":    len(order.Items),
+		"customerName": order.User.Name,
+		"paymentMethod": order.PaymentMethod,
+	}
+
+	err = s.notificationClient.CreateNotification(client.CreateNotificationRequest{
+		UserID:  order.Seller.ID,
+		Type:    "order",
+		Title:   "New Paid Order",
+		Message: fmt.Sprintf("You have a new paid order from %s", order.User.Name),
+		Data:    orderData,
+	})
+
+	if err != nil {
+		// Log error but don't fail the order update
+		fmt.Printf("Warning: failed to send notification to seller: %v\n", err)
+	}
+
+	return nil
 }
 
 func (s *orderService) HandlePaymentFailed(ctx context.Context, paymentIntentID string) error {
