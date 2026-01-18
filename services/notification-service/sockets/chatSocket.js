@@ -1,6 +1,6 @@
 import * as chatService from '../services/chatService.js';
 import { SOCKET_EVENTS } from '../utils/constants.js';
-import { getConversationRoom, emitToConversation } from '../utils/socketHelpers.js';
+import { getConversationRoom, emitToConversation, emitToUser } from '../utils/socketHelpers.js';
 
 /**
  * Register chat-related socket event handlers
@@ -117,8 +117,46 @@ export const registerChatHandlers = (io, socket) => {
       // Send confirmation to sender
       socket.emit(SOCKET_EVENTS.MESSAGE_SENT, message);
 
+      // Determine the receiver ID
+      const receiverId = conversation.userId === userId ? conversation.sellerId : conversation.userId;
+
+      // Check if receiver is in the conversation room
+      const room = getConversationRoom(conversationId);
+      const socketsInRoom = await io.in(room).fetchSockets();
+      const receiverInRoom = socketsInRoom.some(s => s.userId === receiverId);
+
       // Broadcast to all users in the conversation room
       emitToConversation(io, conversationId, SOCKET_EVENTS.NEW_MESSAGE, message);
+
+      // If receiver is not in the room, create a notification
+      if (!receiverInRoom) {
+        console.log(`📲 Receiver ${receiverId} not in room, creating notification`);
+        
+        const { createNotification } = await import('../services/notificationService.js');
+        const { NOTIFICATION_TYPES } = await import('../utils/constants.js');
+        const { emitToUser } = await import('../utils/socketHelpers.js');
+        
+        try {
+          const notification = await createNotification(
+            receiverId,
+            NOTIFICATION_TYPES.CHAT,
+            'New Message',
+            content,
+            {
+              conversationId,
+              senderId: userId,
+              messageId: message._id,
+              hasImage: !!image,
+            }
+          );
+
+          // Try to send notification to user if they're connected (but not in room)
+          emitToUser(io, receiverId, SOCKET_EVENTS.NEW_NOTIFICATION, notification);
+        } catch (notifError) {
+          console.error('Failed to create notification:', notifError);
+          // Don't fail the message send if notification creation fails
+        }
+      }
 
       console.log(`💬 Message sent in conversation ${conversationId}`);
     } catch (error) {

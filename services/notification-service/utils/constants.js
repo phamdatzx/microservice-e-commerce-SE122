@@ -33,6 +33,7 @@ export const NOTIFICATION_TYPES = {
   PRODUCT: 'product',
   SYSTEM: 'system',
   PROMOTION: 'promotion',
+  CHAT: 'chat',
 };
 
 // Room prefixes
