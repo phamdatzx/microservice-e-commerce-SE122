@@ -10,6 +10,7 @@ import connectDatabase from './config/database.js';
 import { initializeSocket } from './config/socket.js';
 import { socketAuth } from './middleware/socketAuth.js';
 import { initializeSocketHandlers } from './sockets/index.js';
+import { initS3 } from './config/s3.js';
 
 // Load environment variables
 dotenv.config();
@@ -67,6 +68,9 @@ const startServer = async () => {
   try {
     // Connect to MongoDB
     await connectDatabase();
+
+    // Initialize S3 client
+    initS3();
 
     // Start server
     httpServer.listen(PORT, () => {
