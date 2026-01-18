@@ -6,6 +6,7 @@ import (
 	"product-service/error"
 	"product-service/model"
 	"product-service/service"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -231,4 +232,29 @@ func (c *ProductController) SearchProducts(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, response)
+}
+
+func (c *ProductController) GetRecentlyViewedProducts(ctx *gin.Context) {
+	userID := ctx.GetHeader("X-User-Id")
+	if userID == "" {
+		ctx.Error(error.NewAppError(401, "User ID not found in header"))
+		ctx.Abort()
+		return
+	}
+
+	// Get limit from query parameter, default to 20
+	limitStr := ctx.DefaultQuery("limit", "20")
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil {
+		limit = 20
+	}
+
+	products, err := c.service.GetRecentlyViewedProducts(userID, limit)
+	if err != nil {
+		ctx.Error(err)
+		ctx.Abort()
+		return
+	}
+
+	ctx.JSON(http.StatusOK, products)
 }

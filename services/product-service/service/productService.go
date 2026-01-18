@@ -25,6 +25,7 @@ type ProductService interface {
 	GetProductsBySeller(sellerID string, params dto.GetProductsQueryParams) (*dto.PaginatedProductsResponse, error)
 	GetVariantsByIds(variantIDs []string) ([]dto.CartVariantDto, error)
 	SearchProducts(params dto.SearchProductsQueryParams, userID string) (*dto.PaginatedProductsResponse, error)
+	GetRecentlyViewedProducts(userID string, limit int) ([]model.Product, error)
 }
 
 type productService struct {
@@ -377,4 +378,40 @@ func (s *productService) SearchProducts(params dto.SearchProductsQueryParams, us
 	// Build paginated response
 	response := dto.NewPaginatedProductsResponse(products, total, params.Page, params.Limit)
 	return response, nil
+}
+
+func (s *productService) GetRecentlyViewedProducts(userID string, limit int) ([]model.Product, error) {
+	// Default limit to 20 if not specified or if too large
+	if limit <= 0 || limit > 50 {
+		limit = 20
+	}
+
+	// Get view history for the user
+	viewHistory, err := s.searchHistoryRepo.FindViewHistoryByUserID(userID, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	// Extract unique product IDs from view history (preserve order)
+	var products []model.Product
+	seenProductIDs := make(map[string]bool)
+
+	for _, view := range viewHistory {
+		// Skip if we've already added this product (prevent duplicates)
+if seenProductIDs[view.ProductID] {
+continue
+}
+
+// Fetch the product
+product, err := s.repo.FindByID(view.ProductID)
+if err != nil {
+// Skip if product no longer exists
+continue
+}
+
+products = append(products, *product)
+seenProductIDs[view.ProductID] = true
+}
+
+return products, nil
 }
