@@ -24,18 +24,20 @@ type ProductService interface {
 	ProcessVariantImageUpload(productID string, fileMap map[string][]*multipart.FileHeader) (map[string]string, error)
 	GetProductsBySeller(sellerID string, params dto.GetProductsQueryParams) (*dto.PaginatedProductsResponse, error)
 	GetVariantsByIds(variantIDs []string) ([]dto.CartVariantDto, error)
-	SearchProducts(params dto.SearchProductsQueryParams) (*dto.PaginatedProductsResponse, error)
+	SearchProducts(params dto.SearchProductsQueryParams, userID string) (*dto.PaginatedProductsResponse, error)
 }
 
 type productService struct {
-	repo       repository.ProductRepository
-	userClient *client.UserServiceClient
+	repo              repository.ProductRepository
+	userClient        *client.UserServiceClient
+	searchHistoryRepo repository.SearchHistoryRepository
 }
 
-func NewProductService(repo repository.ProductRepository, userClient *client.UserServiceClient) ProductService {
+func NewProductService(repo repository.ProductRepository, userClient *client.UserServiceClient, searchHistoryRepo repository.SearchHistoryRepository) ProductService {
 	return &productService{
-		repo:       repo,
-		userClient: userClient,
+		repo:              repo,
+		userClient:        userClient,
+		searchHistoryRepo: searchHistoryRepo,
 	}
 }
 
@@ -277,7 +279,22 @@ func (s *productService) GetVariantsByIds(variantIDs []string) ([]dto.CartVarian
 	return result, nil
 }
 
-func (s *productService) SearchProducts(params dto.SearchProductsQueryParams) (*dto.PaginatedProductsResponse, error) {
+func (s *productService) SearchProducts(params dto.SearchProductsQueryParams, userID string) (*dto.PaginatedProductsResponse, error) {
+	// Save search history if user is logged in and has search query
+	if userID != "" && params.SearchQuery != "" {
+		searchHistory := &model.SearchHistory{
+			UserID: userID,
+			Query:  params.SearchQuery,
+		}
+		// Save search history asynchronously (don't block the search)
+		go func() {
+			if err := s.searchHistoryRepo.Create(searchHistory); err != nil {
+				// Log error but don't fail the search
+				fmt.Printf("Failed to save search history for user %s: %v\n", userID, err)
+			}
+		}()
+	}
+
 	// Build filter based on query parameters
 	filter := bson.M{}
 

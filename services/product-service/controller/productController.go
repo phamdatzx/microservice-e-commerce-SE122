@@ -217,8 +217,11 @@ func (c *ProductController) SearchProducts(ctx *gin.Context) {
 	// Set default values
 	params.SetDefaults()
 
+	// Get userID from header if available (optional - for search history tracking)
+	userID := ctx.GetHeader("X-User-Id")
+
 	// Call service method
-	response, err := c.service.SearchProducts(params)
+	response, err := c.service.SearchProducts(params, userID)
 	if err != nil {
 		ctx.Error(err)
 		return

@@ -27,7 +27,8 @@ func main() {
 	// Wiring dependencies - Product
 	productRepo := repository.NewProductRepository(config.DB)
 	userClient := client.NewUserServiceClient()
-	productService := service.NewProductService(productRepo, userClient)
+	searchHistoryRepo := repository.NewSearchHistoryRepository(config.DB)
+	productService := service.NewProductService(productRepo, userClient, searchHistoryRepo)
 	productController := controller.NewProductController(productService)
 
 	// Wiring dependencies - Category
@@ -63,6 +64,10 @@ func main() {
 	ratingService := service.NewRatingService(ratingRepo,productRepo, orderClient, userClient)
 	ratingController := controller.NewRatingController(ratingService)
 
+	// Wiring dependencies - SearchHistory
+	searchHistoryService := service.NewSearchHistoryService(searchHistoryRepo)
+	searchHistoryController := controller.NewSearchHistoryController(searchHistoryService)
+
 	r := gin.Default()
 	r.Use(cors.Default())
 
@@ -75,6 +80,7 @@ func main() {
 		SavedVoucherController:     savedVoucherController,
 		StockReservationController: stockReservationController,
 		RatingController:           ratingController,
+		SearchHistoryController:    searchHistoryController,
 	})
 
 	r.Run(":8085")
