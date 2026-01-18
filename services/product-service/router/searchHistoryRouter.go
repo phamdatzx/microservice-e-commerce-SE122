@@ -11,4 +11,9 @@ func RegisterSearchHistoryRoutes(rg *gin.RouterGroup, c *controller.SearchHistor
 	{
 		searchHistory.GET("", c.GetSearchHistory)
 	}
+	
+	viewHistory := rg.Group("/view-history")
+	{
+		viewHistory.GET("", c.GetViewHistory)
+	}
 }

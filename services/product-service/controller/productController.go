@@ -43,7 +43,10 @@ func (c *ProductController) CreateProduct(ctx *gin.Context) {
 func (c *ProductController) GetProductByID(ctx *gin.Context) {
 	id := ctx.Param("id")
 
-	product, err := c.service.GetProductByID(id)
+	// Get userID from header if available (optional - for view history tracking)
+	userID := ctx.GetHeader("X-User-Id")
+
+	product, err := c.service.GetProductByID(id, userID)
 	if err != nil {
 		ctx.Error(err)
 		return

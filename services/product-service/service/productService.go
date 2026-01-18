@@ -16,7 +16,7 @@ import (
 
 type ProductService interface {
 	CreateProduct(product *model.Product) error
-	GetProductByID(id string) (*model.Product, error)
+	GetProductByID(id string, userID string) (*model.Product, error)
 	GetAllProducts() ([]model.Product, error)
 	UpdateProduct(product *model.Product) error
 	DeleteProduct(id string) error
@@ -56,8 +56,28 @@ func (s *productService) CreateProduct(product *model.Product) error {
 	return nil
 }
 
-func (s *productService) GetProductByID(id string) (*model.Product, error) {
-	return s.repo.FindByID(id)
+func (s *productService) GetProductByID(id string, userID string) (*model.Product, error) {
+	product, err := s.repo.FindByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	// Save view history if user is logged in
+	if userID != "" {
+		viewHistory := &model.ViewHistory{
+			UserID:    userID,
+			ProductID: id,
+		}
+		// Save view history asynchronously (don't block the request)
+		go func() {
+			if err := s.searchHistoryRepo.CreateViewHistory(viewHistory); err != nil {
+				// Log error but don't fail the request
+				fmt.Printf("Failed to save view history for user %s: %v\n", userID, err)
+			}
+		}()
+	}
+
+	return product, nil
 }
 
 func (s *productService) GetAllProducts() ([]model.Product, error) {

@@ -7,6 +7,7 @@ import (
 
 type SearchHistoryService interface {
 	GetSearchHistory(userID string, limit int) ([]model.SearchHistory, error)
+	GetViewHistory(userID string, limit int) ([]model.ViewHistory, error)
 }
 
 type searchHistoryService struct {
@@ -26,4 +27,13 @@ func (s *searchHistoryService) GetSearchHistory(userID string, limit int) ([]mod
 	}
 	
 	return s.searchHistoryRepo.FindByUserID(userID, limit)
+}
+
+func (s *searchHistoryService) GetViewHistory(userID string, limit int) ([]model.ViewHistory, error) {
+	// Default limit to 50 if not specified or if too large
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+	
+	return s.searchHistoryRepo.FindViewHistoryByUserID(userID, limit)
 }

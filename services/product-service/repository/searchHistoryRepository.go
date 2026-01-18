@@ -13,17 +13,21 @@ import (
 type SearchHistoryRepository interface {
 	Create(searchHistory *model.SearchHistory) error
 	FindByUserID(userID string, limit int) ([]model.SearchHistory, error)
+	CreateViewHistory(viewHistory *model.ViewHistory) error
+	FindViewHistoryByUserID(userID string, limit int) ([]model.ViewHistory, error)
 }
 
 type searchHistoryRepository struct {
-	db         *mongo.Database
-	collection *mongo.Collection
+	db                   *mongo.Database
+	collection           *mongo.Collection
+	viewHistoryCollection *mongo.Collection
 }
 
 func NewSearchHistoryRepository(db *mongo.Database) SearchHistoryRepository {
 	return &searchHistoryRepository{
-		db:         db,
-		collection: db.Collection("search_histories"),
+		db:                   db,
+		collection:           db.Collection("search_histories"),
+		viewHistoryCollection: db.Collection("view_histories"),
 	}
 }
 
@@ -56,4 +60,35 @@ func (r *searchHistoryRepository) FindByUserID(userID string, limit int) ([]mode
 		return nil, err
 	}
 	return searchHistories, nil
+}
+
+func (r *searchHistoryRepository) CreateViewHistory(viewHistory *model.ViewHistory) error {
+	viewHistory.BeforeCreate()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_, err := r.viewHistoryCollection.InsertOne(ctx, viewHistory)
+	return err
+}
+
+func (r *searchHistoryRepository) FindViewHistoryByUserID(userID string, limit int) ([]model.ViewHistory, error) {
+	var viewHistories []model.ViewHistory
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	
+	// Find options: sort by viewed_at descending and limit results
+	findOptions := options.Find()
+	findOptions.SetSort(bson.D{{Key: "viewed_at", Value: -1}})
+	if limit > 0 {
+		findOptions.SetLimit(int64(limit))
+	}
+	
+	cursor, err := r.viewHistoryCollection.Find(ctx, bson.M{"user_id": userID}, findOptions)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+	if err = cursor.All(ctx, &viewHistories); err != nil {
+		return nil, err
+	}
+	return viewHistories, nil
 }
