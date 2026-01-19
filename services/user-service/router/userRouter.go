@@ -2,6 +2,7 @@ package router
 
 import (
 	"user-service/controller"
+	"user-service/middleware"
 
 	"github.com/gin-gonic/gin"
 )
@@ -23,6 +24,10 @@ func RegisterUserRoutes(rg *gin.RouterGroup, c controller.UserController) {
 		user.POST("/upload-image", c.UploadUserImage)
 		user.POST("/seller/rating", c.UpdateSellerRating)
 		user.POST("/seller/product-count", c.UpdateProductCount)
+
+		// Admin routes
+		user.GET("/admin/users", middleware.RequireAdmin(), c.GetAllUsers)
+		user.PUT("/admin/users/:id/ban", middleware.RequireAdmin(), c.SetUserBanned)
 	}
 }
 
