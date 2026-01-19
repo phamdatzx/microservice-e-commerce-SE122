@@ -52,6 +52,14 @@ const handleUncheckAll = () => {
   checkedProducts.value = []
 }
 
+const openChat = () => {
+  if (!isLoggedIn.value) return
+  const event = new CustomEvent('open-chat', {
+    detail: { sellerId: props.seller.sellerId },
+  })
+  window.dispatchEvent(event)
+}
+
 defineExpose({ checkedProducts, handleCheckAll, handleUncheckAll })
 </script>
 
@@ -66,7 +74,13 @@ defineExpose({ checkedProducts, handleCheckAll, handleUncheckAll })
       />
       <h4 style="font-weight: 500">{{ props.seller.sellerName }}</h4>
       <div style="margin-left: 12px; display: flex; align-items: center">
-        <el-button v-if="isLoggedIn" :icon="ChatDotRound" size="small" link class="shop-action-btn"
+        <el-button
+          v-if="isLoggedIn"
+          :icon="ChatDotRound"
+          size="small"
+          link
+          class="shop-action-btn"
+          @click="openChat"
           >Chat</el-button
         >
         <el-divider direction="vertical" />

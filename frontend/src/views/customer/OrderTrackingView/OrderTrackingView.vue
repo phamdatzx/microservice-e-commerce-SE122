@@ -66,6 +66,17 @@ const costs = computed(() => [])
 const paymentMethod = computed(() => order.value?.payment_method || '')
 const total = computed(() => `${formatNumberWithDots(order.value?.total || 0)}đ`)
 
+const openChat = () => {
+  if (!isLoggedIn.value || !order.value?.seller) return
+  const sellerId = order.value.seller.id || order.value.seller._id
+  if (sellerId) {
+    const event = new CustomEvent('open-chat', {
+      detail: { sellerId },
+    })
+    window.dispatchEvent(event)
+  }
+}
+
 const fetchOrder = async () => {
   const orderId = route.params.id
   if (!orderId) return
@@ -382,7 +393,9 @@ onMounted(() => {
       <!-- Secondary Actions -->
       <div class="secondary-actions">
         <el-button plain class="sec-btn">Return/Refund Request</el-button>
-        <el-button v-if="isLoggedIn" plain class="sec-btn">Contact Seller</el-button>
+        <el-button v-if="isLoggedIn" plain class="sec-btn" @click="openChat"
+          >Contact Seller</el-button
+        >
       </div>
 
       <!-- Delivery / Address Info -->
@@ -421,8 +434,15 @@ onMounted(() => {
         <div class="shop-header">
           <div class="shop-info">
             <!-- Removals: "Favorite" badge removed -->
-            <span class="shop-name">Coolsen Electronics</span>
-            <el-button v-if="isLoggedIn" link :icon="ChatDotRound" class="chat-btn">Chat</el-button>
+            <span class="shop-name">{{ order.seller?.name || 'Shop' }}</span>
+            <el-button
+              v-if="isLoggedIn"
+              link
+              :icon="ChatDotRound"
+              class="chat-btn"
+              @click="openChat"
+              >Chat</el-button
+            >
             <el-button link :icon="Shop" class="view-shop-btn">View Shop</el-button>
           </div>
         </div>

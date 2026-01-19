@@ -20,6 +20,14 @@ const handleOrderClick = (order: any) => {
   })
 }
 
+const openChat = (sellerId: string) => {
+  if (!isLoggedIn.value) return
+  const event = new CustomEvent('open-chat', {
+    detail: { sellerId },
+  })
+  window.dispatchEvent(event)
+}
+
 const activeOrderTab = ref('all')
 const orders = ref<any[]>([])
 const loading = ref(false)
@@ -134,6 +142,7 @@ const orderTabs = [
               size="small"
               link
               class="shop-action-btn"
+              @click.stop="openChat(order.seller?.id || order.seller?._id)"
               >Chat</el-button
             >
             <el-divider direction="vertical" />
@@ -192,24 +201,43 @@ const orderTabs = [
             <template v-if="order.status === 'TO_PAY'">
               <el-button type="primary" size="large">Pay Order</el-button>
               <el-button size="large">Cancel Order</el-button>
-              <el-button v-if="isLoggedIn" size="large">Contact Seller</el-button>
+              <el-button
+                v-if="isLoggedIn"
+                size="large"
+                @click.stop="openChat(order.seller?.id || order.seller?._id)"
+                >Contact Seller</el-button
+              >
             </template>
             <template v-else-if="order.status === 'TO_CONFIRM'">
               <el-button size="large">Cancel Order</el-button>
-              <el-button v-if="isLoggedIn" size="large">Contact Seller</el-button>
+              <el-button
+                v-if="isLoggedIn"
+                size="large"
+                @click.stop="openChat(order.seller?.id || order.seller?._id)"
+                >Contact Seller</el-button
+              >
             </template>
             <template v-else-if="order.status === 'TO_PICKUP'">
               <el-button size="large">Cancel Order</el-button>
-              <el-button v-if="isLoggedIn" size="large">Contact Seller</el-button>
+              <el-button
+                v-if="isLoggedIn"
+                size="large"
+                @click.stop="openChat(order.seller?.id || order.seller?._id)"
+                >Contact Seller</el-button
+              >
             </template>
             <template v-else-if="order.status === 'SHIPPING'">
               <el-button type="primary" size="large">Order Received</el-button>
-              <el-button size="large">Contact Seller</el-button>
+              <el-button size="large" @click.stop="openChat(order.seller?.id || order.seller?._id)"
+                >Contact Seller</el-button
+              >
             </template>
             <template v-else-if="order.status === 'COMPLETED'">
               <el-button type="primary" size="large">Buy Again</el-button>
               <el-button size="large">Rate</el-button>
-              <el-button size="large">Contact Seller</el-button>
+              <el-button size="large" @click.stop="openChat(order.seller?.id || order.seller?._id)"
+                >Contact Seller</el-button
+              >
             </template>
           </div>
         </div>

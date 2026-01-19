@@ -38,6 +38,17 @@ const isLoggedIn = ref(false)
 onMounted(() => {
   isLoggedIn.value = !!localStorage.getItem('access_token')
 })
+
+const openChat = () => {
+  if (!isLoggedIn.value) {
+    // Optionally redirect to login or show message
+    return
+  }
+  const event = new CustomEvent('open-chat', {
+    detail: { sellerId: props.sellerInfo.id },
+  })
+  window.dispatchEvent(event)
+}
 </script>
 
 <template>
@@ -78,6 +89,7 @@ onMounted(() => {
               plain
               :icon="ChatDotRound"
               size="default"
+              @click="openChat"
               >Chat Now</el-button
             >
             <el-button

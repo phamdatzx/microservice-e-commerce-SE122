@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { ElMessageBox } from 'element-plus'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ElMessageBox, ElMessage } from 'element-plus'
 import axios from 'axios'
 import {
   Search,
@@ -18,10 +18,11 @@ import {
   Notification,
   Finished,
   Picture,
-  VideoCamera,
+  Loading,
 } from '@element-plus/icons-vue'
 import PinIcon from './icons/PinIcon.vue'
 import UnpinIcon from './icons/UnpinIcon.vue'
+import { socketService, SOCKET_EVENTS } from '@/utils/socket'
 
 const props = defineProps({
   isEmbedded: {
@@ -35,14 +36,23 @@ const searchQuery = ref('')
 const filters = ['All', 'Unread', 'Pinned']
 const activeFilter = ref('All')
 const imageInputRef = ref<HTMLInputElement | null>(null)
-const videoInputRef = ref<HTMLInputElement | null>(null)
 const isContentHidden = ref(false)
 const contacts = ref<any[]>([])
+const activeContact = ref<any>(null)
+const newMessage = ref('')
+const otherUserTyping = ref(false)
+const messagesContainerRef = ref<HTMLElement | null>(null)
+const selectedImageFile = ref<File | null>(null)
+const imagePreviewUrl = ref<string | null>(null)
+const isSending = ref(false)
+const isLoadingContacts = ref(false)
+const isLoadingMessages = ref(false)
 
 const fetchConversations = async () => {
   const token = localStorage.getItem('access_token')
   if (!token) return
 
+  isLoadingContacts.value = true
   try {
     const response = await axios.get(
       `${import.meta.env.VITE_BE_API_URL}/notification/chat/conversations`,
@@ -63,29 +73,162 @@ const fetchConversations = async () => {
           unread: conv.unreadCount || 0,
           avatarUrl: otherParty.image,
           avatarInitials: getInitials(otherParty.name || otherParty.username),
-          isPinned: false, // API doesn't seem to have pinned status yet
+          isPinned: false,
           isRead: conv.unreadCount === 0,
           isMuted: false,
-          messages: [], // User said they'll handle messages later
-          order: conv.order || null, // API might provide order info
+          messages: [],
+          order: conv.order || null,
           raw: conv,
         }
       })
-
-      // Select first contact if none selected
-      if (contacts.value.length > 0 && !activeContact.value) {
-        selectContact(contacts.value[0])
-      }
+      hydrateLastMessagePrefix()
     }
   } catch (error) {
     console.error('Error fetching conversations:', error)
+  } finally {
+    isLoadingContacts.value = false
   }
+}
+
+const openChatWithSeller = async (sellerId: string) => {
+  if (!sellerId) return
+  isChatVisible.value = true
+  isContentHidden.value = false
+
+  const existing = contacts.value.find((c) => {
+    const targetId = props.isEmbedded ? c.raw.customerId : c.raw.sellerId
+    return String(targetId) === String(sellerId)
+  })
+
+  if (existing) {
+    selectContact(existing)
+    return
+  }
+
+  const token = localStorage.getItem('access_token')
+  if (!token) return
+
+  try {
+    const response = await axios.post(
+      `${import.meta.env.VITE_BE_API_URL}/notification/chat/conversations`,
+      { sellerId },
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    )
+
+    if (response.data && response.data.data) {
+      const conv = response.data.data
+      const otherParty = props.isEmbedded ? conv.customer : conv.seller
+      const newContact = {
+        id: conv._id,
+        name: otherParty.name || otherParty.username,
+        lastMessage: conv.lastMessage || 'No messages yet',
+        time: formatTime(conv.lastUpdated),
+        unread: conv.unreadCount || 0,
+        avatarUrl: otherParty.image,
+        avatarInitials: getInitials(otherParty.name || otherParty.username),
+        isPinned: false,
+        isRead: conv.unreadCount === 0,
+        isMuted: false,
+        messages: [],
+        order: conv.order || null,
+        raw: conv,
+      }
+      contacts.value.unshift(newContact)
+      selectContact(newContact)
+    }
+  } catch (error) {
+    console.error('Error starting new conversation:', error)
+    ElMessage.error('Failed to start chat')
+  }
+}
+
+const handleOpenChatEvent = (event: any) => {
+  if (event.detail && event.detail.sellerId) {
+    openChatWithSeller(event.detail.sellerId)
+  }
+}
+
+const scrollToBottom = async () => {
+  await nextTick()
+  if (messagesContainerRef.value) {
+    messagesContainerRef.value.scrollTop = messagesContainerRef.value.scrollHeight
+  }
+}
+
+const formatMessage = (msg: any, contact: any) => {
+  const isMe =
+    String(msg.senderId) === String(props.isEmbedded ? contact.raw.sellerId : contact.raw.userId)
+  return {
+    id: msg._id,
+    text: msg.content === '[Image]' ? '' : msg.content,
+    sender: isMe ? 'receiver' : 'sender',
+    time: new Date(msg.createdAt).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }),
+    date: formatDateSeparator(msg.createdAt),
+    image: msg.image,
+  }
+}
+
+const markAsReadAPI = async (conversationId: string) => {
+  const token = localStorage.getItem('access_token')
+  if (!token) return
+
+  try {
+    await axios.patch(
+      `${import.meta.env.VITE_BE_API_URL}/notification/chat/conversations/${conversationId}/read`,
+      {},
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    )
+  } catch (error) {
+    console.error('Error marking conversation as read:', error)
+  }
+}
+
+const updateContactInList = (message: any) => {
+  const index = contacts.value.findIndex((c) => String(c.id) === String(message.conversationId))
+  if (index !== -1) {
+    const contact = contacts.value[index]
+
+    // Check if the message was sent by the current user
+    const currentUserId = props.isEmbedded ? contact.raw.sellerId : contact.raw.userId
+    const isMe = String(message.senderId) === String(currentUserId)
+    const prefix = isMe ? 'You: ' : ''
+
+    contact.lastMessage = prefix + (message.content || '')
+    if (message.image && (!contact.lastMessage || contact.lastMessage.trim() === '')) {
+      // Or if content is empty but has image
+      // If content is empty/null but has image, or if just image
+      if (!message.content || message.content.trim() === '' || message.content === '[Image]') {
+        contact.lastMessage = prefix + '[Image]'
+      } else {
+        contact.lastMessage = prefix + message.content
+      }
+    } else if (message.content === '[Image]') {
+      contact.lastMessage = prefix + '[Image]'
+    }
+
+    contact.time = formatTime(message.createdAt)
+    contact.raw.lastUpdated = message.createdAt
+
+    contacts.value.splice(index, 1)
+    contacts.value.unshift(contact)
+    return contact
+  }
+  return null
 }
 
 const fetchMessages = async (conversationId: string) => {
   const token = localStorage.getItem('access_token')
   if (!token) return
 
+  isLoadingMessages.value = true
   try {
     const response = await axios.get(
       `${import.meta.env.VITE_BE_API_URL}/notification/chat/conversations/${conversationId}/messages`,
@@ -98,25 +241,47 @@ const fetchMessages = async (conversationId: string) => {
     if (response.data && response.data.data) {
       const contact = contacts.value.find((c) => c.id === conversationId)
       if (contact) {
-        contact.messages = response.data.data.map((msg: any) => {
-          const isMe =
-            msg.senderId === (props.isEmbedded ? contact.raw.sellerId : contact.raw.userId)
-          return {
-            id: msg._id,
-            text: msg.content,
-            sender: isMe ? 'receiver' : 'sender',
-            time: new Date(msg.createdAt).toLocaleTimeString('en-US', {
-              hour: '2-digit',
-              minute: '2-digit',
-              hour12: false,
-            }),
-            date: formatDateSeparator(msg.createdAt),
-          }
-        })
+        contact.messages = response.data.data.map((msg: any) => formatMessage(msg, contact))
+        scrollToBottom()
       }
     }
   } catch (error) {
     console.error('Error fetching messages:', error)
+  } finally {
+    isLoadingMessages.value = false
+  }
+}
+
+const hydrateLastMessagePrefix = async () => {
+  const token = localStorage.getItem('access_token')
+  if (!token) return
+
+  // Limit concurrency if needed, but for now simple loop
+  for (const contact of contacts.value) {
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_BE_API_URL}/notification/chat/conversations/${contact.id}/messages`,
+        {
+          params: { limit: 1 },
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      )
+      if (response.data && response.data.data && response.data.data.length > 0) {
+        const lastMsg = response.data.data[0]
+        const currentUserId = props.isEmbedded ? contact.raw.sellerId : contact.raw.userId
+        const isMe = String(lastMsg.senderId) === String(currentUserId)
+
+        if (isMe) {
+          const content =
+            lastMsg.content === '[Image]' || (!lastMsg.content && lastMsg.image)
+              ? '[Image]'
+              : lastMsg.content
+          contact.lastMessage = `You: ${content}`
+        }
+      }
+    } catch (e) {
+      // ignore error for hydration
+    }
   }
 }
 
@@ -154,7 +319,7 @@ const getInitials = (name: string) => {
 }
 
 const filteredContacts = computed(() => {
-  return contacts.value.filter((contact) => {
+  const filtered = contacts.value.filter((contact) => {
     const matchesSearch = contact.name.toLowerCase().includes(searchQuery.value.toLowerCase())
     const matchesFilter =
       activeFilter.value === 'All' ||
@@ -162,6 +327,12 @@ const filteredContacts = computed(() => {
       (activeFilter.value === 'Pinned' && contact.isPinned)
 
     return matchesSearch && matchesFilter
+  })
+
+  return [...filtered].sort((a, b) => {
+    const dateA = new Date(a.raw.lastUpdated || 0).getTime()
+    const dateB = new Date(b.raw.lastUpdated || 0).getTime()
+    return dateB - dateA
   })
 })
 
@@ -171,6 +342,136 @@ const totalUnreadCount = computed(() => {
 
 onMounted(() => {
   fetchConversations()
+
+  const token = localStorage.getItem('access_token')
+  if (token) {
+    socketService.connect(token)
+    setupSocketListeners()
+  }
+
+  window.addEventListener('open-chat', handleOpenChatEvent)
+})
+
+onUnmounted(() => {
+  socketService.disconnect()
+  window.removeEventListener('open-chat', handleOpenChatEvent)
+})
+
+const setupSocketListeners = () => {
+  socketService.on(SOCKET_EVENTS.NEW_MESSAGE, (message: any) => {
+    const existingContact = contacts.value.find(
+      (c) => String(c.id) === String(message.conversationId),
+    )
+    if (existingContact) {
+      const isDuplicate = existingContact.messages.some(
+        (m: any) =>
+          String(m.id) === String(message._id) ||
+          (m.text === message.content &&
+            m.image === message.image &&
+            Math.abs(new Date(m.createdAt).getTime() - new Date(message.createdAt).getTime()) <
+              5000),
+      )
+      if (isDuplicate) return
+    }
+
+    const updatedContact = updateContactInList(message)
+    if (updatedContact) {
+      const formattedMsg = formatMessage(message, updatedContact)
+      updatedContact.messages.push(formattedMsg)
+
+      if (
+        activeContact.value &&
+        String(activeContact.value.id) === String(message.conversationId)
+      ) {
+        scrollToBottom()
+      }
+
+      // Always increment unread count for new messages, even if active
+      // User must click to mark as read
+      updatedContact.unread++
+      updatedContact.isRead = false
+    } else {
+      fetchConversations()
+    }
+  })
+
+  socketService.on(SOCKET_EVENTS.MESSAGE_SENT, (message: any) => {
+    const contact = updateContactInList(message)
+    if (contact) {
+      const isDuplicate = contact.messages.some(
+        (m: any) =>
+          String(m.id) === String(message._id) ||
+          (m.text === message.content &&
+            m.image === message.image &&
+            Math.abs(new Date(m.createdAt).getTime() - new Date(message.createdAt).getTime()) <
+              5000),
+      )
+
+      if (!isDuplicate) {
+        const formattedMsg = formatMessage(message, contact)
+        contact.messages.push(formattedMsg)
+        scrollToBottom()
+      }
+    }
+  })
+
+  socketService.on(SOCKET_EVENTS.USER_TYPING, (data: any) => {
+    if (activeContact.value?.id === data.conversationId) {
+      otherUserTyping.value = data.isTyping
+    }
+  })
+
+  socketService.on(SOCKET_EVENTS.MESSAGES_UPDATED, (data: any) => {
+    const contact = contacts.value.find((c) => c.id === data.conversationId)
+    if (contact) {
+      contact.unread = 0
+      contact.isRead = true
+    }
+  })
+
+  socketService.on(SOCKET_EVENTS.NEW_NOTIFICATION, (notification: any) => {
+    if (notification.type === 'chat' && notification.data) {
+      const messageData = {
+        conversationId: notification.data.conversationId,
+        content: notification.message,
+        createdAt: notification.createdAt,
+        image: notification.data.hasImage ? '[Image]' : null,
+      }
+
+      const updatedContact = updateContactInList(messageData)
+      if (updatedContact) {
+        updatedContact.unread++
+        updatedContact.isRead = false
+      } else {
+        fetchConversations()
+      }
+    }
+  })
+
+  socketService.on(SOCKET_EVENTS.ERROR, (error: any) => {
+    console.error('Socket error event:', error)
+    ElMessage.error(error.message || 'Socket error occurred')
+  })
+}
+
+watch(activeContact, (newVal, oldVal) => {
+  if (oldVal) {
+    socketService.emit(SOCKET_EVENTS.LEAVE_CONVERSATION, { conversationId: oldVal.id })
+  }
+  if (newVal) {
+    socketService.emit(SOCKET_EVENTS.JOIN_CONVERSATION, { conversationId: newVal.id })
+    // Removed auto-read logic from here
+    otherUserTyping.value = false
+  }
+})
+
+watch(newMessage, (val) => {
+  if (activeContact.value) {
+    socketService.emit(SOCKET_EVENTS.TYPING, {
+      conversationId: activeContact.value.id,
+      isTyping: val.length > 0,
+    })
+  }
 })
 
 const toggleChat = () => {
@@ -182,12 +483,30 @@ const toggleContent = () => {
   isContentHidden.value = !isContentHidden.value
 }
 
-const activeContact = ref<any>(null)
+const shouldShowDate = (index: number, messages: any[]) => {
+  if (index === 0) return true
+  return messages[index].date !== messages[index - 1].date
+}
 
 const selectContact = (contact: any) => {
   activeContact.value = contact
+
+  if (isContentHidden.value) {
+    isContentHidden.value = false
+  }
+
+  // Mark as read when explicitly selected (clicked)
+  if (contact) {
+    contact.unread = 0
+    contact.isRead = true
+    socketService.emit(SOCKET_EVENTS.MESSAGE_READ, { conversationId: contact.id })
+    markAsReadAPI(contact.id)
+  }
+
   if (contact && contact.messages.length === 0) {
     fetchMessages(contact.id)
+  } else if (contact) {
+    scrollToBottom()
   }
 }
 
@@ -195,6 +514,18 @@ const toggleReadStatus = () => {
   if (activeContact.value) {
     activeContact.value.isRead = !activeContact.value.isRead
     activeContact.value.unread = activeContact.value.isRead ? 0 : 1
+    if (activeContact.value.isRead) {
+      markAsReadAPI(activeContact.value.id)
+    }
+  }
+}
+
+const markActiveConversationAsRead = () => {
+  if (activeContact.value && !activeContact.value.isRead) {
+    activeContact.value.isRead = true
+    activeContact.value.unread = 0
+    socketService.emit(SOCKET_EVENTS.MESSAGE_READ, { conversationId: activeContact.value.id })
+    markAsReadAPI(activeContact.value.id)
   }
 }
 
@@ -207,6 +538,76 @@ const togglePin = () => {
 const toggleMute = () => {
   if (activeContact.value) {
     activeContact.value.isMuted = !activeContact.value.isMuted
+  }
+}
+
+const sendMessage = async () => {
+  if (
+    isSending.value ||
+    (!newMessage.value.trim() && !selectedImageFile.value) ||
+    !activeContact.value
+  ) {
+    return
+  }
+
+  isSending.value = true
+  try {
+    if (selectedImageFile.value) {
+      await sendImageMessage()
+    } else {
+      const payload = {
+        conversationId: activeContact.value.id,
+        content: newMessage.value.trim(),
+      }
+
+      socketService.emit(SOCKET_EVENTS.SEND_MESSAGE, payload)
+      newMessage.value = ''
+    }
+  } catch (err) {
+    console.error('❌ Error in sendMessage:', err)
+  } finally {
+    isSending.value = false
+  }
+}
+
+const sendImageMessage = async () => {
+  if (!activeContact.value || !selectedImageFile.value) return
+
+  const token = localStorage.getItem('access_token')
+  if (!token) return
+
+  const formData = new FormData()
+  formData.append('conversationId', activeContact.value.id)
+  formData.append('content', newMessage.value.trim() || '[Image]')
+  formData.append('image', selectedImageFile.value)
+
+  try {
+    const response = await axios.post(
+      `${import.meta.env.VITE_BE_API_URL}/notification/chat/messages/with-image`,
+      formData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
+        },
+      },
+    )
+
+    if (response.data && response.data.success) {
+      const message = response.data.data
+
+      socketService.emit(SOCKET_EVENTS.SEND_MESSAGE, {
+        conversationId: activeContact.value.id,
+        content: message.content,
+        image: message.image,
+      })
+
+      removeSelectedImage()
+      newMessage.value = ''
+    }
+  } catch (error) {
+    console.error('Error sending image message:', error)
+    ElMessage.error('Failed to send image')
   }
 }
 
@@ -226,12 +627,10 @@ const deleteConversation = async () => {
       },
     )
 
-    // Find index of contact to delete
     const index = contacts.value.findIndex((c) => c.id === activeContact.value?.id)
     if (index !== -1) {
       contacts.value.splice(index, 1)
 
-      // Select another contact if available
       if (contacts.value.length > 0) {
         activeContact.value = contacts.value[0]
       } else {
@@ -247,25 +646,27 @@ const handleImageUpload = () => {
   imageInputRef.value?.click()
 }
 
-const handleVideoUpload = () => {
-  videoInputRef.value?.click()
-}
-
 const onImageSelected = (event: Event) => {
   const target = event.target as HTMLInputElement
   const file = target.files?.[0]
   if (file) {
-    // Handle image file upload logic here
-    console.log('Image selected:', file.name)
+    if (file.size > 5 * 1024 * 1024) {
+      ElMessage.warning('Image size must be less than 5MB')
+      return
+    }
+    selectedImageFile.value = file
+    imagePreviewUrl.value = URL.createObjectURL(file)
   }
 }
 
-const onVideoSelected = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  const file = target.files?.[0]
-  if (file) {
-    // Handle video file upload logic here
-    console.log('Video selected:', file.name)
+const removeSelectedImage = () => {
+  selectedImageFile.value = null
+  if (imagePreviewUrl.value) {
+    URL.revokeObjectURL(imagePreviewUrl.value)
+    imagePreviewUrl.value = null
+  }
+  if (imageInputRef.value) {
+    imageInputRef.value.value = ''
   }
 }
 
@@ -333,43 +734,48 @@ const getMsgClass = (msg: any) => {
             </el-dropdown>
           </div>
           <div class="contacts-scroll">
-            <div
-              v-for="contact in filteredContacts"
-              :key="contact.id"
-              class="contact-item"
-              :class="{ active: activeContact?.id === contact.id }"
-              @click="selectContact(contact)"
-            >
-              <div v-if="contact.avatarUrl" class="avatar-img-wrapper">
-                <img :src="contact.avatarUrl" class="avatar-image" />
-              </div>
-              <div v-else class="avatar">{{ contact.avatarInitials }}</div>
-              <div class="contact-info">
-                <div class="name-time">
-                  <span class="name one-line-ellipsis">{{ contact.name }}</span>
-                  <span class="time">{{ contact.time }}</span>
+            <div v-if="isLoadingContacts" class="loading-container">
+              <el-icon class="is-loading"><Loading /></el-icon>
+            </div>
+            <template v-else>
+              <div
+                v-for="contact in filteredContacts"
+                :key="contact.id"
+                class="contact-item"
+                :class="{ active: activeContact?.id === contact.id }"
+                @click="selectContact(contact)"
+              >
+                <div v-if="contact.avatarUrl" class="avatar-img-wrapper">
+                  <img :src="contact.avatarUrl" class="avatar-image" />
                 </div>
-                <div class="last-msg-unread">
-                  <span class="last-msg one-line-ellipsis">{{ contact.lastMessage }}</span>
-                  <div class="status-indicators">
-                    <el-icon v-if="contact.isPinned" size="large" class="pin-icon">
-                      <PinIcon />
-                    </el-icon>
-                    <el-icon
-                      size="large"
-                      v-if="contact.isMuted"
-                      class="mute-icon"
-                      style="color: var(--main-color)"
-                    >
-                      <MuteNotification
-                    /></el-icon>
-                    <span v-if="contact.unread > 0" class="unread-count">{{
-                      contact.unread > 9 ? '9+' : contact.unread
-                    }}</span>
+                <div v-else class="avatar">{{ contact.avatarInitials }}</div>
+                <div class="contact-info">
+                  <div class="name-time">
+                    <span class="name one-line-ellipsis">{{ contact.name }}</span>
+                    <span class="time">{{ contact.time }}</span>
+                  </div>
+                  <div class="last-msg-unread">
+                    <span class="last-msg one-line-ellipsis">{{ contact.lastMessage }}</span>
+                    <div class="status-indicators">
+                      <el-icon v-if="contact.isPinned" size="large" class="pin-icon">
+                        <PinIcon />
+                      </el-icon>
+                      <el-icon
+                        size="large"
+                        v-if="contact.isMuted"
+                        class="mute-icon"
+                        style="color: var(--main-color)"
+                      >
+                        <MuteNotification
+                      /></el-icon>
+                      <span v-if="contact.unread > 0" class="unread-count">{{
+                        contact.unread > 9 ? '9+' : contact.unread
+                      }}</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            </template>
           </div>
         </div>
 
@@ -409,68 +815,92 @@ const getMsgClass = (msg: any) => {
                 </template>
               </el-dropdown>
             </div>
-            <div class="messages-container">
-              <div class="warning-box">
-                <el-icon class="warning-icon"><ChatDotRound /></el-icon>
-                <div class="warning-text">
-                  <span v-if="isEmbedded">
-                    NOTE: Please answer customers politely and avoid conducting transactions outside
-                    the platform to ensure your safety and account status.
-                  </span>
-                  <span v-else>
-                    NOTE: Swoo does NOT allow: Deposit/Bank Transfer outside the system, providing
-                    personal phone numbers, or other external activities. Please stay alert to avoid
-                    scams!
-                  </span>
-                </div>
+            <div class="messages-container" ref="messagesContainerRef">
+              <div v-if="isLoadingMessages" class="loading-container">
+                <el-icon class="is-loading"><Loading /></el-icon>
               </div>
-
-              <div class="chat-messages">
-                <template v-for="(msg, index) in activeContact.messages" :key="msg.id">
-                  <div
-                    v-if="index === 0 || msg.date !== activeContact.messages?.[index - 1]?.date"
-                    class="date-separator"
-                  >
-                    <span>{{ msg.date }}</span>
+              <template v-else>
+                <div class="warning-box">
+                  <el-icon class="warning-icon"><ChatDotRound /></el-icon>
+                  <div class="warning-text">
+                    <span v-if="isEmbedded">
+                      NOTE: Please answer customers politely and avoid conducting transactions
+                      outside the platform to ensure your safety and account status.
+                    </span>
+                    <span v-else>
+                      NOTE: Swoo does NOT allow: Deposit/Bank Transfer outside the system, providing
+                      personal phone numbers, or other external activities. Please stay alert to
+                      avoid scams!
+                    </span>
                   </div>
+                </div>
 
-                  <!-- Show order card at the top of the chat if available -->
-                  <div v-if="index === 0 && activeContact.order" class="order-info-card">
-                    <div class="order-info-header">
-                      <span v-if="isEmbedded">Customer is chatting with you about this order</span>
-                      <span v-else>You are chatting with the Seller about this order</span>
+                <div class="chat-messages">
+                  <template v-for="(msg, index) in activeContact.messages" :key="msg.id">
+                    <div
+                      v-if="shouldShowDate(Number(index), activeContact.messages)"
+                      class="date-separator"
+                    >
+                      <span>{{ msg.date }}</span>
                     </div>
-                    <div class="order-info-body">
-                      <img
-                        :src="
-                          activeContact.order.image ||
-                          activeContact.order.item_image ||
-                          '../assets/product-imgs/product1.png'
-                        "
-                        class="order-item-img"
-                      />
-                      <div class="order-details">
-                        <div class="order-id">
-                          Order ID: {{ activeContact.order.id || activeContact.order._id }}
-                        </div>
-                        <div class="order-total">
-                          Total Order:
-                          {{ activeContact.order.total_price || activeContact.order.total }}đ
-                        </div>
-                        <div class="order-status" style="text-transform: capitalize">
-                          {{ activeContact.order.status }}
+
+                    <div v-if="index === 0 && activeContact.order" class="order-info-card">
+                      <div class="order-info-header">
+                        <span v-if="isEmbedded"
+                          >Customer is chatting with you about this order</span
+                        >
+                        <span v-else>You are chatting with the Seller about this order</span>
+                      </div>
+                      <div class="order-info-body">
+                        <img
+                          :src="
+                            activeContact.order.image ||
+                            activeContact.order.item_image ||
+                            '../assets/product-imgs/product1.png'
+                          "
+                          class="order-item-img"
+                        />
+                        <div class="order-details">
+                          <div class="order-id">
+                            Order ID: {{ activeContact.order.id || activeContact.order._id }}
+                          </div>
+                          <div class="order-total">
+                            Total Order:
+                            {{ activeContact.order.total_price || activeContact.order.total }}đ
+                          </div>
+                          <div class="order-status" style="text-transform: capitalize">
+                            {{ activeContact.order.status }}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div class="msg-row" :class="getMsgClass(msg)">
-                    <div class="msg-bubble">
-                      {{ msg.text }}
-                      <span class="msg-time">{{ msg.time }}</span>
+                    <div class="msg-row" :class="getMsgClass(msg)">
+                      <div class="msg-bubble">
+                        <div v-if="msg.image" class="msg-image-container">
+                          <img :src="msg.image" class="msg-image" @load="scrollToBottom" />
+                        </div>
+                        <span v-if="msg.text">{{ msg.text }}</span>
+                        <span class="msg-time">{{ msg.time }}</span>
+                      </div>
+                    </div>
+                  </template>
+
+                  <div v-if="otherUserTyping" class="msg-row sender">
+                    <div class="msg-bubble typing-indicator">
+                      <span>.</span><span>.</span><span>.</span>
                     </div>
                   </div>
-                </template>
+                </div>
+              </template>
+            </div>
+
+            <div v-if="imagePreviewUrl" class="image-preview-bar">
+              <div class="preview-item">
+                <img :src="imagePreviewUrl" class="preview-img" />
+                <div class="preview-remove" @click="removeSelectedImage">
+                  <el-icon><Close /></el-icon>
+                </div>
               </div>
             </div>
             <div class="input-area">
@@ -481,23 +911,30 @@ const getMsgClass = (msg: any) => {
                 style="display: none"
                 @change="onImageSelected"
               />
-              <input
-                ref="videoInputRef"
-                type="file"
-                accept="video/*"
-                style="display: none"
-                @change="onVideoSelected"
-              />
-              <input type="text" placeholder="Type a message..." class="msg-input" />
 
-              <button class="upload-btn" @click="handleImageUpload" title="Upload Image">
+              <input
+                v-model="newMessage"
+                type="text"
+                placeholder="Type a message..."
+                class="msg-input"
+                :disabled="isSending"
+                @keyup.enter="sendMessage"
+                @click="markActiveConversationAsRead"
+                @focus="markActiveConversationAsRead"
+              />
+
+              <button
+                class="upload-btn"
+                :disabled="isSending"
+                @click="handleImageUpload"
+                title="Upload Image"
+              >
                 <el-icon><Picture /></el-icon>
               </button>
-              <button class="upload-btn" @click="handleVideoUpload" title="Upload Video">
-                <el-icon><VideoCamera /></el-icon>
-              </button>
-              <button class="send-btn">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+
+              <button class="send-btn" :disabled="isSending" @click="sendMessage">
+                <el-icon v-if="isSending" class="is-loading"><Loading /></el-icon>
+                <svg v-else viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
                   <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
                 </svg>
               </button>
@@ -964,6 +1401,7 @@ const getMsgClass = (msg: any) => {
 
 .msg-bubble {
   max-width: 80%;
+  min-width: 60px;
   padding: 8px 12px;
   border-radius: 4px;
   font-size: 13px;
@@ -1035,6 +1473,11 @@ const getMsgClass = (msg: any) => {
   border-color: var(--main-color);
 }
 
+.msg-input:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+}
+
 .send-btn {
   color: var(--main-color);
   display: flex;
@@ -1042,10 +1485,19 @@ const getMsgClass = (msg: any) => {
   justify-content: center;
   padding: 4px;
   transition: transform 0.2s;
+  background: transparent;
+  border: none;
+  cursor: pointer;
 }
 
-.send-btn:hover {
+.send-btn:hover:not(:disabled) {
   transform: scale(1.1);
+}
+
+.send-btn:disabled,
+.upload-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .one-line-ellipsis {
@@ -1085,6 +1537,111 @@ const getMsgClass = (msg: any) => {
 
 .contact-dropdown-menu .el-dropdown-menu__item:hover .el-icon {
   color: var(--main-color);
+}
+
+.typing-indicator {
+  display: flex;
+  gap: 2px;
+  padding: 8px 15px !important;
+  min-height: 32px;
+  align-items: center;
+}
+
+.typing-indicator span {
+  height: 8px;
+  width: 8px;
+  background: #999;
+  border-radius: 50%;
+  display: block;
+  animation: typing 1s infinite;
+}
+
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.msg-image-container {
+  margin-bottom: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  max-width: 180px;
+}
+
+.msg-image {
+  display: block;
+  max-width: 100%;
+  max-height: 120px;
+  object-fit: contain;
+  cursor: pointer;
+}
+
+.image-preview-bar {
+  padding: 8px 16px;
+  background-color: #f9f9f9;
+  border-top: 1px solid #f0f0f0;
+  display: flex;
+  gap: 10px;
+}
+
+.preview-item {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid #e5e5e5;
+}
+
+.preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.preview-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.preview-remove:hover {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 50%;
+  width: 100%;
+  color: var(--main-color);
+  font-size: 24px;
 }
 </style>
 
