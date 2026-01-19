@@ -369,8 +369,27 @@ func (s *productService) SearchProducts(params dto.SearchProductsQueryParams, us
 		sortByTextScore = true
 	}
 
+	// Determine sort field and direction
+	sortField := params.SortBy
+	sortDirection := 1 // ascending
+	if params.SortDirection == "desc" {
+		sortDirection = -1
+	}
+
+	// Handle special price sorting logic
+	// If sorting by price:
+	// - ascending: use price.min
+	// - descending: use price.max
+	if sortField == "price" {
+		if sortDirection == 1 { // ascending
+			sortField = "price.min"
+		} else { // descending
+			sortField = "price.max"
+		}
+	}
+
 	// Call repository method
-	products, total, err := s.repo.SearchProducts(filter, params.GetSkip(), params.Limit, sortByTextScore)
+	products, total, err := s.repo.SearchProducts(filter, params.GetSkip(), params.Limit, sortByTextScore, sortField, sortDirection)
 	if err != nil {
 		return nil, err
 	}

@@ -20,7 +20,7 @@ type ProductRepository interface {
 	FindBySeller(sellerID string, filter bson.M, skip, limit int, sortField string, sortDirection int) ([]model.Product, int64, error)
 	FindVariantsByIds(variantIDs []string) (map[string]*model.Product, error)
 	UpdateVariantStock(productID string, variantID string, stockDelta int) error
-	SearchProducts(filter bson.M, skip, limit int, sortByTextScore bool) ([]model.Product, int64, error)
+	SearchProducts(filter bson.M, skip, limit int, sortByTextScore bool, sortField string, sortDirection int) ([]model.Product, int64, error)
 }
 
 type productRepository struct {
@@ -263,7 +263,7 @@ func (r *productRepository) UpdateVariantStock(productID string, variantID strin
 	return err
 }
 
-func (r *productRepository) SearchProducts(filter bson.M, skip, limit int, sortByTextScore bool) ([]model.Product, int64, error) {
+func (r *productRepository) SearchProducts(filter bson.M, skip, limit int, sortByTextScore bool, sortField string, sortDirection int) ([]model.Product, int64, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -289,6 +289,11 @@ func (r *productRepository) SearchProducts(filter bson.M, skip, limit int, sortB
 		})
 		pipeline = append(pipeline, bson.M{
 			"$sort": bson.M{"textScore": -1},
+		})
+	} else if sortField != "" {
+		// Apply custom sorting if no text search
+		pipeline = append(pipeline, bson.M{
+			"$sort": bson.M{sortField: sortDirection},
 		})
 	}
 
