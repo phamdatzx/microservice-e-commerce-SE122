@@ -26,7 +26,7 @@ class SocketService {
   private socket: Socket | null = null
 
   connect(token: string) {
-    if (this.socket?.connected) return
+    if (this.socket) return
 
     const apiUrl = import.meta.env.VITE_BE_API_URL || 'http://localhost:8080'
     let socketUrl = import.meta.env.VITE_NOTIFICATION_SERVICE_URL
@@ -39,24 +39,18 @@ class SocketService {
       }
     }
 
-    console.log('Connecting to socket at:', socketUrl)
-
     this.socket = io(socketUrl, {
       auth: { token },
       transports: ['websocket', 'polling'],
     })
 
-    this.socket.on(SOCKET_EVENTS.CONNECT, () => {
-      console.log('✅ Connected to notification socket')
-    })
+    this.socket.on(SOCKET_EVENTS.CONNECT, () => {})
 
     this.socket.on('connect_error', (error) => {
       console.error('❌ Socket connection error:', error)
     })
 
-    this.socket.on(SOCKET_EVENTS.DISCONNECT, () => {
-      console.log('❌ Disconnected from notification socket')
-    })
+    this.socket.on(SOCKET_EVENTS.DISCONNECT, () => {})
   }
 
   disconnect() {
