@@ -22,6 +22,8 @@ type Product struct {
 	UpdatedAt   time.Time `bson:"updated_at" json:"updated_at"`
 	Price       Price     `bson:"price" json:"price"`
 	Stock       int       `bson:"stock" json:"stock"`
+	IsDisabled  bool      `bson:"is_disabled" json:"is_disabled"`
+	DisableReason string  `bson:"disable_reason,omitempty" json:"disable_reason,omitempty"`
 
 	OptionGroups []OptionGroup      `bson:"option_groups" json:"option_groups"` 
 	Variants     []Variant          `bson:"variants" json:"variants"`

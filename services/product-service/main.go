@@ -68,6 +68,11 @@ func main() {
 	searchHistoryService := service.NewSearchHistoryService(searchHistoryRepo)
 	searchHistoryController := controller.NewSearchHistoryController(searchHistoryService)
 
+	// Wiring dependencies - Report
+	reportRepo := repository.NewReportRepository(config.DB)
+	reportService := service.NewReportService(reportRepo, orderClient, userClient)
+	reportController := controller.NewReportController(reportService)
+
 	r := gin.Default()
 	r.Use(cors.Default())
 
@@ -81,6 +86,7 @@ func main() {
 		StockReservationController: stockReservationController,
 		RatingController:           ratingController,
 		SearchHistoryController:    searchHistoryController,
+		ReportController:           reportController,
 	})
 
 	r.Run(":8085")

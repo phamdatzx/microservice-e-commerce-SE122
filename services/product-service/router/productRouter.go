@@ -26,5 +26,9 @@ func RegisterProductRoutes(rg *gin.RouterGroup, c controller.ProductController) 
 		product.DELETE("/:id", middleware.RequireSeller(), c.DeleteProduct)
 		product.POST("/:id/images", middleware.RequireSeller(), c.UploadProductImages)
 		product.POST("/:id/variants/images", middleware.RequireSeller(), c.UploadVariantImages)
+
+		// Admin only routes
+		product.PUT("/:id/disable", middleware.RequireAdmin(), c.SetProductDisabled)
+		product.GET("/disabled/seller/:sellerId", middleware.RequireAdmin(), c.GetDisabledProductsBySeller)
 	}
 }

@@ -55,7 +55,9 @@ func (r *productRepository) FindAll() ([]model.Product, error) {
 	var products []model.Product
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	cursor, err := r.collection.Find(ctx, bson.M{})
+	// Filter out disabled products
+	filter := bson.M{"is_disabled": bson.M{"$ne": true}}
+	cursor, err := r.collection.Find(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -185,9 +187,10 @@ func (r *productRepository) FindVariantsByIds(variantIDs []string) (map[string]*
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// Query products that contain any of the variant IDs
+	// Query products that contain any of the variant IDs and are not disabled
 	filter := bson.M{
 		"variants._id": bson.M{"$in": variantIDs},
+		"is_disabled":  bson.M{"$ne": true},
 	}
 
 	cursor, err := r.collection.Find(ctx, filter)
