@@ -134,6 +134,9 @@ const fetchProducts = async () => {
 
     const response = await axios.get(`${import.meta.env.VITE_BE_API_URL}/product/public/search`, {
       params,
+      headers: {
+        'X-User-Id': localStorage.getItem('user_id'),
+      },
     })
 
     const rawProducts: Product[] = response.data.products

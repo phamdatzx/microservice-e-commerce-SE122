@@ -17,6 +17,7 @@ import {
   Wallet,
   Discount,
   Loading,
+  Clock,
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -151,7 +152,6 @@ const handleNotificationClick = (notification: any) => {
       window.dispatchEvent(event)
     }
     isNotificationOpen.value = false
-  } else {
   }
 }
 
@@ -224,8 +224,6 @@ const handleNotificationUpdated = (payload: any) => {
   }
 }
 
-const handleNotificationsJoined = (data: any) => {}
-
 const initSocket = () => {
   const token = localStorage.getItem('access_token')
   if (token) {
@@ -235,14 +233,12 @@ const initSocket = () => {
 
     socketService.on(SOCKET_EVENTS.NEW_NOTIFICATION, handleNewNotification)
     socketService.on(SOCKET_EVENTS.NOTIFICATION_UPDATED, handleNotificationUpdated)
-    socketService.on(SOCKET_EVENTS.NOTIFICATIONS_JOINED, handleNotificationsJoined)
   }
 }
 
 const cleanupSocket = () => {
   socketService.off(SOCKET_EVENTS.NEW_NOTIFICATION, handleNewNotification)
   socketService.off(SOCKET_EVENTS.NOTIFICATION_UPDATED, handleNotificationUpdated)
-  socketService.off(SOCKET_EVENTS.NOTIFICATIONS_JOINED, handleNotificationsJoined)
 }
 
 watch(isLoggedIn, (newVal) => {
@@ -273,8 +269,57 @@ onUnmounted(() => {
 })
 
 const searchQuery = ref('')
+const searchHistory = ref<any[]>([])
+const isSearchHistoryOpen = ref(false)
+const searchInputRef = ref<HTMLInputElement | null>(null)
+
+const fetchSearchHistory = async () => {
+  const token = localStorage.getItem('access_token')
+  const userId = localStorage.getItem('user_id')
+  if (!token || !userId) return
+
+  try {
+    const response = await axios.get(`${import.meta.env.VITE_BE_API_URL}/product/search-history`, {
+      params: { limit: 20 },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'X-User-Id': userId,
+      },
+    })
+    if (response.data && Array.isArray(response.data)) {
+      const uniqueQueries = new Set()
+      searchHistory.value = response.data.filter((item: any) => {
+        if (uniqueQueries.has(item.query)) return false
+        uniqueQueries.add(item.query)
+        return true
+      })
+    }
+  } catch (error) {
+    console.error('Error fetching search history:', error)
+  }
+}
+
+const handleSearchInputFocus = () => {
+  if (isLoggedIn.value) {
+    fetchSearchHistory()
+    isSearchHistoryOpen.value = true
+  }
+}
+
+const handleSearchInputBlur = () => {
+  setTimeout(() => {
+    isSearchHistoryOpen.value = false
+  }, 200)
+}
+
+const selectHistoryItem = (query: string) => {
+  searchQuery.value = query
+  handleSearch()
+}
+
 const handleSearch = () => {
   if (searchQuery.value.trim()) {
+    isSearchHistoryOpen.value = false
     router.push({ path: '/search', query: { q: searchQuery.value } })
   }
 }
@@ -295,7 +340,6 @@ defineExpose({
 </script>
 
 <template>
-  <!-- Header -->
   <header class="header">
     <div class="header-main">
       <div class="container">
@@ -318,13 +362,16 @@ defineExpose({
             </div>
           </RouterLink>
 
-          <div class="search-bar">
+          <div class="search-bar" style="position: relative; z-index: 102">
             <input
               type="text"
               placeholder="Search anything..."
               class="search-input"
               v-model="searchQuery"
               @keyup.enter="handleSearch"
+              @focus="handleSearchInputFocus"
+              @blur="handleSearchInputBlur"
+              ref="searchInputRef"
             />
             <button class="search-btn" @click="handleSearch">
               <svg
@@ -341,10 +388,24 @@ defineExpose({
                 ></path>
               </svg>
             </button>
+
+            <div v-if="isSearchHistoryOpen && searchHistory.length > 0" class="search-dropdown">
+              <div class="search-history-header">Recent Searches</div>
+              <div class="search-history-list">
+                <div
+                  v-for="(item, index) in searchHistory"
+                  :key="index"
+                  class="search-history-item"
+                  @mousedown="selectHistoryItem(item.query)"
+                >
+                  <el-icon style="margin-right: 8px; color: #999"><Clock /></el-icon>
+                  <span>{{ item.query }}</span>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div class="header-actions">
-            <!-- Notification Section -->
             <div class="notification-wrapper" v-if="isLoggedIn">
               <button
                 class="notification-btn"
@@ -372,7 +433,6 @@ defineExpose({
                 </div>
               </button>
 
-              <!-- Notifications Dropdown -->
               <div
                 v-show="isNotificationOpen"
                 class="notification-dropdown"
@@ -432,13 +492,10 @@ defineExpose({
                   </div>
                 </div>
 
-                <div class="notification-footer">
-                  <!-- <RouterLink to="/notifications" class="view-all-link">View all</RouterLink> -->
-                </div>
+                <div class="notification-footer"></div>
               </div>
             </div>
 
-            <!-- Cart Section on the Left of User -->
             <div class="action-item cart-section" @click="$router.push('/cart')">
               <div class="icon-wrapper">
                 <svg
@@ -461,7 +518,6 @@ defineExpose({
               </div>
             </div>
 
-            <!-- User Section -->
             <div v-if="!isLoggedIn" class="action-item user-section">
               <div class="icon-wrapper">
                 <svg
@@ -506,7 +562,6 @@ defineExpose({
                 </div>
               </div>
 
-              <!-- Dropdown Menu -->
               <div class="user-dropdown">
                 <RouterLink to="/profile" class="dropdown-item">
                   <IconUser />
@@ -541,7 +596,6 @@ defineExpose({
 </template>
 
 <style scoped>
-/* Header Styles */
 .container {
   max-width: 1200px;
   margin: 0 auto;
@@ -552,6 +606,8 @@ defineExpose({
   background-color: white;
   padding: 20px 0;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  position: relative;
+  z-index: 101;
 }
 
 .header-content {
@@ -604,7 +660,67 @@ defineExpose({
   gap: 24px;
 }
 
-/* Notification Styles */
+.search-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  background-color: white;
+  border: 1px solid #e4e4e7;
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 2000;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.search-history-header {
+  padding: 8px 16px;
+  background-color: #f8fafc;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #e4e4e7;
+}
+
+.search-history-list {
+  max-height: 212px;
+  overflow-y: auto;
+}
+
+.search-history-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.search-history-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.search-history-list::-webkit-scrollbar-thumb {
+  background: #e4e4e7;
+  border-radius: 3px;
+}
+
+.search-history-list::-webkit-scrollbar-thumb:hover {
+  background: #d4d4d8;
+}
+
+.search-history-item {
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  color: #1a1a1a;
+  font-size: 14px;
+}
+
+.search-history-item:hover {
+  background-color: #f1f5f9;
+}
+
 .notification-wrapper {
   position: relative;
 }
@@ -613,7 +729,7 @@ defineExpose({
   background: none;
   border: none;
   cursor: pointer;
-  padding: 8px; /* Reduced padding slightly */
+  padding: 8px;
   color: #71717a;
   display: flex;
   align-items: center;
@@ -631,7 +747,7 @@ defineExpose({
 .notification-dropdown {
   position: absolute;
   top: calc(100% + 10px);
-  right: -80px; /* Shift right slightly to align better with layout */
+  right: -80px;
   width: 360px;
   background-color: white;
   border-radius: 12px;
@@ -649,7 +765,7 @@ defineExpose({
   content: '';
   position: absolute;
   top: -6px;
-  right: 94px; /* Align arrow with bell icon */
+  right: 94px;
   width: 12px;
   height: 12px;
   background-color: white;
@@ -1011,7 +1127,7 @@ defineExpose({
   display: flex;
   align-items: center;
   gap: 2px;
-  margin-left: -6px; /* Offset padding to keep alignment */
+  margin-left: -6px;
 }
 
 .auth-links .separator {
@@ -1025,7 +1141,6 @@ defineExpose({
   color: #22c55e;
 }
 
-/* Search Bar */
 .search-bar {
   display: flex;
   flex: 1;
@@ -1033,9 +1148,10 @@ defineExpose({
   margin: 0 40px;
   background: #f4f4f5;
   border-radius: 7px;
-  overflow: hidden;
   transition: all 0.2s ease;
   border: 2px solid #e4e4e7;
+  position: relative;
+  z-index: 2000;
 }
 
 .search-bar:focus-within {
@@ -1052,6 +1168,8 @@ defineExpose({
   outline: none;
   color: #18181b;
   background: transparent;
+  border-top-left-radius: 5px;
+  border-bottom-left-radius: 5px;
 }
 
 .search-input::placeholder {
@@ -1067,6 +1185,8 @@ defineExpose({
   align-items: center;
   justify-content: center;
   transition: background-color 0.2s ease;
+  border-top-right-radius: 5px;
+  border-bottom-right-radius: 5px;
 }
 
 .search-btn:hover {

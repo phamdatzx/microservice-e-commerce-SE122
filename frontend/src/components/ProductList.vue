@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import ProductItem from '@/components/ProductItem.vue'
-import { ArrowDownBold, ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
+import { ArrowDownBold, ArrowLeft, ArrowRight, Loading } from '@element-plus/icons-vue'
 
 interface Product {
   id: number | string
