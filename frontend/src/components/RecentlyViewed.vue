@@ -7,10 +7,12 @@ import ProductItem from './ProductItem.vue'
 import axios from 'axios'
 
 const recentlyViewedProducts = ref<any[]>([])
+const isLoading = ref(false)
 
 const loadRecentlyViewed = async () => {
   const token = localStorage.getItem('access_token')
   const headers = token ? { Authorization: `Bearer ${token}` } : {}
+  isLoading.value = true
   try {
     const response = await axios.get(
       `${import.meta.env.VITE_BE_API_URL}/product/recently-viewed-products?limit=20`,
@@ -33,6 +35,8 @@ const loadRecentlyViewed = async () => {
     }
   } catch (error) {
     console.error('Error fetching recently viewed products:', error)
+  } finally {
+    isLoading.value = false
   }
 }
 
@@ -49,6 +53,7 @@ defineExpose({
   <div
     class="box-shadow border-radius recently-viewed-section"
     style="background-color: #fff; padding: 20px 20px 28px; margin-bottom: 20px"
+    v-loading="isLoading"
   >
     <div style="display: flex; margin-bottom: 12px">
       <h3 style="font-weight: bold">YOU RECENTLY VIEWED</h3>

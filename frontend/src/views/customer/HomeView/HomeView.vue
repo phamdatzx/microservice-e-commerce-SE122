@@ -10,199 +10,65 @@ import CategoryItem from './components/CategoryItem.vue'
 import SellerFollowItem from './components/SellerFollowItem.vue'
 import axios from 'axios'
 
-const categories = [
-  'Laptops',
-  'PC & Computers',
-  'Cell Phones',
-  'Tablets',
-  'Gaming & VR',
-  'Networking',
-  'Cameras',
-  'Sounds',
-  'Office',
-  'Storage, USB',
-  'Accessories',
-  'Clearance',
-]
+const fetchedCategories = ref<any[]>([])
+const bestSellers = ref<any[]>([])
+
+const loadingCategories = ref(false)
+const loadingBestSellers = ref(false)
+const loadingFollowedSellers = ref(false)
+
+const fetchBestSellers = async () => {
+  loadingBestSellers.value = true
+  try {
+    const response = await axios.get(
+      `${import.meta.env.VITE_BE_API_URL}/product/public/search?page=1&limit=15&sort_by=sold_count&sort_direction=desc`,
+    )
+    if (response.data && response.data.products) {
+      bestSellers.value = response.data.products.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        imageUrl:
+          p.images.length > 0
+            ? p.images.sort((a: any, b: any) => a.order - b.order)[0]?.url || ''
+            : '',
+        price: p.price.min,
+        rating: p.rating,
+        location: 'Vietnam',
+        discount: 0,
+        soldCount: p.sold_count,
+      }))
+    }
+  } catch (error) {
+    console.error('Error fetching best sellers:', error)
+  } finally {
+    loadingBestSellers.value = false
+  }
+}
+
+const fetchCategories = async () => {
+  loadingCategories.value = true
+  try {
+    const response = await axios.get(`${import.meta.env.VITE_BE_API_URL}/product/public/category`)
+    fetchedCategories.value = response.data
+  } catch (error) {
+    console.error('Error fetching categories:', error)
+  } finally {
+    loadingCategories.value = false
+  }
+}
 
 const carouselItems = [
   {
-    imageUrl: '/src/assets/carousel-imgs/headphones.png',
-    to: '/',
+    imageUrl: '/src/assets/carousel-imgs/banner1.jpg',
   },
   {
-    imageUrl: '/src/assets/carousel-imgs/headphones.png',
-    to: '/',
+    imageUrl: '/src/assets/carousel-imgs/banner2.jpg',
   },
   {
-    imageUrl: '/src/assets/carousel-imgs/headphones.png',
-    to: '/',
+    imageUrl: '/src/assets/carousel-imgs/banner3.jpg',
   },
   {
-    imageUrl: '/src/assets/carousel-imgs/headphones.png',
-    to: '/',
-  },
-]
-
-const topCategoriesList = [
-  {
-    name: 'Laptops',
-    imageUrl: '/src/assets/category-imgs/laptop.png',
-  },
-  {
-    name: 'Laptops',
-    imageUrl: '/src/assets/category-imgs/laptop.png',
-  },
-  {
-    name: 'Laptops',
-    imageUrl: '/src/assets/category-imgs/laptop.png',
-  },
-  {
-    name: 'Laptops',
-    imageUrl: '/src/assets/category-imgs/laptop.png',
-  },
-  {
-    name: 'Laptops',
-    imageUrl: '/src/assets/category-imgs/laptop.png',
-  },
-  {
-    name: 'Laptops',
-    imageUrl: '/src/assets/category-imgs/laptop.png',
-  },
-  {
-    name: 'Laptops',
-    imageUrl: '/src/assets/category-imgs/laptop.png',
-  },
-  {
-    name: 'Laptops',
-    imageUrl: '/src/assets/category-imgs/laptop.png',
-  },
-  {
-    name: 'Laptops',
-    imageUrl: '/src/assets/category-imgs/laptop.png',
-  },
-  {
-    name: 'Laptops',
-    imageUrl: '/src/assets/category-imgs/laptop.png',
-  },
-  {
-    name: 'Laptops',
-    imageUrl: '/src/assets/category-imgs/laptop.png',
-  },
-  {
-    name: 'Laptops',
-    imageUrl: '/src/assets/category-imgs/laptop.png',
-  },
-  {
-    name: 'Laptops',
-    imageUrl: '/src/assets/category-imgs/laptop.png',
-  },
-]
-
-const productList = [
-  {
-    imageUrl: '/src/assets/product-imgs/product1.png',
-    name: 'Laptop Dell 15 DC15250 71071928 (Core i5-1334U/16GB/512GB/Intel Graphics/15.6 inch FHD IPS/Win 11/Bạc) - Chính hãng',
-    price: 16090000,
-    rating: 5.0,
-    location: 'Ha Noi',
-    discount: 37,
-  },
-  {
-    imageUrl: '/src/assets/product-imgs/product1.png',
-    name: 'Laptop Dell 15 DC15250 71071928 (Core i5-1334U/16GB/512GB/Intel Graphics/15.6 inch FHD IPS/Win 11/Bạc) - Chính hãng',
-    price: 16090000,
-    rating: 5.0,
-    location: 'Ha Noi',
-    discount: 37,
-  },
-  {
-    imageUrl: '/src/assets/product-imgs/product1.png',
-    name: 'Laptop Dell 15 DC15250 71071928 (Core i5-1334U/16GB/512GB/Intel Graphics/15.6 inch FHD IPS/Win 11/Bạc) - Chính hãng',
-    price: 16090000,
-    rating: 5.0,
-    location: 'Ha Noi',
-    discount: 37,
-  },
-  {
-    imageUrl: '/src/assets/product-imgs/product1.png',
-    name: 'Laptop Dell 15 DC15250 71071928 (Core i5-1334U/16GB/512GB/Intel Graphics/15.6 inch FHD IPS/Win 11/Bạc) - Chính hãng',
-    price: 16090000,
-    rating: 5.0,
-    location: 'Ha Noi',
-    discount: 37,
-  },
-  {
-    imageUrl: '/src/assets/product-imgs/product1.png',
-    name: 'Laptop Dell 15 DC15250 71071928 (Core i5-1334U/16GB/512GB/Intel Graphics/15.6 inch FHD IPS/Win 11/Bạc) - Chính hãng',
-    price: 16090000,
-    rating: 5.0,
-    location: 'Ha Noi',
-    discount: 37,
-  },
-  {
-    imageUrl: '/src/assets/product-imgs/product1.png',
-    name: 'Laptop Dell 15 DC15250 71071928 (Core i5-1334U/16GB/512GB/Intel Graphics/15.6 inch FHD IPS/Win 11/Bạc) - Chính hãng',
-    price: 16090000,
-    rating: 5.0,
-    location: 'Ha Noi',
-    discount: 37,
-  },
-  {
-    imageUrl: '/src/assets/product-imgs/product1.png',
-    name: 'Laptop Dell 15 DC15250 71071928 (Core i5-1334U/16GB/512GB/Intel Graphics/15.6 inch FHD IPS/Win 11/Bạc) - Chính hãng',
-    price: 16090000,
-    rating: 5.0,
-    location: 'Ha Noi',
-    discount: 37,
-  },
-  {
-    imageUrl: '/src/assets/product-imgs/product1.png',
-    name: 'Laptop Dell 15 DC15250 71071928 (Core i5-1334U/16GB/512GB/Intel Graphics/15.6 inch FHD IPS/Win 11/Bạc) - Chính hãng',
-    price: 16090000,
-    rating: 5.0,
-    location: 'Ha Noi',
-    discount: 37,
-  },
-  {
-    imageUrl: '/src/assets/product-imgs/product1.png',
-    name: 'Laptop Dell 15 DC15250 71071928 (Core i5-1334U/16GB/512GB/Intel Graphics/15.6 inch FHD IPS/Win 11/Bạc) - Chính hãng',
-    price: 16090000,
-    rating: 5.0,
-    location: 'Ha Noi',
-    discount: 37,
-  },
-  {
-    imageUrl: '/src/assets/product-imgs/product1.png',
-    name: 'Laptop Dell 15 DC15250 71071928 (Core i5-1334U/16GB/512GB/Intel Graphics/15.6 inch FHD IPS/Win 11/Bạc) - Chính hãng',
-    price: 16090000,
-    rating: 5.0,
-    location: 'Ha Noi',
-    discount: 37,
-  },
-  {
-    imageUrl: '/src/assets/product-imgs/product1.png',
-    name: 'Laptop Dell 15 DC15250 71071928 (Core i5-1334U/16GB/512GB/Intel Graphics/15.6 inch FHD IPS/Win 11/Bạc) - Chính hãng',
-    price: 16090000,
-    rating: 5.0,
-    location: 'Ha Noi',
-    discount: 37,
-  },
-  {
-    imageUrl: '/src/assets/product-imgs/product1.png',
-    name: 'Laptop Dell 15 DC15250 71071928 (Core i5-1334U/16GB/512GB/Intel Graphics/15.6 inch FHD IPS/Win 11/Bạc) - Chính hãng',
-    price: 16090000,
-    rating: 5.0,
-    location: 'Ha Noi',
-    discount: 37,
-  },
-  {
-    imageUrl: '/src/assets/product-imgs/product1.png',
-    name: 'Laptop Dell 15 DC15250 71071928 (Core i5-1334U/16GB/512GB/Intel Graphics/15.6 inch FHD IPS/Win 11/Bạc) - Chính hãng',
-    price: 16090000,
-    rating: 5.0,
-    location: 'Ha Noi',
-    discount: 37,
+    imageUrl: '/src/assets/carousel-imgs/banner4.jpg',
   },
 ]
 
@@ -212,6 +78,7 @@ const fetchFollowedSellers = async () => {
   const token = localStorage.getItem('access_token')
   if (!token) return
 
+  loadingFollowedSellers.value = true
   try {
     const response = await axios.get(`${import.meta.env.VITE_BE_API_URL}/user/follow`, {
       headers: {
@@ -223,30 +90,37 @@ const fetchFollowedSellers = async () => {
     }
   } catch (error) {
     console.error('Error fetching followed sellers:', error)
+  } finally {
+    loadingFollowedSellers.value = false
   }
 }
 
 onMounted(() => {
+  fetchCategories()
   fetchFollowedSellers()
+  fetchBestSellers()
 })
-
-const activeTab = ref('best-seller')
 </script>
 
 <template>
   <main class="main-container">
-    <el-row :gutter="20" style="padding: 20px 0">
+    <el-row :gutter="20" style="padding: 20px 0; height: 440px">
       <el-col :span="6">
         <div
           class="box-shadow border-radius"
           style="width: 100%; height: 100%; background-color: #fff; padding: 20px 40px"
+          v-loading="loadingCategories"
         >
           <h4 style="color: var(--main-color); font-weight: bold; margin-bottom: 4px">
-            SALE 40% OFF
+            CATEGORIES
           </h4>
-          <ul>
-            <li v-for="category in categories" :key="category">
-              <RouterLink class="category-item" to="/">{{ category }}</RouterLink>
+          <ul v-if="fetchedCategories.length > 0">
+            <li v-for="category in fetchedCategories" :key="category.id">
+              <RouterLink
+                class="category-item"
+                :to="{ path: '/search', query: { categoryId: category.id } }"
+                >{{ category.name }}</RouterLink
+              >
             </li>
           </ul>
         </div>
@@ -258,7 +132,12 @@ const activeTab = ref('best-seller')
           style="width: 100%; height: 100%; overflow: hidden; position: relative"
         >
           <el-carousel-item v-for="item in carouselItems" :key="item">
-            <CarouselItem :imageUrl="item.imageUrl" :to="item.to" />
+            <div style="width: 100%; height: 100%; font-size: 0px">
+              <img
+                :src="item.imageUrl"
+                style="width: 100%; height: 100%; object-fit: cover; display: block"
+              />
+            </div>
           </el-carousel-item>
         </el-carousel>
         <div></div>
@@ -270,6 +149,7 @@ const activeTab = ref('best-seller')
       v-if="followedSellers.length > 0"
       class="box-shadow border-radius followed-sellers"
       style="background-color: #fff; padding: 20px 20px 32px; margin-bottom: 20px"
+      v-loading="loadingFollowedSellers"
     >
       <div style="display: flex; margin-bottom: 24px">
         <h3 style="font-weight: bold">FOLLOWED SELLERS</h3>
@@ -303,8 +183,9 @@ const activeTab = ref('best-seller')
     <div
       class="box-shadow border-radius top-categories"
       style="background-color: #fff; padding: 20px 20px 40px; margin-bottom: 20px"
+      v-loading="loadingCategories"
     >
-      <div style="display: flex; margin-bottom: 12px">
+      <div style="display: flex; margin-bottom: 20px">
         <h3 style="font-weight: bold">TOP CATEGORIES</h3>
         <RouterLink
           to="/"
@@ -314,6 +195,7 @@ const activeTab = ref('best-seller')
       </div>
 
       <Splide
+        v-if="fetchedCategories.length > 0"
         :options="{
           rewind: true,
           perPage: 6,
@@ -326,39 +208,41 @@ const activeTab = ref('best-seller')
           },
         }"
       >
-        <SplideSlide v-for="item in topCategoriesList" :key="item.name">
-          <CategoryItem :image-url="item.imageUrl" :name="item.name" />
+        <SplideSlide v-for="item in fetchedCategories" :key="item.id">
+          <CategoryItem :image-url="item.image" :name="item.name" />
         </SplideSlide>
       </Splide>
     </div>
 
     <div
       class="box-shadow border-radius"
-      style="background-color: #fff; padding: 20px 20px 0; margin-bottom: 20px"
+      style="background-color: #fff; padding: 20px; margin-bottom: 20px"
+      v-loading="loadingBestSellers"
     >
-      <el-tabs v-model="activeTab">
-        <el-tab-pane label="BEST SELLER" name="best-seller">
-          <el-row :gutter="20">
-            <el-col
-              :span="4.8"
-              class="el-col-4-8"
-              v-for="(item, index) in productList"
-              :key="index"
-            >
-              <ProductItem
-                :image-url="item.imageUrl"
-                :name="item.name"
-                :price="item.price"
-                :rating="item.rating"
-                :location="item.location"
-                :discount="item.discount"
-              />
-            </el-col>
-          </el-row>
-        </el-tab-pane>
-        <el-tab-pane label="NEW IN" name="new-in">Config</el-tab-pane>
-        <el-tab-pane label="POPULAR" name="popular">Role</el-tab-pane>
-      </el-tabs>
+      <div style="display: flex; margin-bottom: 24px">
+        <h3 style="font-weight: bold">BEST SELLER</h3>
+      </div>
+
+      <el-row :gutter="20">
+        <el-col
+          :span="4.8"
+          class="el-col-4-8"
+          v-for="(item, index) in bestSellers"
+          :key="index"
+          style="margin-bottom: 20px"
+        >
+          <ProductItem
+            :image-url="item.imageUrl"
+            :name="item.name"
+            :price="item.price"
+            :rating="item.rating"
+            :location="item.location"
+            :discount="item.discount"
+            :sold-count="item.soldCount"
+            :id="item.id"
+          />
+        </el-col>
+      </el-row>
     </div>
 
     <RecentlyViewed />
