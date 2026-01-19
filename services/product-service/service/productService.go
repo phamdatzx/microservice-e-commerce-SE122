@@ -16,7 +16,7 @@ import (
 
 type ProductService interface {
 	CreateProduct(product *model.Product) error
-	GetProductByID(id string) (*model.Product, error)
+	GetProductByID(id string, userID string) (*model.Product, error)
 	GetAllProducts() ([]model.Product, error)
 	UpdateProduct(product *model.Product) error
 	DeleteProduct(id string) error
@@ -24,18 +24,21 @@ type ProductService interface {
 	ProcessVariantImageUpload(productID string, fileMap map[string][]*multipart.FileHeader) (map[string]string, error)
 	GetProductsBySeller(sellerID string, params dto.GetProductsQueryParams) (*dto.PaginatedProductsResponse, error)
 	GetVariantsByIds(variantIDs []string) ([]dto.CartVariantDto, error)
-	SearchProducts(params dto.SearchProductsQueryParams) (*dto.PaginatedProductsResponse, error)
+	SearchProducts(params dto.SearchProductsQueryParams, userID string) (*dto.PaginatedProductsResponse, error)
+	GetRecentlyViewedProducts(userID string, limit int) ([]model.Product, error)
 }
 
 type productService struct {
-	repo       repository.ProductRepository
-	userClient *client.UserServiceClient
+	repo              repository.ProductRepository
+	userClient        *client.UserServiceClient
+	searchHistoryRepo repository.SearchHistoryRepository
 }
 
-func NewProductService(repo repository.ProductRepository, userClient *client.UserServiceClient) ProductService {
+func NewProductService(repo repository.ProductRepository, userClient *client.UserServiceClient, searchHistoryRepo repository.SearchHistoryRepository) ProductService {
 	return &productService{
-		repo:       repo,
-		userClient: userClient,
+		repo:              repo,
+		userClient:        userClient,
+		searchHistoryRepo: searchHistoryRepo,
 	}
 }
 
@@ -54,8 +57,28 @@ func (s *productService) CreateProduct(product *model.Product) error {
 	return nil
 }
 
-func (s *productService) GetProductByID(id string) (*model.Product, error) {
-	return s.repo.FindByID(id)
+func (s *productService) GetProductByID(id string, userID string) (*model.Product, error) {
+	product, err := s.repo.FindByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	// Save view history if user is logged in
+	if userID != "" {
+		viewHistory := &model.ViewHistory{
+			UserID:    userID,
+			ProductID: id,
+		}
+		// Save view history asynchronously (don't block the request)
+		go func() {
+			if err := s.searchHistoryRepo.CreateViewHistory(viewHistory); err != nil {
+				// Log error but don't fail the request
+				fmt.Printf("Failed to save view history for user %s: %v\n", userID, err)
+			}
+		}()
+	}
+
+	return product, nil
 }
 
 func (s *productService) GetAllProducts() ([]model.Product, error) {
@@ -277,7 +300,22 @@ func (s *productService) GetVariantsByIds(variantIDs []string) ([]dto.CartVarian
 	return result, nil
 }
 
-func (s *productService) SearchProducts(params dto.SearchProductsQueryParams) (*dto.PaginatedProductsResponse, error) {
+func (s *productService) SearchProducts(params dto.SearchProductsQueryParams, userID string) (*dto.PaginatedProductsResponse, error) {
+	// Save search history if user is logged in and has search query
+	if userID != "" && params.SearchQuery != "" {
+		searchHistory := &model.SearchHistory{
+			UserID: userID,
+			Query:  params.SearchQuery,
+		}
+		// Save search history asynchronously (don't block the search)
+		go func() {
+			if err := s.searchHistoryRepo.Create(searchHistory); err != nil {
+				// Log error but don't fail the search
+				fmt.Printf("Failed to save search history for user %s: %v\n", userID, err)
+			}
+		}()
+	}
+
 	// Build filter based on query parameters
 	filter := bson.M{}
 
@@ -331,8 +369,27 @@ func (s *productService) SearchProducts(params dto.SearchProductsQueryParams) (*
 		sortByTextScore = true
 	}
 
+	// Determine sort field and direction
+	sortField := params.SortBy
+	sortDirection := 1 // ascending
+	if params.SortDirection == "desc" {
+		sortDirection = -1
+	}
+
+	// Handle special price sorting logic
+	// If sorting by price:
+	// - ascending: use price.min
+	// - descending: use price.max
+	if sortField == "price" {
+		if sortDirection == 1 { // ascending
+			sortField = "price.min"
+		} else { // descending
+			sortField = "price.max"
+		}
+	}
+
 	// Call repository method
-	products, total, err := s.repo.SearchProducts(filter, params.GetSkip(), params.Limit, sortByTextScore)
+	products, total, err := s.repo.SearchProducts(filter, params.GetSkip(), params.Limit, sortByTextScore, sortField, sortDirection)
 	if err != nil {
 		return nil, err
 	}
@@ -340,4 +397,40 @@ func (s *productService) SearchProducts(params dto.SearchProductsQueryParams) (*
 	// Build paginated response
 	response := dto.NewPaginatedProductsResponse(products, total, params.Page, params.Limit)
 	return response, nil
+}
+
+func (s *productService) GetRecentlyViewedProducts(userID string, limit int) ([]model.Product, error) {
+	// Default limit to 20 if not specified or if too large
+	if limit <= 0 || limit > 50 {
+		limit = 20
+	}
+
+	// Get view history for the user
+	viewHistory, err := s.searchHistoryRepo.FindViewHistoryByUserID(userID, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	// Extract unique product IDs from view history (preserve order)
+	var products []model.Product
+	seenProductIDs := make(map[string]bool)
+
+	for _, view := range viewHistory {
+		// Skip if we've already added this product (prevent duplicates)
+if seenProductIDs[view.ProductID] {
+continue
+}
+
+// Fetch the product
+product, err := s.repo.FindByID(view.ProductID)
+if err != nil {
+// Skip if product no longer exists
+continue
+}
+
+products = append(products, *product)
+seenProductIDs[view.ProductID] = true
+}
+
+return products, nil
 }

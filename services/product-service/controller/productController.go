@@ -6,6 +6,7 @@ import (
 	"product-service/error"
 	"product-service/model"
 	"product-service/service"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -43,7 +44,10 @@ func (c *ProductController) CreateProduct(ctx *gin.Context) {
 func (c *ProductController) GetProductByID(ctx *gin.Context) {
 	id := ctx.Param("id")
 
-	product, err := c.service.GetProductByID(id)
+	// Get userID from header if available (optional - for view history tracking)
+	userID := ctx.GetHeader("X-User-Id")
+
+	product, err := c.service.GetProductByID(id, userID)
 	if err != nil {
 		ctx.Error(err)
 		return
@@ -217,12 +221,40 @@ func (c *ProductController) SearchProducts(ctx *gin.Context) {
 	// Set default values
 	params.SetDefaults()
 
+	// Get userID from header if available (optional - for search history tracking)
+	userID := ctx.GetHeader("X-User-Id")
+
 	// Call service method
-	response, err := c.service.SearchProducts(params)
+	response, err := c.service.SearchProducts(params, userID)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
 	ctx.JSON(http.StatusOK, response)
+}
+
+func (c *ProductController) GetRecentlyViewedProducts(ctx *gin.Context) {
+	userID := ctx.GetHeader("X-User-Id")
+	if userID == "" {
+		ctx.Error(error.NewAppError(401, "User ID not found in header"))
+		ctx.Abort()
+		return
+	}
+
+	// Get limit from query parameter, default to 20
+	limitStr := ctx.DefaultQuery("limit", "20")
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil {
+		limit = 20
+	}
+
+	products, err := c.service.GetRecentlyViewedProducts(userID, limit)
+	if err != nil {
+		ctx.Error(err)
+		ctx.Abort()
+		return
+	}
+
+	ctx.JSON(http.StatusOK, products)
 }

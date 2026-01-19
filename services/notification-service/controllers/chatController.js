@@ -254,3 +254,80 @@ export const markConversationAsRead = async (req, res) => {
     });
   }
 };
+
+/**
+ * Send a message with image (REST API with multipart/form-data)
+ * POST /api/notification/chat/messages/with-image
+ * Form data: conversationId, content, image (file)
+ */
+export const sendMessageWithImage = async (req, res) => {
+  try {
+    const senderId = req.headers['x-user-id'];
+    const { conversationId, content } = req.body;
+    const imageFile = req.file; // Uploaded via multer
+
+    if (!senderId) {
+      return res.status(401).json({
+        success: false,
+        error: ERROR_MESSAGES.UNAUTHORIZED,
+      });
+    }
+
+    if (!conversationId || !content) {
+      return res.status(400).json({
+        success: false,
+        error: 'conversationId and content are required',
+      });
+    }
+
+    if (!imageFile) {
+      return res.status(400).json({
+        success: false,
+        error: 'Image file is required',
+      });
+    }
+
+    // Verify user has access to this conversation
+    const conversation = await chatService.getConversationById(conversationId, senderId);
+    if (!conversation) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied to this conversation',
+      });
+    }
+
+    // Import s3Service here to avoid circular dependency issues
+    const { uploadImageToS3 } = await import('../services/s3Service.js');
+
+    // Upload image to S3
+    let imageURL;
+    try {
+      imageURL = await uploadImageToS3(
+        imageFile.buffer,
+        imageFile.originalname,
+        imageFile.mimetype,
+        'chat'
+      );
+    } catch (uploadError) {
+      console.error('S3 upload error:', uploadError);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to upload image',
+      });
+    }
+
+    // Create message with image URL
+    const message = await chatService.createMessage(senderId, conversationId, content, imageURL);
+
+    return res.status(201).json({
+      success: true,
+      data: message,
+    });
+  } catch (error) {
+    console.error('Error in sendMessageWithImage:', error);
+    return res.status(500).json({
+      success: false,
+      error: ERROR_MESSAGES.SERVER_ERROR,
+    });
+  }
+};

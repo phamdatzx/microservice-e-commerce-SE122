@@ -30,13 +30,14 @@ type OrderService interface {
 }
 
 type orderService struct {
-	repo          repository.OrderRepository
-	cartRepo      repository.CartRepository
-	productClient *client.ProductServiceClient
-	userClient    *client.UserServiceClient
-	paymentClient payment.PaymentClient
-	GHNClient     *client.GHNClient
-	clientURL     string
+	repo               repository.OrderRepository
+	cartRepo           repository.CartRepository
+	productClient      *client.ProductServiceClient
+	userClient         *client.UserServiceClient
+	paymentClient      payment.PaymentClient
+	GHNClient          *client.GHNClient
+	notificationClient *client.NotificationServiceClient
+	clientURL          string
 }
 
 func NewOrderService(
@@ -46,15 +47,17 @@ func NewOrderService(
 	userClient *client.UserServiceClient,
 	paymentClient payment.PaymentClient,
 	GHNClient *client.GHNClient,
+	notificationClient *client.NotificationServiceClient,
 ) OrderService {
 	return &orderService{
-		repo:          orderRepo,
-		cartRepo:      cartRepo,
-		productClient: productClient,
-		userClient:    userClient,
-		paymentClient: paymentClient,
-		GHNClient:     GHNClient,
-		clientURL:     os.Getenv("CLIENT_URL"),
+		repo:               orderRepo,
+		cartRepo:           cartRepo,
+		productClient:      productClient,
+		userClient:         userClient,
+		paymentClient:      paymentClient,
+		GHNClient:          GHNClient,
+		notificationClient: notificationClient,
+		clientURL:          os.Getenv("CLIENT_URL"),
 	}
 }
 
@@ -320,6 +323,29 @@ func (s *orderService) Checkout(userID string, request dto.CheckoutRequest) (*dt
 		_ = s.cartRepo.DeleteCartItem(item.ID)
 	}
 
+	// Send notification to seller for COD orders
+	if request.PaymentMethod == "COD" {
+		orderData := map[string]interface{}{
+			"orderId":      order.ID,
+			"total":        order.Total + float64(order.DeliveryFee),
+			"itemCount":    len(order.Items),
+			"customerName": user.Name,
+		}
+
+		err = s.notificationClient.CreateNotification(client.CreateNotificationRequest{
+			UserID:  sellerID,
+			Type:    "order",
+			Title:   "New COD Order",
+			Message: fmt.Sprintf("You have a new COD order from %s", user.Name),
+			Data:    orderData,
+		})
+
+		if err != nil {
+			// Log error but don't fail the checkout
+			fmt.Printf("Warning: failed to send notification to seller: %v\n", err)
+		}
+	}
+
 	return &dto.CheckoutResponse{
 		OrderID:     order.ID,
 		TotalAmount: order.Total + float64(order.DeliveryFee),
@@ -411,7 +437,34 @@ func (s *orderService) HandleCheckoutSessionCompleted(ctx context.Context, order
 	// Update order status to TO_CONFIRM
 	order.Status = "TO_CONFIRM"
 
-	return s.repo.UpdateOrder(order)
+	err = s.repo.UpdateOrder(order)
+	if err != nil {
+		return err
+	}
+
+	// Send notification to seller about the paid order
+	orderData := map[string]interface{}{
+		"orderId":      order.ID,
+		"total":        order.Total + float64(order.DeliveryFee),
+		"itemCount":    len(order.Items),
+		"customerName": order.User.Name,
+		"paymentMethod": order.PaymentMethod,
+	}
+
+	err = s.notificationClient.CreateNotification(client.CreateNotificationRequest{
+		UserID:  order.Seller.ID,
+		Type:    "order",
+		Title:   "New Paid Order",
+		Message: fmt.Sprintf("You have a new paid order from %s", order.User.Name),
+		Data:    orderData,
+	})
+
+	if err != nil {
+		// Log error but don't fail the order update
+		fmt.Printf("Warning: failed to send notification to seller: %v\n", err)
+	}
+
+	return nil
 }
 
 func (s *orderService) HandlePaymentFailed(ctx context.Context, paymentIntentID string) error {

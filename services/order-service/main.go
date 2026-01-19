@@ -9,6 +9,7 @@ import (
 	"order-service/repository"
 	"order-service/router"
 	"order-service/service"
+	"os"
 
 	"github.com/gin-gonic/gin"
 )
@@ -31,13 +32,14 @@ func main() {
 	stripeConfig := config.NewStripeConfig()
 	stripeClient := stripeclient.NewStripeClient(stripeConfig)
 	GHNClient := client.NewGHNClient()
+	notificationClient := client.NewNotificationServiceClient(os.Getenv("NOTIFICATION_SERVICE_URL"))
 
 	// Initialize layers
 	cartRepo := repository.NewCartRepository(config.DB)
 	orderRepo := repository.NewOrderRepository(config.DB)
 
 	cartService := service.NewCartService(cartRepo, productClient, userClient)
-	orderService := service.NewOrderService(orderRepo, cartRepo, productClient, userClient, stripeClient, GHNClient)
+	orderService := service.NewOrderService(orderRepo, cartRepo, productClient, userClient, stripeClient, GHNClient, notificationClient)
 
 	cartController := controller.NewCartController(cartService)
 	orderController := controller.NewOrderController(orderService, stripeClient)

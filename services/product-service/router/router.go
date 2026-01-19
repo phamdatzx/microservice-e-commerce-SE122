@@ -16,6 +16,7 @@ type AppRouter struct {
 	SavedVoucherController      *controller.SavedVoucherController
 	StockReservationController  *controller.StockReservationController
 	RatingController            *controller.RatingController
+	SearchHistoryController     *controller.SearchHistoryController
 }
 
 // SetupRouter builds the main Gin router and registers all module routes
@@ -49,6 +50,9 @@ func SetupRouter(engine *gin.Engine, appRouter *AppRouter) *gin.Engine {
 
 		// Rating routes
 		RegisterRatingRoutes(productGroup, *appRouter.RatingController)
+
+		// Search History routes
+		RegisterSearchHistoryRoutes(productGroup, appRouter.SearchHistoryController)
 	}
 
 	return engine

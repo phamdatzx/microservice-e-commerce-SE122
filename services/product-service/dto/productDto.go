@@ -89,14 +89,16 @@ type ReleaseStockRequest struct {
 
 // SearchProductsQueryParams represents query parameters for searching products
 type SearchProductsQueryParams struct {
-	Page        int     `form:"page"`
-	Limit       int     `form:"limit"`
-	MinPrice    *int    `form:"min_price"`
-	MaxPrice    *int    `form:"max_price"`
-	MinRating   *float64 `form:"min_rating"`
-	MaxRating   *float64 `form:"max_rating"`
-	CategoryIDs string  `form:"category_ids"` // comma-separated list
-	SearchQuery string  `form:"search_query"`
+	Page          int      `form:"page"`
+	Limit         int      `form:"limit"`
+	MinPrice      *int     `form:"min_price"`
+	MaxPrice      *int     `form:"max_price"`
+	MinRating     *float64 `form:"min_rating"`
+	MaxRating     *float64 `form:"max_rating"`
+	CategoryIDs   string   `form:"category_ids"` // comma-separated list
+	SearchQuery   string   `form:"search_query"`
+	SortBy        string   `form:"sort_by"`        // rating, sold_count, price
+	SortDirection string   `form:"sort_direction"` // asc, desc
 }
 
 // SetDefaults sets default values for search query parameters
@@ -106,6 +108,13 @@ func (p *SearchProductsQueryParams) SetDefaults() {
 	}
 	if p.Limit <= 0 {
 		p.Limit = 10
+	}
+	if p.SortDirection == "" {
+		p.SortDirection = "asc"
+	}
+	// Validate sort direction
+	if p.SortDirection != "asc" && p.SortDirection != "desc" {
+		p.SortDirection = "asc"
 	}
 }
 
