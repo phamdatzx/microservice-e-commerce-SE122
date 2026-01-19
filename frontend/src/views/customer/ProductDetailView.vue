@@ -219,8 +219,15 @@ const fetchProduct = async () => {
   if (!productId.value) return
   isLoading.value = true
   try {
+    const userId = localStorage.getItem('user_id')
+    const headers: any = {}
+    if (userId) {
+      headers['X-User-Id'] = userId
+    }
+
     const response = await axios.get(
       `${import.meta.env.VITE_BE_API_URL}/product/public/${productId.value}`,
+      { headers },
     )
     product.value = response.data
 
@@ -240,7 +247,6 @@ const fetchProduct = async () => {
   }
 
   if (product.value) {
-    saveToRecentlyViewed(product.value)
     recentlyViewedRef.value?.loadRecentlyViewed()
     fetchSellerInfo(product.value.seller_id)
   }
@@ -268,34 +274,6 @@ const checkDescriptionHeight = () => {
       isDescriptionTooLong.value = descriptionRef.value.scrollHeight > 200
     }
   }, 100)
-}
-
-const saveToRecentlyViewed = (p: Product) => {
-  const stored = localStorage.getItem('recently_viewed')
-  let list = stored ? JSON.parse(stored) : []
-
-  // Simplify product for storage
-  const simplifiedProduct = {
-    id: p.id,
-    name: p.name,
-    imageUrl: p.images.length > 0 ? p.images.sort((a, b) => a.order - b.order)[0]?.url || '' : '',
-    price: p.variants.length > 0 ? p.variants[0]?.price || 0 : p.price.min,
-    rating: p.rating,
-    location: 'Vietnam', // Mock location as it's not in the product data
-    discount: 0, // Mock discount
-    soldCount: p.sold_count,
-  }
-
-  // Remove existing
-  list = list.filter((item: any) => item.id !== simplifiedProduct.id)
-
-  // Add to front
-  list.unshift(simplifiedProduct)
-
-  // Limit to 10
-  list = list.slice(0, 10)
-
-  localStorage.setItem('recently_viewed', JSON.stringify(list))
 }
 
 watch(

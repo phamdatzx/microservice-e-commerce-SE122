@@ -281,6 +281,7 @@ const handleSearch = () => {
 
 const handleLogout = () => {
   localStorage.removeItem('access_token')
+  localStorage.removeItem('user_id')
   isLoggedIn.value = false
   router.push('/')
 }

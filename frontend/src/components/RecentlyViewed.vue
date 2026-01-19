@@ -4,12 +4,35 @@ import { Splide, SplideSlide } from '@splidejs/vue-splide'
 import { ShoppingCart } from '@element-plus/icons-vue'
 import ProductItem from './ProductItem.vue'
 
+import axios from 'axios'
+
 const recentlyViewedProducts = ref<any[]>([])
 
-const loadRecentlyViewed = () => {
-  const stored = localStorage.getItem('recently_viewed')
-  if (stored) {
-    recentlyViewedProducts.value = JSON.parse(stored)
+const loadRecentlyViewed = async () => {
+  const token = localStorage.getItem('access_token')
+  const headers = token ? { Authorization: `Bearer ${token}` } : {}
+  try {
+    const response = await axios.get(
+      `${import.meta.env.VITE_BE_API_URL}/product/recently-viewed-products?limit=20`,
+      { headers },
+    )
+    if (response.data && Array.isArray(response.data)) {
+      recentlyViewedProducts.value = response.data.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        imageUrl:
+          p.images.length > 0
+            ? p.images.sort((a: any, b: any) => a.order - b.order)[0]?.url || ''
+            : '',
+        price: p.price.min, // Use min price
+        rating: p.rating,
+        location: 'Vietnam',
+        discount: 0,
+        soldCount: p.sold_count,
+      }))
+    }
+  } catch (error) {
+    console.error('Error fetching recently viewed products:', error)
   }
 }
 

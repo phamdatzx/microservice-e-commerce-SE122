@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import ProductItem from '@/components/ProductItem.vue'
-import { Delete } from '@element-plus/icons-vue'
-import { ElMessageBox, ElMessage } from 'element-plus'
 
 interface Product {
   id: string
@@ -15,31 +13,35 @@ interface Product {
   soldCount: number
 }
 
+import axios from 'axios'
+
 const recentlyViewed = ref<Product[]>([])
 
-const loadRecentlyViewed = () => {
-  const stored = localStorage.getItem('recently_viewed')
-  if (stored) {
-    recentlyViewed.value = JSON.parse(stored)
-  }
-}
-
-const clearHistory = async () => {
+const loadRecentlyViewed = async () => {
+  const token = localStorage.getItem('access_token')
+  const headers = token ? { Authorization: `Bearer ${token}` } : {}
   try {
-    await ElMessageBox.confirm(
-      'Are you sure you want to clear your recently viewed products history?',
-      'Warning',
-      {
-        confirmButtonText: 'Clear All',
-        cancelButtonText: 'Cancel',
-        type: 'warning',
-      },
+    const response = await axios.get(
+      `${import.meta.env.VITE_BE_API_URL}/product/recently-viewed-products?limit=20`,
+      { headers },
     )
-    localStorage.removeItem('recently_viewed')
-    recentlyViewed.value = []
-    ElMessage.success('Recently viewed history cleared')
+    if (response.data && Array.isArray(response.data)) {
+      recentlyViewed.value = response.data.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        imageUrl:
+          p.images.length > 0
+            ? p.images.sort((a: any, b: any) => a.order - b.order)[0]?.url || ''
+            : '',
+        price: p.price.min,
+        rating: p.rating,
+        location: 'Vietnam',
+        discount: 0,
+        soldCount: p.sold_count,
+      }))
+    }
   } catch (error) {
-    // User cancelled
+    console.error('Error fetching recently viewed products:', error)
   }
 }
 
@@ -55,15 +57,6 @@ onMounted(() => {
         <h2 class="page-title">Recently Viewed</h2>
         <p class="subtitle">Products you've recently visited are saved here for easy access.</p>
       </div>
-      <el-button
-        v-if="recentlyViewed.length > 0"
-        type="danger"
-        plain
-        :icon="Delete"
-        @click="clearHistory"
-      >
-        Clear All History
-      </el-button>
     </div>
 
     <div v-if="recentlyViewed.length > 0" class="products-grid">
