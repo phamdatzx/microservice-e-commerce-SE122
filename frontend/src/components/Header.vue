@@ -362,7 +362,7 @@ defineExpose({
             </div>
           </RouterLink>
 
-          <div class="search-bar" style="position: relative; z-index: 102">
+          <div class="search-bar" style="position: relative; z-index: 2002">
             <input
               type="text"
               placeholder="Search anything..."
@@ -607,7 +607,7 @@ defineExpose({
   padding: 20px 0;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
   position: relative;
-  z-index: 101;
+  z-index: 2001;
 }
 
 .header-content {
