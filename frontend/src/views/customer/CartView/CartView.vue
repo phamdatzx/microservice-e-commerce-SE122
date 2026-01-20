@@ -336,8 +336,6 @@ const handleDeleteSelected = async () => {
           {{ checkAll ? 'Unselect All' : 'Select All' }} ({{ allProducts.length }})
         </button>
         <button class="btn" @click="handleDeleteSelected">Delete</button>
-        <button class="btn">Remove Unactive Products</button>
-        <button class="btn">Add To Favorites</button>
       </div>
       <div style="display: flex; justify-content: space-between; align-items: center">
         <el-button
