@@ -27,6 +27,7 @@ type OrderService interface {
 	GetSellerOrders(ctx context.Context, sellerID string, request dto.GetOrdersBySellerRequest) (*dto.GetOrdersResponse, error)
 	UpdateOrderStatus(ctx context.Context, userID string, orderID string, request dto.UpdateOrderStatusRequest) error
 	VerifyVariantPurchase(userID, productID, variantID string) (bool, error)
+	GetSellerStatistics(ctx context.Context, sellerID string, request dto.GetSellerStatisticsRequest) (*dto.GetSellerStatisticsResponse, error)
 }
 
 type orderService struct {
@@ -711,5 +712,48 @@ func convertOrderToDto(order *model.Order) dto.OrderDto {
 
 func (s *orderService) VerifyVariantPurchase(userID, productID, variantID string) (bool, error) {
 	return s.repo.VerifyVariantPurchase(userID, productID, variantID)
+}
+
+func (s *orderService) GetSellerStatistics(ctx context.Context, sellerID string, request dto.GetSellerStatisticsRequest) (*dto.GetSellerStatisticsResponse, error) {
+	// Validate time range
+	if request.From.After(request.To) {
+		return nil, appError.NewAppError(400, "invalid time range: 'from' must be before 'to'")
+	}
+
+	// Validate type parameter
+	groupBy := request.Type
+	if groupBy != "" && groupBy != "day" && groupBy != "month" {
+		return nil, appError.NewAppError(400, "invalid type parameter: must be 'day' or 'month'")
+	}
+
+	// Get statistics from repository
+	orderCount, totalRevenue, breakdownData, err := s.repo.GetSellerStatistics(sellerID, request.From, request.To, groupBy)
+	if err != nil {
+		return nil, err
+	}
+
+	response := &dto.GetSellerStatisticsResponse{
+		OrderCount:   orderCount,
+		TotalRevenue: totalRevenue,
+	}
+
+	// If breakdown is requested, convert the data
+	if groupBy != "" && breakdownData != nil {
+		breakdown := make([]dto.PeriodStatistics, 0, len(breakdownData))
+		for _, item := range breakdownData {
+			period := item["_id"].(string)
+			count := int(item["count"].(int32))
+			revenue := item["revenue"].(float64)
+			
+			breakdown = append(breakdown, dto.PeriodStatistics{
+				Period:     period,
+				OrderCount: count,
+				Revenue:    revenue,
+			})
+		}
+		response.Breakdown = breakdown
+	}
+
+	return response, nil
 }
 

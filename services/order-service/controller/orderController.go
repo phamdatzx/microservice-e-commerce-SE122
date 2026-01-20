@@ -237,3 +237,25 @@ func (c *OrderController) VerifyPurchase(ctx *gin.Context) {
 	})
 }
 
+func (c *OrderController) GetSellerStatistics(ctx *gin.Context) {
+	sellerID := ctx.GetHeader("X-User-Id")
+	if sellerID == "" {
+		ctx.Error(appError.NewAppError(401, "Seller ID not found in header"))
+		return
+	}
+
+	var request dto.GetSellerStatisticsRequest
+	if err := ctx.ShouldBindQuery(&request); err != nil {
+		ctx.Error(appError.NewAppErrorWithErr(400, "Invalid query parameters", err))
+		return
+	}
+
+	response, err := c.service.GetSellerStatistics(ctx, sellerID, request)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(200, response)
+}
+
