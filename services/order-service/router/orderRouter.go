@@ -12,6 +12,7 @@ func RegisterOrderRoutes(rg *gin.RouterGroup, c controller.OrderController) {
 	{
 		order.GET("", c.GetOrders)
 		order.GET("/seller",middleware.RequireSeller(), c.GetOrdersBySellerId)
+		order.GET("/seller/statistics",middleware.RequireSeller(), c.GetSellerStatistics)
 		order.PUT("/:orderId",middleware.RequireSeller(), c.UpdateOrderStatus)
 		order.POST("/checkout", c.Checkout)
 		order.POST("/:orderId/payment", c.CreatePayment)
