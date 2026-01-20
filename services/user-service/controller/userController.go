@@ -2,6 +2,7 @@ package controller
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 	"user-service/dto"
 	appError "user-service/error"
@@ -349,4 +350,76 @@ func (c *UserController) UpdateProductCount(ctx *gin.Context) {
 	}
 
 	utils.SuccessResponse(ctx, 200, "Product count updated successfully", response)
+}
+
+func (c *UserController) GetAllUsers(ctx *gin.Context) {
+	// Parse pagination parameters
+	page := 1
+	limit := 10
+
+	if pageStr := ctx.Query("page"); pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+	}
+
+	if limitStr := ctx.Query("limit"); limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
+			limit = l
+		}
+	}
+
+	// Parse role filter (optional)
+	var role *string
+	if roleStr := ctx.Query("role"); roleStr != "" {
+		role = &roleStr
+	}
+
+	// Parse isBanned filter (optional)
+	var isBanned *bool
+	if isBannedStr := ctx.Query("is_banned"); isBannedStr != "" {
+		banned := isBannedStr == "true"
+		isBanned = &banned
+	}
+
+	response, err := c.service.GetAllUsers(page, limit, role, isBanned)
+	if err != nil {
+		_ = ctx.Error(err)
+		ctx.Abort()
+		return
+	}
+
+	utils.SuccessResponse(ctx, 200, "Get all users successfully", response)
+}
+
+type SetUserBannedRequest struct {
+	IsBanned bool `json:"is_banned"`
+}
+
+func (c *UserController) SetUserBanned(ctx *gin.Context) {
+	userId := ctx.Param("id")
+	if userId == "" {
+		ctx.Error(appError.NewAppError(400, "User ID is required"))
+		ctx.Abort()
+		return
+	}
+
+	var request SetUserBannedRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := c.service.SetUserBanned(userId, request.IsBanned); err != nil {
+		_ = ctx.Error(err)
+		ctx.Abort()
+		return
+	}
+
+	message := "User unbanned successfully"
+	if request.IsBanned {
+		message = "User banned successfully"
+	}
+
+	utils.SuccessResponse(ctx, 200, message, nil)
 }

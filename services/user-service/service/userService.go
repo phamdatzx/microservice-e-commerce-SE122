@@ -25,6 +25,8 @@ type UserService interface {
 	UploadUserImage(userId string, file multipart.File, fileHeader *multipart.FileHeader) (string, error)
 	UpdateSellerRating(request dto.UpdateRatingRequest) (dto.UpdateRatingResponse, error)
 	UpdateProductCount(request dto.UpdateProductCountRequest) (dto.UpdateProductCountResponse, error)
+	GetAllUsers(page, limit int, role *string, isBanned *bool) (dto.GetAllUsersResponse, error)
+	SetUserBanned(userId string, isBanned bool) error
 }
 
 type userService struct {
@@ -76,6 +78,11 @@ func (s *userService) Login(request dto.LoginRequest) (dto.LoginResponse, error)
 	user, err := s.repo.GetUserByUsername(request.Username)
 	if err != nil {
 		return dto.LoginResponse{}, customError.NewAppErrorWithErr(401, "username not found", err)
+	}
+
+	//check is banned
+	if user.IsBanned {
+		return dto.LoginResponse{}, customError.NewAppError(401, "account is banned")
 	}
 
 	//check password
@@ -353,4 +360,80 @@ func (s *userService) UpdateProductCount(request dto.UpdateProductCountRequest) 
 	return dto.UpdateProductCountResponse{
 		ProductCount: saleInfo.ProductCount,
 	}, nil
+}
+
+func (s *userService) GetAllUsers(page, limit int, role *string, isBanned *bool) (dto.GetAllUsersResponse, error) {
+	skip := (page - 1) * limit
+	users, total, err := s.repo.GetAllUsers(skip, limit, role, isBanned)
+	if err != nil {
+		return dto.GetAllUsersResponse{}, err
+	}
+
+	// Map users to AdminUserResponse
+	var adminUsers []dto.AdminUserResponse
+	for _, user := range users {
+		adminUser := dto.AdminUserResponse{
+			ID:       user.ID,
+			Username: user.Username,
+			Name:     user.Name,
+			Phone:    user.Phone,
+			Email:    user.Email,
+			Image:    user.Image,
+			Role:     user.Role,
+			IsActive: user.IsActive,
+			IsVerify: user.IsVerify,
+			IsBanned: user.IsBanned,
+		}
+
+		// Map addresses
+		for _, addr := range user.Addresses {
+			adminUser.Addresses = append(adminUser.Addresses, dto.AddressResponse{
+				ID:           addr.ID,
+				UserID:       addr.UserID,
+				FullName:     addr.FullName,
+				Phone:        addr.Phone,
+				AddressLine:  addr.AddressLine,
+				Ward:         addr.Ward,
+				District:     addr.District,
+				Province:     addr.Province,
+				WardCode:     addr.WardCode,
+				ProvinceCode: addr.ProvinceCode,
+				DistrictID:   addr.DistrictID,
+				ProvinceID:   addr.ProvinceID,
+				Country:      addr.Country,
+				Latitude:     addr.Latitude,
+				Longitude:    addr.Longitude,
+				Default:      addr.Default,
+			})
+		}
+
+		// Map SaleInfo if exists
+		if user.SaleInfo != nil {
+			adminUser.SaleInfo = &dto.SaleInfoResponse{
+				FollowCount:   user.SaleInfo.FollowCount,
+				RatingCount:   user.SaleInfo.RatingCount,
+				RatingAverage: user.SaleInfo.RatingAverage,
+				ProductCount:  user.SaleInfo.ProductCount,
+			}
+		}
+
+		adminUsers = append(adminUsers, adminUser)
+	}
+
+	return dto.GetAllUsersResponse{
+		Users: adminUsers,
+		Total: total,
+		Page:  page,
+		Limit: limit,
+	}, nil
+}
+
+func (s *userService) SetUserBanned(userId string, isBanned bool) error {
+	user, err := s.repo.GetUserByID(userId)
+	if err != nil {
+		return customError.NewAppErrorWithErr(404, "User not found", err)
+	}
+
+	user.IsBanned = isBanned
+	return s.repo.Save(user)
 }

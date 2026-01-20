@@ -258,3 +258,62 @@ func (c *ProductController) GetRecentlyViewedProducts(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, products)
 }
+
+type SetProductDisabledRequest struct {
+	IsDisabled bool   `json:"is_disabled"`
+	Reason     string `json:"reason"`
+}
+
+func (c *ProductController) SetProductDisabled(ctx *gin.Context) {
+	productID := ctx.Param("id")
+
+	var req SetProductDisabledRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.Error(error.NewAppErrorWithErr(http.StatusBadRequest, "Invalid request body", err))
+		return
+	}
+
+	if err := c.service.SetProductDisabled(productID, req.IsDisabled, req.Reason); err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	message := "Product enabled successfully"
+	if req.IsDisabled {
+		message = "Product disabled successfully"
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"message": message})
+}
+
+func (c *ProductController) GetDisabledProductsBySeller(ctx *gin.Context) {
+	sellerID := ctx.Param("sellerId")
+	if sellerID == "" {
+		ctx.Error(error.NewAppError(http.StatusBadRequest, "Seller ID is required"))
+		return
+	}
+
+	// Parse pagination parameters
+	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "10"))
+
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 100 {
+		limit = 10
+	}
+
+	products, total, err := c.service.GetDisabledProductsBySeller(sellerID, page, limit)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"products": products,
+		"total":    total,
+		"page":     page,
+		"limit":    limit,
+	})
+}

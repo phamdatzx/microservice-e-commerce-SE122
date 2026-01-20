@@ -26,6 +26,8 @@ type ProductService interface {
 	GetVariantsByIds(variantIDs []string) ([]dto.CartVariantDto, error)
 	SearchProducts(params dto.SearchProductsQueryParams, userID string) (*dto.PaginatedProductsResponse, error)
 	GetRecentlyViewedProducts(userID string, limit int) ([]model.Product, error)
+	SetProductDisabled(productID string, isDisabled bool, reason string) error
+	GetDisabledProductsBySeller(sellerID string, page, limit int) ([]model.Product, int64, error)
 }
 
 type productService struct {
@@ -61,6 +63,11 @@ func (s *productService) GetProductByID(id string, userID string) (*model.Produc
 	product, err := s.repo.FindByID(id)
 	if err != nil {
 		return nil, err
+	}
+
+	// Check if product is disabled
+	if product.IsDisabled {
+		return nil, appError.NewAppError(404, "Product not found")
 	}
 
 	// Save view history if user is logged in
@@ -317,7 +324,9 @@ func (s *productService) SearchProducts(params dto.SearchProductsQueryParams, us
 	}
 
 	// Build filter based on query parameters
-	filter := bson.M{}
+	filter := bson.M{
+		"is_disabled": bson.M{"$ne": true},
+	}
 
 	// Price range filter
 	if params.MinPrice != nil || params.MaxPrice != nil {
@@ -428,9 +437,37 @@ if err != nil {
 continue
 }
 
+// Skip disabled products
+if product.IsDisabled {
+continue
+}
+
 products = append(products, *product)
 seenProductIDs[view.ProductID] = true
 }
 
 return products, nil
+}
+
+func (s *productService) SetProductDisabled(productID string, isDisabled bool, reason string) error {
+	product, err := s.repo.FindByID(productID)
+	if err != nil {
+		return appError.NewAppErrorWithErr(404, "Product not found", err)
+	}
+
+	product.IsDisabled = isDisabled
+	if isDisabled {
+		product.DisableReason = reason
+	} else {
+		product.DisableReason = ""
+	}
+	return s.repo.Update(product)
+}
+
+func (s *productService) GetDisabledProductsBySeller(sellerID string, page, limit int) ([]model.Product, int64, error) {
+	skip := (page - 1) * limit
+	filter := bson.M{
+		"is_disabled": true,
+	}
+	return s.repo.FindBySeller(sellerID, filter, skip, limit, "updated_at", -1)
 }

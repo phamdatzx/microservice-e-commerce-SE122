@@ -20,6 +20,7 @@ type UserRepository interface {
 	UpdateSaleInfo(saleInfo *model.SaleInfo) error
 	UpdateProductCount(userId string, increment bool) (*model.SaleInfo, error)
 	UpdateFollowCount(userId string, increment bool) (*model.SaleInfo, error)
+	GetAllUsers(skip, limit int, role *string, isBanned *bool) ([]model.User, int64, error)
 }
 
 type userRepository struct {
@@ -183,4 +184,36 @@ func (r *userRepository) UpdateFollowCount(userId string, increment bool) (*mode
 	}
 
 	return &saleInfo, nil
+}
+
+func (r *userRepository) GetAllUsers(skip, limit int, role *string, isBanned *bool) ([]model.User, int64, error) {
+	var users []model.User
+	var total int64
+
+	query := r.db.Model(&model.User{})
+
+	// Apply role filter if provided
+	if role != nil && *role != "" {
+		query = query.Where("role = ?", *role)
+	}
+
+	// Apply isBanned filter if provided
+	if isBanned != nil {
+		query = query.Where("is_banned = ?", *isBanned)
+	}
+
+	// Count total
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Get paginated results with preloads
+	if err := query.Preload("Addresses").Preload("SaleInfo").
+		Offset(skip).Limit(limit).
+		Order("id DESC").
+		Find(&users).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return users, total, nil
 }
