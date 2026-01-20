@@ -17,11 +17,13 @@ import { useRouter, useRoute } from 'vue-router'
 import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
+import NotFoundView from '@/components/NotFoundView.vue'
 
 const router = useRouter()
 const route = useRoute()
 const isLoggedIn = ref(false)
 const isLoading = ref(false)
+const isNotFound = ref(false)
 
 const order = ref<any>(null)
 const trackingInfo = ref<any>(null)
@@ -82,6 +84,7 @@ const fetchOrder = async () => {
   if (!orderId) return
 
   isLoading.value = true
+  isNotFound.value = false
   try {
     let orderData = null
 
@@ -115,9 +118,11 @@ const fetchOrder = async () => {
     if (shippingCode) {
       await fetchGHNTracking(shippingCode)
     }
-  } catch (error) {
+  } catch (error: any) {
+    if (error.response?.status === 404) {
+      isNotFound.value = true
+    }
     console.error('Error fetching order:', error)
-    ElMessage.error('Failed to load order details')
   } finally {
     isLoading.value = false
   }
@@ -337,144 +342,153 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="order-tracking-page" v-loading="isLoading">
-    <div class="main-container" v-if="order">
-      <!-- Top Action Bar -->
-      <div class="tracking-top-bar">
-        <el-button link :icon="ArrowLeft" @click="handleBack">BACK</el-button>
-        <div class="order-meta">
-          <span>ORDER ID: {{ orderInfo.id }}</span>
-          <span class="status-divider">|</span>
-          <span class="order-status-text">{{ orderInfo.status.replace('_', ' ') }}</span>
+  <div v-loading="isLoading">
+    <div v-if="order && !isNotFound" class="order-tracking-page">
+      <div class="main-container">
+        <!-- Top Action Bar -->
+        <div class="tracking-top-bar">
+          <el-button link :icon="ArrowLeft" @click="handleBack">BACK</el-button>
+          <div class="order-meta">
+            <span>ORDER ID: {{ orderInfo.id }}</span>
+            <span class="status-divider">|</span>
+            <span class="order-status-text">{{ orderInfo.status.replace('_', ' ') }}</span>
+          </div>
         </div>
-      </div>
 
-      <!-- Stepper Section -->
-      <div class="stepper-section card">
-        <div class="stepper-container">
-          <!-- Background progress bar -->
-          <div class="stepper-progress-bg">
+        <!-- Stepper Section -->
+        <div class="stepper-section card">
+          <div class="stepper-container">
+            <!-- Background progress bar -->
+            <div class="stepper-progress-bg">
+              <div
+                class="stepper-progress-fill"
+                :style="{
+                  width:
+                    ((steps.filter((s) => s.completed).length - 1) / (steps.length - 1)) * 100 +
+                    '%',
+                }"
+              ></div>
+            </div>
+
             <div
-              class="stepper-progress-fill"
-              :style="{
-                width:
-                  ((steps.filter((s) => s.completed).length - 1) / (steps.length - 1)) * 100 + '%',
-              }"
-            ></div>
-          </div>
-
-          <div
-            v-for="(step, index) in steps"
-            :key="index"
-            class="step-item"
-            :class="{ active: step.completed }"
-          >
-            <div class="step-icon">
-              <el-icon><component :is="step.icon" /></el-icon>
-            </div>
-            <div class="step-content">
-              <div class="step-title">{{ step.title }}</div>
-              <div class="step-time">{{ step.time }}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Action Banner -->
-      <div class="action-banner card">
-        <p class="banner-text">
-          Please check all products in the order carefully before clicking "Order Received".
-        </p>
-        <div class="banner-actions">
-          <el-button type="primary" class="received-btn">Order Received</el-button>
-        </div>
-      </div>
-
-      <!-- Secondary Actions -->
-      <div class="secondary-actions">
-        <el-button plain class="sec-btn">Return/Refund Request</el-button>
-        <el-button v-if="isLoggedIn" plain class="sec-btn" @click="openChat"
-          >Contact Seller</el-button
-        >
-      </div>
-
-      <!-- Delivery / Address Info -->
-      <div class="info-grid">
-        <div class="address-card card">
-          <h3 class="section-title">Delivery Address</h3>
-          <div class="address-body">
-            <p class="user-name">{{ address.name }}</p>
-            <p class="user-phone">{{ address.phone }}</p>
-            <p class="address-text">{{ address.detail }}</p>
-          </div>
-        </div>
-
-        <div class="timeline-card card">
-          <el-timeline>
-            <el-timeline-item
-              v-for="(item, index) in timeline"
+              v-for="(step, index) in steps"
               :key="index"
-              :timestamp="item.time"
-              placement="top"
-              :type="item.type"
-              :hollow="index !== 0"
+              class="step-item"
+              :class="{ active: step.completed }"
             >
-              <div class="timeline-content">
-                <span class="timeline-title">{{ item.title }}</span>
-                <p class="timeline-desc">{{ item.desc }}</p>
-                <!-- Removals: "View delivery image" link removed -->
+              <div class="step-icon">
+                <el-icon><component :is="step.icon" /></el-icon>
               </div>
-            </el-timeline-item>
-          </el-timeline>
-        </div>
-      </div>
-
-      <!-- Products Section -->
-      <div class="products-section card">
-        <div class="shop-header">
-          <div class="shop-info">
-            <!-- Removals: "Favorite" badge removed -->
-            <span class="shop-name">{{ order.seller?.name || 'Shop' }}</span>
-            <el-button
-              v-if="isLoggedIn"
-              link
-              :icon="ChatDotRound"
-              class="chat-btn"
-              @click="openChat"
-              >Chat</el-button
-            >
-            <el-button link :icon="Shop" class="view-shop-btn">View Shop</el-button>
-          </div>
-        </div>
-
-        <div class="product-list">
-          <div v-for="product in products" :key="product.id" class="product-item">
-            <el-image :src="product.img" class="p-img" fit="cover" />
-            <div class="p-info">
-              <h4 class="p-name">{{ product.name }}</h4>
-              <p class="p-variant">Variant: {{ product.variant }}</p>
-              <p class="p-qty">x{{ product.qty }}</p>
-            </div>
-            <div class="p-prices">
-              <span class="current-price">{{ formatNumberWithDots(product.price) }}₫</span>
+              <div class="step-content">
+                <div class="step-title">{{ step.title }}</div>
+                <div class="step-time">{{ step.time }}</div>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="order-summary-footer">
-          <div class="summary-table">
-            <div class="summary-line total-line">
-              <span class="summary-label">Total Payment</span>
-              <span class="total-value">{{ total }}</span>
+        <!-- Action Banner -->
+        <div class="action-banner card">
+          <p class="banner-text">
+            Please check all products in the order carefully before clicking "Order Received".
+          </p>
+          <div class="banner-actions">
+            <el-button type="primary" class="received-btn">Order Received</el-button>
+          </div>
+        </div>
+
+        <!-- Secondary Actions -->
+        <div class="secondary-actions">
+          <el-button plain class="sec-btn">Return/Refund Request</el-button>
+          <el-button v-if="isLoggedIn" plain class="sec-btn" @click="openChat"
+            >Contact Seller</el-button
+          >
+        </div>
+
+        <!-- Delivery / Address Info -->
+        <div class="info-grid">
+          <div class="address-card card">
+            <h3 class="section-title">Delivery Address</h3>
+            <div class="address-body">
+              <p class="user-name">{{ address.name }}</p>
+              <p class="user-phone">{{ address.phone }}</p>
+              <p class="address-text">{{ address.detail }}</p>
             </div>
-            <div class="summary-line payment-line">
-              <span class="summary-label">Payment Method</span>
-              <span class="payment-value">{{ paymentMethod }}</span>
+          </div>
+
+          <div class="timeline-card card">
+            <el-timeline>
+              <el-timeline-item
+                v-for="(item, index) in timeline"
+                :key="index"
+                :timestamp="item.time"
+                placement="top"
+                :type="item.type"
+                :hollow="index !== 0"
+              >
+                <div class="timeline-content">
+                  <span class="timeline-title">{{ item.title }}</span>
+                  <p class="timeline-desc">{{ item.desc }}</p>
+                  <!-- Removals: "View delivery image" link removed -->
+                </div>
+              </el-timeline-item>
+            </el-timeline>
+          </div>
+        </div>
+
+        <!-- Products Section -->
+        <div class="products-section card">
+          <div class="shop-header">
+            <div class="shop-info">
+              <!-- Removals: "Favorite" badge removed -->
+              <span class="shop-name">{{ order.seller?.name || 'Shop' }}</span>
+              <el-button
+                v-if="isLoggedIn"
+                link
+                :icon="ChatDotRound"
+                class="chat-btn"
+                @click="openChat"
+                >Chat</el-button
+              >
+              <el-button link :icon="Shop" class="view-shop-btn">View Shop</el-button>
+            </div>
+          </div>
+
+          <div class="product-list">
+            <div v-for="product in products" :key="product.id" class="product-item">
+              <el-image :src="product.img" class="p-img" fit="cover" />
+              <div class="p-info">
+                <h4 class="p-name">{{ product.name }}</h4>
+                <p class="p-variant">Variant: {{ product.variant }}</p>
+                <p class="p-qty">x{{ product.qty }}</p>
+              </div>
+              <div class="p-prices">
+                <span class="current-price">{{ formatNumberWithDots(product.price) }}₫</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="order-summary-footer">
+            <div class="summary-table">
+              <div class="summary-line total-line">
+                <span class="summary-label">Total Payment</span>
+                <span class="total-value">{{ total }}</span>
+              </div>
+              <div class="summary-line payment-line">
+                <span class="summary-label">Payment Method</span>
+                <span class="payment-value">{{ paymentMethod }}</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
+
+    <NotFoundView
+      v-else-if="!isLoading && isNotFound"
+      title="Order Not Found"
+      message="The order you are looking for does not exist or has been removed."
+    />
   </div>
 </template>
 

@@ -19,6 +19,7 @@ import ProductSellerInfo from '@/components/ProductSellerInfo.vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import { ElNotification } from 'element-plus'
+import NotFoundView from '@/components/NotFoundView.vue'
 
 interface ProductImage {
   id: string
@@ -779,17 +780,11 @@ const addToCart = async () => {
   >
     <el-icon class="is-loading" size="40"><Loading /></el-icon>
   </div>
-  <div v-else style="height: 100vh; display: flex; align-items: center; justify-content: center">
-    <el-result
-      icon="error"
-      title="Product not found"
-      sub-title="Please check the URL or try again later"
-    >
-      <template #extra>
-        <el-button type="primary" @click="$router.push('/')">Back to Home</el-button>
-      </template>
-    </el-result>
-  </div>
+  <NotFoundView
+    v-else
+    title="Product Not Found"
+    message="The product you are looking for does not exist or has been removed."
+  />
 </template>
 
 <style lang="css" scoped>

@@ -24,7 +24,6 @@ import UserView from '@/views/admin/UserView.vue'
 import ReportView from '@/views/admin/ReportView.vue'
 import ProfileView from '@/components/profile/ProfileView.vue'
 import OrderTrackingView from '@/views/customer/OrderTrackingView/OrderTrackingView.vue'
-import MyOrder from '@/views/customer/ProfileView/components/MyOrder.vue'
 import CustomerLayout from '@/views/customer/CustomerLayout.vue'
 
 const loginFormProps = {
@@ -230,6 +229,12 @@ const router = createRouter({
           props: { role: 'admin' },
         },
       ],
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'NotFound',
+      component: () => import('@/components/NotFoundView.vue'),
+      props: { hasHeader: false },
     },
   ],
 })

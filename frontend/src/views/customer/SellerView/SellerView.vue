@@ -6,6 +6,7 @@ import SellerHeader from './components/SellerHeader.vue'
 import SellerVouchers from './components/SellerVouchers.vue'
 import SellerRecommendations from './components/SellerRecommendations.vue'
 import ProductList from '@/components/ProductList.vue'
+import NotFoundView from '@/components/NotFoundView.vue'
 
 const route = useRoute()
 const sellerId = computed(() => route.params.sellerId as string)
@@ -31,6 +32,7 @@ const products = ref<any[]>([])
 const vouchers = ref<any[]>([])
 const savedVoucherIds = ref<string[]>([])
 const isLoading = ref(false)
+const isNotFound = ref(false)
 const isFollowLoading = ref(false)
 const totalItems = ref(0)
 const currentPage = ref(1)
@@ -55,6 +57,7 @@ const fetchSellerInfo = async () => {
   if (!sellerId.value) return
   const token = localStorage.getItem('access_token')
   const headers = token ? { Authorization: `Bearer ${token}` } : {}
+  isNotFound.value = false
   try {
     const response = await axios.get(
       `${import.meta.env.VITE_BE_API_URL}/user/public/seller/${sellerId.value}`,
@@ -63,7 +66,10 @@ const fetchSellerInfo = async () => {
     if (response.data && response.data.data) {
       sellerInfo.value = response.data.data
     }
-  } catch (error) {
+  } catch (error: any) {
+    if (error.response?.status === 404 || error.response?.status === 500) {
+      isNotFound.value = true
+    }
     console.error('Error fetching seller info:', error)
   }
 }
@@ -266,7 +272,7 @@ const pagination = computed(() => ({
 
 <template>
   <div class="seller-page">
-    <main class="seller-main">
+    <main v-if="!isNotFound" class="seller-main">
       <SellerHeader
         v-if="sellerInfo"
         :seller-info="sellerInfo"
@@ -308,6 +314,12 @@ const pagination = computed(() => ({
         </ProductList>
       </div>
     </main>
+
+    <NotFoundView
+      v-else
+      title="Seller Not Found"
+      message="The seller you are looking for does not exist or has been deactivated."
+    />
   </div>
 </template>
 
