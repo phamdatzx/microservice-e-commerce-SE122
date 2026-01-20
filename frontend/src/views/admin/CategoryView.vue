@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Delete, Edit, Plus, Search } from '@element-plus/icons-vue'
+import { Delete, Edit, Loading, Picture, Plus, Search } from '@element-plus/icons-vue'
 import axios from 'axios'
 import {
   ElLoading,
@@ -8,7 +8,7 @@ import {
   type FormInstance,
   type FormRules,
 } from 'element-plus'
-import { onMounted, reactive, ref, computed } from 'vue'
+import { onMounted, reactive, ref, computed, watch } from 'vue'
 
 interface AdminCategory {
   id: string
@@ -17,14 +17,7 @@ interface AdminCategory {
   productCount: number
 }
 
-// Reuse similar API structure or Mock it since user said "General Category Management"
-// Assuming there is a general category API or we simulate it.
-// Since I don't have the exact Admin API endpoints, I'll use the Seller one as a base but populate with mock data for Image/Count.
-
-const userId = ref('7d27d61d-8cb3-4ef9-a9ff-0a92f217855b')
-// Ideally this should use an Admin Token
-const token =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjY4Mjc1MDYsImlhdCI6MTc2Njc0MTEwNiwicm9sZSI6InNlbGxlciIsInVzZXJJZCI6IjdkMjdkNjFkLThjYjMtNGVmOS1hOWZmLTBhOTJmMjE3ODU1YiIsInVzZXJuYW1lIjoidGVzdDEifQ.cCs5gwsDkDVZZrnHHmeTFGmuleu9RR2Ieke8pYaRH_s'
+const token = localStorage.getItem('access_token') || ''
 
 const categoryData = ref<AdminCategory[]>([])
 const dialogVisible = ref(false)
@@ -35,6 +28,7 @@ const dialogContent = ref({
 })
 const isLoading = ref(false)
 const searchQuery = ref('')
+const selectedFile = ref<File | null>(null)
 
 onMounted(() => {
   fetchCategories()
@@ -42,59 +36,48 @@ onMounted(() => {
 
 const fetchCategories = () => {
   isLoading.value = true
-  // Using seller API for demo, replacing with mock data for missing fields
   axios
-    .get(import.meta.env.VITE_BE_API_URL + '/product/public/seller/' + userId.value + '/category')
+    .get(import.meta.env.VITE_BE_API_URL + '/product/public/category', {
+      params: { name: searchQuery.value },
+    })
     .then((response) => {
-      // Map response to AdminCategory with Mock Data
-      categoryData.value = response.data.map((item: any, index: number) => ({
-        id: item.id || `cat-${index}`,
+      categoryData.value = response.data.map((item: any) => ({
+        id: item.id,
         name: item.name,
-        // Mock Image
-        image: `https://picsum.photos/seed/${index}/200/200`,
-        // Mock Product Count
-        productCount: Math.floor(Math.random() * 50) + 1,
+        image: item.image,
+        productCount: item.product_count || 0,
       }))
     })
     .catch((error) => {
-      console.error(error)
-      // Fallback Mock data if API fails or is empty
-      categoryData.value = [
-        {
-          id: '1',
-          name: 'Electronics',
-          image: 'https://picsum.photos/seed/elec/200/200',
-          productCount: 120,
-        },
-        {
-          id: '2',
-          name: 'Fashion',
-          image: 'https://picsum.photos/seed/fash/200/200',
-          productCount: 85,
-        },
-        {
-          id: '3',
-          name: 'Home & Living',
-          image: 'https://picsum.photos/seed/home/200/200',
-          productCount: 42,
-        },
-      ]
+      console.error('Failed to fetch categories:', error)
+      ElNotification({
+        title: 'Error',
+        message: 'Failed to load categories',
+        type: 'error',
+      })
     })
     .finally(() => {
       isLoading.value = false
     })
 }
 
-const currentPage = ref(1)
-const pageSize = ref(10)
-
-const filteredData = computed(() => {
-  if (!searchQuery.value) return categoryData.value
-  return categoryData.value.filter((category) =>
-    category.name.toLowerCase().includes(searchQuery.value.toLowerCase()),
-  )
+let searchTimeout: any = null
+watch(searchQuery, () => {
+  if (searchTimeout) clearTimeout(searchTimeout)
+  searchTimeout = setTimeout(() => {
+    // currentPage.value = 1
+    fetchCategories()
+  }, 300)
 })
 
+// const currentPage = ref(1)
+// const pageSize = ref(10)
+
+const filteredData = computed(() => {
+  return categoryData.value
+})
+
+/*
 const paginatedData = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value
   const end = start + pageSize.value
@@ -109,10 +92,10 @@ const handleSizeChange = (val: number) => {
 const handleCurrentChange = (val: number) => {
   currentPage.value = val
 }
+*/
 
 const fileInput = ref<HTMLInputElement | null>(null)
 const imagePreview = ref<string>('')
-// ... existing code ...
 
 const handleUploadClick = () => {
   fileInput.value?.click()
@@ -121,19 +104,20 @@ const handleUploadClick = () => {
 const handleFileChange = (event: Event) => {
   const target = event.target as HTMLInputElement
   if (target.files && target.files[0]) {
-    const file = target.files[0]
+    selectedFile.value = target.files[0]
     const reader = new FileReader()
     reader.onload = (e) => {
       imagePreview.value = e.target?.result as string
     }
-    reader.readAsDataURL(file)
+    reader.readAsDataURL(selectedFile.value)
   }
 }
 
 const openModal = (mode: 'add' | 'edit', row?: AdminCategory) => {
   dialogMode.value = mode
   dialogVisible.value = true
-  imagePreview.value = '' // Reset preview
+  imagePreview.value = ''
+  selectedFile.value = null
 
   if (mode === 'add') {
     dialogContent.value = {
@@ -148,48 +132,89 @@ const openModal = (mode: 'add' | 'edit', row?: AdminCategory) => {
     }
     ruleForm.category = row.name
     ruleForm.id = row.id
-    imagePreview.value = row.image // Show existing image
+    imagePreview.value = row.image
   }
 }
 
 const handleAddCategory = () => {
-  // Mock Implementation
-  ElNotification({
-    title: 'Success!',
-    message: `Category "${ruleForm.category}" added.`,
-    type: 'success',
-  })
-  categoryData.value.push({
-    id: Date.now().toString(),
-    name: ruleForm.category,
-    image: imagePreview.value || 'https://placehold.co/200x200?text=New',
-    productCount: 0,
-  })
-  dialogVisible.value = false
-  clearRuleForm()
+  const loading = ElLoading.service({ text: 'Adding category...' })
+  const formData = new FormData()
+  formData.append('name', ruleForm.category)
+  if (selectedFile.value) {
+    formData.append('image', selectedFile.value)
+  }
+
+  axios
+    .post(import.meta.env.VITE_BE_API_URL + '/product/category', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    .then(() => {
+      ElNotification({
+        title: 'Success!',
+        message: `Category "${ruleForm.category}" added.`,
+        type: 'success',
+      })
+      fetchCategories()
+      dialogVisible.value = false
+      clearRuleForm()
+    })
+    .catch((error) => {
+      console.error('Failed to add category:', error)
+      ElNotification({
+        title: 'Error',
+        message: error.response?.data?.message || 'Failed to add category',
+        type: 'error',
+      })
+    })
+    .finally(() => {
+      loading.close()
+    })
 }
 
 const handleEditCategory = () => {
-  // Mock Implementation
-  const index = categoryData.value.findIndex((c) => c.id === ruleForm.id)
-  if (index !== -1) {
-    categoryData.value[index].name = ruleForm.category
-    if (imagePreview.value) {
-      categoryData.value[index].image = imagePreview.value
-    }
+  const loading = ElLoading.service({ text: 'Updating category...' })
+  const formData = new FormData()
+  formData.append('name', ruleForm.category)
+  if (selectedFile.value) {
+    formData.append('image', selectedFile.value)
   }
-  ElNotification({
-    title: 'Success!',
-    message: `Category updated.`,
-    type: 'success',
-  })
-  dialogVisible.value = false
-  clearRuleForm()
+
+  axios
+    .put(import.meta.env.VITE_BE_API_URL + `/product/category/${ruleForm.id}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    .then(() => {
+      ElNotification({
+        title: 'Success!',
+        message: `Category updated.`,
+        type: 'success',
+      })
+      fetchCategories()
+      dialogVisible.value = false
+      clearRuleForm()
+    })
+    .catch((error) => {
+      console.error('Failed to update category:', error)
+      ElNotification({
+        title: 'Error',
+        message: error.response?.data?.message || 'Failed to update category',
+        type: 'error',
+      })
+    })
+    .finally(() => {
+      loading.close()
+    })
 }
 
 const handleDeleteBtnClick = (row: AdminCategory) => {
   ElMessageBox.confirm(
-    `Delete category "${row.name}" with ${row.productCount} products?`,
+    `Are you sure you want to delete category "${row.name}"? This action cannot be undone.`,
     'Confirm Delete',
     {
       type: 'warning',
@@ -197,13 +222,32 @@ const handleDeleteBtnClick = (row: AdminCategory) => {
       cancelButtonText: 'Cancel',
     },
   ).then(() => {
-    // Mock Delete
-    categoryData.value = categoryData.value.filter((c) => c.id !== row.id)
-    ElNotification({
-      title: 'Success',
-      message: 'Category deleted',
-      type: 'success',
-    })
+    const loading = ElLoading.service({ text: 'Deleting category...' })
+    axios
+      .delete(import.meta.env.VITE_BE_API_URL + `/product/category/${row.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      .then(() => {
+        ElNotification({
+          title: 'Success',
+          message: 'Category deleted',
+          type: 'success',
+        })
+        fetchCategories()
+      })
+      .catch((error) => {
+        console.error('Failed to delete category:', error)
+        ElNotification({
+          title: 'Error',
+          message: error.response?.data?.message || 'Failed to delete category',
+          type: 'error',
+        })
+      })
+      .finally(() => {
+        loading.close()
+      })
   })
 }
 
@@ -258,18 +302,53 @@ const clearRuleForm = () => {
       </div>
     </div>
 
-    <el-table v-loading="isLoading" :data="paginatedData" border style="width: 100%">
+    <el-table v-loading="isLoading" :data="filteredData" border style="width: 100%">
       <el-table-column type="index" label="#" width="60" align="center" />
 
       <el-table-column label="Image" width="120" align="center">
         <template #default="{ row }">
           <el-image
             style="width: 50px; height: 50px; border-radius: 4px"
-            :src="row.image"
+            :src="row.image || 'https://placehold.co/200x200?text=No+Image'"
             fit="cover"
-            :preview-src-list="[row.image]"
+            :preview-src-list="[row.image || 'https://placehold.co/200x200?text=No+Image']"
             preview-teleported
-          />
+          >
+            <template #placeholder>
+              <div
+                class="image-slot"
+                style="
+                  background: #f5f7fa;
+                  display: flex;
+                  justify-content: center;
+                  align-items: center;
+                  width: 100%;
+                  height: 100%;
+                  border-radius: 4px;
+                "
+              >
+                <el-icon class="is-loading"><Loading /></el-icon>
+              </div>
+            </template>
+            <template #error>
+              <div
+                class="image-slot"
+                style="
+                  background: #f5f7fa;
+                  color: #909399;
+                  font-size: 20px;
+                  display: flex;
+                  justify-content: center;
+                  align-items: center;
+                  width: 100%;
+                  height: 100%;
+                  border-radius: 4px;
+                "
+              >
+                <el-icon><Picture /></el-icon>
+              </div>
+            </template>
+          </el-image>
         </template>
       </el-table-column>
 
@@ -293,6 +372,7 @@ const clearRuleForm = () => {
       </el-table-column>
     </el-table>
 
+    <!--
     <div class="pagination-container">
       <el-pagination
         v-model:current-page="currentPage"
@@ -304,6 +384,7 @@ const clearRuleForm = () => {
         @current-change="handleCurrentChange"
       />
     </div>
+    -->
 
     <!-- Dialog -->
     <el-dialog

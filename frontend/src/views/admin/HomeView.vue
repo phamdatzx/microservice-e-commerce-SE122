@@ -1,5 +1,19 @@
 <script setup lang="ts">
-import { ArrowDown, ArrowRight, Menu, User, Warning } from '@element-plus/icons-vue'
+import { ArrowRight, Menu, User, Warning } from '@element-plus/icons-vue'
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+import UserAvatarDropdown from '@/components/UserAvatarDropdown.vue'
+
+const route = useRoute()
+
+const activeIndex = computed(() => {
+  const path = route.path
+  if (path.includes('/admin/category')) return '1'
+  if (path.includes('/admin/users')) return '2'
+  if (path.includes('/admin/report')) return '3'
+  if (path.includes('/admin/profile')) return '4'
+  return '1'
+})
 
 const handleOpen = (key: string, keyPath: string[]) => {
   console.log(key, keyPath)
@@ -47,22 +61,18 @@ const handleClose = (key: string, keyPath: string[]) => {
               </div>
             </div>
 
-            <div class="user-section">
-              <img
-                src="https://placehold.co/40x40"
-                alt="User Avatar"
-                class="user-avatar"
-                style="border-radius: 100%"
-              />
-              <span>Admin User</span>
-              <el-icon><ArrowDown /></el-icon>
-            </div>
+            <UserAvatarDropdown role="admin" :show-address="false" style="margin-right: 20px" />
           </div>
         </div>
       </el-header>
       <el-container style="height: calc(100vh - 64px)">
         <el-aside width="200px" style="margin-top: 3px">
-          <el-menu default-active="1" @open="handleOpen" @close="handleClose" style="height: 100%">
+          <el-menu
+            :default-active="activeIndex"
+            @open="handleOpen"
+            @close="handleClose"
+            style="height: 100%"
+          >
             <RouterLink to="/admin/category">
               <el-menu-item index="1">
                 <el-icon><Menu /></el-icon>
@@ -79,6 +89,12 @@ const handleClose = (key: string, keyPath: string[]) => {
               <el-menu-item index="3">
                 <el-icon><Warning /></el-icon>
                 <span>Report</span>
+              </el-menu-item>
+            </RouterLink>
+            <RouterLink to="/admin/profile">
+              <el-menu-item index="4">
+                <el-icon><User /></el-icon>
+                <span>Profile</span>
               </el-menu-item>
             </RouterLink>
           </el-menu>
@@ -198,19 +214,5 @@ a {
 .breadcrumb-current {
   color: #333;
   font-weight: 600;
-}
-
-/* User section */
-.user-section {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  padding: 12px 16px;
-
-  &:hover {
-    background-color: #f5f5f5;
-  }
 }
 </style>

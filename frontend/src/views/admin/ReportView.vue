@@ -1,159 +1,226 @@
 <script setup lang="ts">
 import {
-  Search,
+  ArrowLeft,
   CircleCheck,
   CircleClose,
-  View,
-  More,
-  Lock,
   Delete,
-  UserFilled,
+  Lock,
+  Unlock,
   Warning,
 } from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { computed, onMounted, ref } from 'vue'
+import axios from 'axios'
+import { ElLoading, ElMessage, ElMessageBox } from 'element-plus'
+import { computed, onMounted, ref, watch } from 'vue'
 
-interface ReportDetail {
+interface User {
   id: string
-  reporterName: string
-  reporterAvatar?: string
-  violationType:
-    | 'Fake Goods'
-    | 'Prohibited Content'
-    | 'Offensive Image'
-    | 'Scam/Fake Price'
-    | 'Other'
-  orderId?: string
-  description?: string
-  createdAt: string
+  name: string
+  email: string
+  avatar: string
 }
 
-interface ReportedProduct {
+interface Product {
   id: string
-  productName: string
-  productImage: string
-  sellerName: string
-  reportCount: number
-  status: 'Pending' | 'Resolved' | 'Rejected'
-  reports: ReportDetail[]
+  name: string
+  images: { id: string; url: string }[]
+  seller_id: string
+  is_disabled: boolean
 }
-// #endregion
 
-const reportedProducts = ref<ReportedProduct[]>([])
+interface Report {
+  id: string
+  product_id: string
+  variant_id: string
+  user: User
+  reason: string
+  description: string
+  status: 'pending' | 'reviewed' | 'resolved' | 'rejected'
+  created_at: string
+}
+
+const token = localStorage.getItem('access_token') || ''
+const viewMode = ref<'list' | 'detail'>('list')
+const reports = ref<Report[]>([])
 const isLoading = ref(false)
-const searchQuery = ref('')
 const statusFilter = ref('')
-const dialogVisible = ref(false)
-const selectedProduct = ref<ReportedProduct | null>(null)
 const currentPage = ref(1)
 const pageSize = ref(10)
-// #endregion
+const totalReports = ref(0)
+
+// Detail View State
+const selectedReport = ref<Report | null>(null)
+const productInfo = ref<Product | null>(null)
+const relatedReports = ref<Report[]>([])
+const isDetailLoading = ref(false)
+const relatedCurrentPage = ref(1)
+const relatedPageSize = ref(10)
+const relatedTotalReports = ref(0)
 
 onMounted(() => {
-  fetchReportedProducts()
+  fetchReports()
 })
 
-const fetchReportedProducts = () => {
+const fetchReports = () => {
   isLoading.value = true
-  // Simulate API delay
-  setTimeout(() => {
-    reportedProducts.value = Array.from({ length: 20 }).map((_, index) => {
-      const id = `RP-${1000 + index}`
-      const status = index % 3 === 0 ? 'Resolved' : index % 2 === 0 ? 'Rejected' : 'Pending'
-      return {
-        id,
-        productName: `Product Sample ${index + 1} - High Quality Item`,
-        productImage: `https://picsum.photos/seed/${index + 100}/100/100`,
-        sellerName: `Seller ${index + 1}`,
-        reportCount: Math.floor(Math.random() * 20) + 1,
-        status: status as any,
-        reports: Array.from({ length: Math.floor(Math.random() * 5) + 1 }).map((__, rIndex) => ({
-          id: `R-${id}-${rIndex}`,
-          reporterName: `User Reporter ${rIndex + 1}`,
-          reporterAvatar: `https://i.pravatar.cc/150?u=${id}-${rIndex}`,
-          violationType:
-            rIndex % 2 === 0
-              ? 'Fake Goods'
-              : rIndex % 3 === 0
-                ? 'Offensive Image'
-                : 'Scam/Fake Price',
-          orderId: rIndex % 2 === 0 ? `ORD-${Date.now()}-${rIndex}` : undefined,
-          description: 'This item looks very suspicious and does not match description.',
-          createdAt: new Date().toISOString().split('T')[0],
-        })),
-      }
+  axios
+    .get(import.meta.env.VITE_BE_API_URL + '/product/report', {
+      params: {
+        page: currentPage.value,
+        limit: pageSize.value,
+        status: statusFilter.value || undefined,
+      },
+      headers: { Authorization: `Bearer ${token}` },
     })
-    isLoading.value = false
-  }, 600)
+    .then((res) => {
+      reports.value = res.data.reports || []
+      totalReports.value = res.data.total || 0
+    })
+    .catch((err) => {
+      console.error('Failed to fetch reports:', err)
+      ElMessage.error('Failed to load reports')
+    })
+    .finally(() => {
+      isLoading.value = false
+    })
 }
-// #endregion
 
-const filteredData = computed(() => {
-  let data = reportedProducts.value
+watch([currentPage, pageSize, statusFilter], () => {
+  fetchReports()
+})
 
-  // Search
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
-    data = data.filter(
-      (item) =>
-        item.productName.toLowerCase().includes(query) || item.id.toLowerCase().includes(query),
+const handleViewDetail = async (report: Report) => {
+  selectedReport.value = report
+  viewMode.value = 'detail'
+  isDetailLoading.value = true
+
+  try {
+    // Fetch product info
+    const productRes = await axios.get(
+      import.meta.env.VITE_BE_API_URL + `/product/public/${report.product_id}`,
     )
+    productInfo.value = productRes.data
+
+    // Fetch related reports
+    await fetchRelatedReports()
+  } catch (err) {
+    console.error('Failed to fetch detail info:', err)
+    ElMessage.error('Failed to load product or related reports')
+  } finally {
+    isDetailLoading.value = false
   }
-
-  // Filter
-  if (statusFilter.value) {
-    data = data.filter((item) => item.status === statusFilter.value)
-  }
-
-  // Sort by Report Count (Desc default)
-  data.sort((a, b) => b.reportCount - a.reportCount)
-
-  return data
-})
-
-const paginatedData = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  return filteredData.value.slice(start, end)
-})
-// #endregion
-
-const handleViewDetails = (row: ReportedProduct) => {
-  selectedProduct.value = row
-  dialogVisible.value = true
 }
 
-const handleAction = (command: string, row: ReportedProduct) => {
-  if (command === 'remove') {
-    ElMessageBox.confirm(`Remove product "${row.productName}"?`, 'Confirm Removal', {
-      type: 'warning',
-    }).then(() => {
-      ElMessage.success('Product removed')
-    })
-  } else if (command === 'lock') {
-    ElMessage.info('Product locked')
-  } else if (command === 'ban') {
-    ElMessageBox.confirm(`Ban seller "${row.sellerName}"?`, 'Confirm Ban', {
-      type: 'error',
-    }).then(() => {
-      ElMessage.error('Seller banned')
-    })
-  } else if (command === 'warn') {
-    ElMessage.warning('Warning sent to seller')
-  } else if (command === 'reject') {
-    row.status = 'Rejected'
-    ElMessage.info('Reports rejected')
-  } else if (command === 'resolve') {
-    row.status = 'Resolved'
-    ElMessage.success('Marked as resolved')
+const fetchRelatedReports = async () => {
+  if (!selectedReport.value) return
+  try {
+    const relatedRes = await axios.get(
+      import.meta.env.VITE_BE_API_URL +
+        `/product/report/product/${selectedReport.value.product_id}`,
+      {
+        params: {
+          page: relatedCurrentPage.value,
+          limit: relatedPageSize.value,
+        },
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    )
+    relatedReports.value = (relatedRes.data.reports || []).filter(
+      (r: Report) => r.id !== selectedReport.value?.id,
+    )
+    relatedTotalReports.value = relatedRes.data.total || 0
+  } catch (err) {
+    console.error('Failed to fetch related reports:', err)
+    ElMessage.error('Failed to load related reports')
   }
+}
+
+watch([relatedCurrentPage, relatedPageSize], () => {
+  if (viewMode.value === 'detail') {
+    fetchRelatedReports()
+  }
+})
+
+const handleStatusUpdate = (reportId: string, status: string) => {
+  const loading = ElLoading.service({ text: 'Updating status...' })
+  axios
+    .put(
+      import.meta.env.VITE_BE_API_URL + `/product/report/${reportId}/status`,
+      { status },
+      { headers: { Authorization: `Bearer ${token}` } },
+    )
+    .then(() => {
+      ElMessage.success(`Report ${status} successfully`)
+      if (selectedReport.value && selectedReport.value.id === reportId) {
+        selectedReport.value.status = status as any
+      }
+      fetchReports()
+    })
+    .catch((err) => {
+      console.error('Failed to update status:', err)
+      ElMessage.error('Failed to update status')
+    })
+    .finally(() => {
+      loading.close()
+    })
+}
+
+const handleToggleProductDisable = () => {
+  if (!productInfo.value) return
+  const isDisabled = !productInfo.value.is_disabled
+  const action = isDisabled ? 'disable' : 'enable'
+
+  ElMessageBox.prompt(`Please provide a reason to ${action} this product:`, `Confirm ${action}`, {
+    confirmButtonText: action.charAt(0).toUpperCase() + action.slice(1),
+    cancelButtonText: 'Cancel',
+    inputPattern: /.+/,
+    inputErrorMessage: 'Reason is required',
+  }).then(({ value }) => {
+    const loading = ElLoading.service({ text: `${action}ing product...` })
+    axios
+      .put(
+        import.meta.env.VITE_BE_API_URL + `/product/${productInfo.value!.id}/disable`,
+        { is_disabled: isDisabled, reason: value },
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .then(() => {
+        ElMessage.success(`Product ${action}d successfully`)
+        productInfo.value!.is_disabled = isDisabled
+      })
+      .catch((err) => {
+        console.error(`Failed to ${action} product:`, err)
+        ElMessage.error(`Failed to ${action} product`)
+      })
+      .finally(() => {
+        loading.close()
+      })
+  })
+}
+
+const formatDate = (dateStr: string) => {
+  if (!dateStr) return 'N/A'
+  return new Date(dateStr).toLocaleString()
+}
+
+const getReasonLabel = (reason: string) => {
+  const labels: Record<string, string> = {
+    fake_product: 'Fake Product',
+    quality_issue: 'Quality Issue',
+    misleading_description: 'Misleading Description',
+    counterfeit: 'Counterfeit',
+    damaged_product: 'Damaged Product',
+    other: 'Other',
+  }
+  return labels[reason] || reason
 }
 
 const getStatusType = (status: string) => {
-  if (status === 'Pending') return 'warning'
-  if (status === 'Resolved') return 'success'
-  if (status === 'Rejected') return 'info'
-  return ''
+  const types: Record<string, string> = {
+    pending: 'warning',
+    reviewed: 'info',
+    resolved: 'success',
+    rejected: 'danger',
+  }
+  return types[status] || 'info'
 }
 
 const handleSizeChange = (val: number) => {
@@ -164,161 +231,227 @@ const handleSizeChange = (val: number) => {
 const handleCurrentChange = (val: number) => {
   currentPage.value = val
 }
-// #endregion
+
+const goBack = () => {
+  viewMode.value = 'list'
+  selectedReport.value = null
+  productInfo.value = null
+  relatedReports.value = []
+}
 </script>
 
 <template>
   <div class="report-management-view">
-    <div class="toolbar">
-      <h2>Report Management</h2>
-      <div class="actions">
-        <el-select
-          v-model="statusFilter"
-          placeholder="Filter by Status"
-          clearable
-          style="width: 160px"
-        >
-          <el-option label="Pending" value="Pending" />
-          <el-option label="Resolved" value="Resolved" />
-          <el-option label="Rejected" value="Rejected" />
-        </el-select>
-        <el-input
-          v-model="searchQuery"
-          placeholder="Search product or ID..."
-          :prefix-icon="Search"
-          style="width: 250px"
-          clearable
+    <!-- List View -->
+    <div v-if="viewMode === 'list'">
+      <div class="toolbar">
+        <h2>Report Management</h2>
+        <div class="actions">
+          <el-select
+            v-model="statusFilter"
+            placeholder="Filter by Status"
+            clearable
+            style="width: 160px"
+          >
+            <el-option label="Pending" value="pending" />
+            <el-option label="Resolved" value="resolved" />
+            <el-option label="Rejected" value="rejected" />
+          </el-select>
+        </div>
+      </div>
+
+      <el-table v-loading="isLoading" :data="reports" border style="width: 100%">
+        <el-table-column prop="id" label="Report ID" min-width="120" sortable />
+
+        <el-table-column prop="product_id" label="Product ID" min-width="120" />
+
+        <el-table-column label="Reporter" min-width="180">
+          <template #default="{ row }">
+            <div class="user-cell">
+              <el-avatar :size="32" :src="row.user.avatar" />
+              <span>{{ row.user.name }}</span>
+            </div>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="Reason" width="180">
+          <template #default="{ row }">
+            <el-tag type="danger" effect="plain">{{ getReasonLabel(row.reason) }}</el-tag>
+          </template>
+        </el-table-column>
+
+        <el-table-column prop="status" label="Status" width="120" align="center">
+          <template #default="{ row }">
+            <el-tag :type="getStatusType(row.status)">{{ row.status.toUpperCase() }}</el-tag>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="Actions" width="150" align="center">
+          <template #default="{ row }">
+            <el-button type="primary" link @click="handleViewDetail(row)"> Details </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <div class="pagination-container">
+        <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :page-sizes="[10, 20, 50]"
+          layout="total, sizes, prev, pager, next, jumper"
+          :total="totalReports"
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
         />
       </div>
     </div>
 
-    <el-table v-loading="isLoading" :data="paginatedData" border style="width: 100%">
-      <el-table-column prop="id" label="ID" width="100" sortable />
+    <!-- Detail View -->
+    <div v-else-if="viewMode === 'detail'" v-loading="isDetailLoading">
+      <div class="detail-header">
+        <el-button :icon="ArrowLeft" @click="goBack">Back to List</el-button>
+        <h2>Report Detail</h2>
+      </div>
 
-      <el-table-column label="Product" min-width="250">
-        <template #default="{ row }">
-          <div class="product-cell">
+      <div v-if="selectedReport" class="detail-container">
+        <!-- Product Section -->
+        <div class="detail-section product-section">
+          <h3>Product Information</h3>
+          <div v-if="productInfo" class="product-card">
             <el-image
-              style="width: 50px; height: 50px; border-radius: 4px"
-              :src="row.productImage"
+              class="product-image"
+              :src="productInfo.images?.[0]?.url"
               fit="cover"
+              :preview-src-list="[productInfo.images?.[0]?.url]"
               preview-teleported
-              :preview-src-list="[row.productImage]"
             />
-            <div class="product-info">
-              <span class="product-name">{{ row.productName }}</span>
-              <span class="seller-name">Seller: {{ row.sellerName }}</span>
+            <div class="product-meta">
+              <div class="name-row">
+                <h4>{{ productInfo.name }}</h4>
+                <el-tag :type="productInfo.is_disabled ? 'danger' : 'success'">
+                  {{ productInfo.is_disabled ? 'DISABLED' : 'ACTIVE' }}
+                </el-tag>
+              </div>
+              <p>ID: {{ productInfo.id }}</p>
+              <p>Seller ID: {{ productInfo.seller_id }}</p>
+
+              <div class="product-actions">
+                <el-button
+                  :type="productInfo.is_disabled ? 'success' : 'danger'"
+                  :icon="productInfo.is_disabled ? Unlock : Lock"
+                  @click="handleToggleProductDisable"
+                >
+                  {{ productInfo.is_disabled ? 'Enable Product' : 'Disable Product' }}
+                </el-button>
+              </div>
             </div>
           </div>
-        </template>
-      </el-table-column>
-
-      <el-table-column prop="reportCount" label="Reports" width="120" sortable align="center">
-        <template #default="{ row }">
-          <el-tag type="danger" effect="plain" round>{{ row.reportCount }}</el-tag>
-        </template>
-      </el-table-column>
-
-      <el-table-column prop="status" label="Status" width="120" align="center">
-        <template #default="{ row }">
-          <el-tag :type="getStatusType(row.status)">{{ row.status }}</el-tag>
-        </template>
-      </el-table-column>
-
-      <el-table-column label="Actions" width="200" align="center">
-        <template #default="{ row }">
-          <div class="action-buttons">
-            <el-button type="primary" link :icon="View" @click="handleViewDetails(row)">
-              Details
-            </el-button>
-            <el-dropdown trigger="click" @command="(cmd: string) => handleAction(cmd, row)">
-              <el-button type="primary" link style="margin-left: 10px">
-                <el-icon size="large">
-                  <More />
-                </el-icon>
-              </el-button>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item command="resolve" :icon="CircleCheck"
-                    >Mark Resolved</el-dropdown-item
-                  >
-                  <el-dropdown-item command="reject" :icon="CircleClose"
-                    >Reject Reports</el-dropdown-item
-                  >
-                  <el-dropdown-item divided command="warn" :icon="Warning"
-                    >Warn Seller</el-dropdown-item
-                  >
-                  <el-dropdown-item command="lock" :icon="Lock">Lock Product</el-dropdown-item>
-                  <el-dropdown-item command="remove" :icon="Delete" style="color: red"
-                    >Remove Product</el-dropdown-item
-                  >
-                  <el-dropdown-item command="ban" :icon="UserFilled" style="color: red"
-                    >Ban Seller</el-dropdown-item
-                  >
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
-          </div>
-        </template>
-      </el-table-column>
-    </el-table>
-
-    <div class="pagination-container">
-      <el-pagination
-        v-model:current-page="currentPage"
-        v-model:page-size="pageSize"
-        :page-sizes="[10, 20, 50]"
-        layout="total, sizes, prev, pager, next, jumper"
-        :total="filteredData.length"
-        @size-change="handleSizeChange"
-        @current-change="handleCurrentChange"
-      />
-    </div>
-
-    <!-- Details Dialog -->
-    <el-dialog
-      v-model="dialogVisible"
-      title="Report Details"
-      width="700px"
-      align-center
-      destroy-on-close
-    >
-      <div v-if="selectedProduct">
-        <div class="report-header">
-          <el-image class="report-product-img" :src="selectedProduct.productImage" fit="cover" />
-          <div class="report-product-info">
-            <h3>{{ selectedProduct.productName }}</h3>
-            <p>ID: {{ selectedProduct.id }}</p>
-            <el-tag :type="getStatusType(selectedProduct.status)">{{
-              selectedProduct.status
-            }}</el-tag>
-          </div>
+          <el-skeleton v-else animated />
         </div>
 
-        <el-divider content-position="left">User Reports</el-divider>
+        <div class="detail-grid">
+          <!-- Current Report section -->
+          <div class="detail-section">
+            <h3>Current Report</h3>
+            <div class="report-card main-report">
+              <div class="report-user-info">
+                <el-avatar :size="48" :src="selectedReport.user.avatar" />
+                <div class="user-text">
+                  <strong>{{ selectedReport.user.name }}</strong>
+                  <span>{{ selectedReport.user.email }}</span>
+                </div>
+                <div class="report-date">{{ formatDate(selectedReport.created_at) }}</div>
+              </div>
 
-        <div class="reports-list">
-          <div v-for="report in selectedProduct.reports" :key="report.id" class="report-item">
-            <div class="report-user">
-              <el-avatar :size="32" :src="report.reporterAvatar" />
-              <div class="user-meta">
-                <span class="username">{{ report.reporterName }}</span>
-                <span class="date">{{ report.createdAt }}</span>
+              <div class="report-body">
+                <div class="report-tag">
+                  <strong>Reason:</strong>
+                  <el-tag type="danger">{{ getReasonLabel(selectedReport.reason) }}</el-tag>
+                </div>
+                <div class="report-description">
+                  <strong>Description:</strong>
+                  <p>{{ selectedReport.description || 'No description provided' }}</p>
+                </div>
+              </div>
+
+              <div class="report-footer">
+                <div class="status-actions">
+                  <span style="margin-right: 12px">Current Status:</span>
+                  <el-tag :type="getStatusType(selectedReport.status)">{{
+                    selectedReport.status.toUpperCase()
+                  }}</el-tag>
+
+                  <div class="action-buttons">
+                    <el-button
+                      type="success"
+                      :icon="CircleCheck"
+                      @click="handleStatusUpdate(selectedReport!.id, 'resolved')"
+                      :disabled="selectedReport.status === 'resolved'"
+                    >
+                      Resolve
+                    </el-button>
+                    <el-button
+                      type="danger"
+                      :icon="CircleClose"
+                      @click="handleStatusUpdate(selectedReport!.id, 'rejected')"
+                      :disabled="selectedReport.status === 'rejected'"
+                    >
+                      Reject
+                    </el-button>
+                  </div>
+                </div>
               </div>
             </div>
-            <div class="report-content">
-              <div class="tags">
-                <el-tag size="small" effect="dark" type="danger">{{ report.violationType }}</el-tag>
-                <el-tag v-if="report.orderId" size="small" type="info"
-                  >Order: {{ report.orderId }}</el-tag
-                >
+          </div>
+
+          <!-- Other reports for this product -->
+          <div class="detail-section">
+            <h3>Other Reports for this Product</h3>
+            <div class="related-reports">
+              <div v-if="relatedReports.length === 0" class="no-data">
+                No other reports for this product.
               </div>
-              <p class="description">{{ report.description }}</p>
+              <div
+                v-for="report in relatedReports"
+                :key="report.id"
+                class="report-card related-report"
+              >
+                <div class="report-user-info mini">
+                  <el-avatar :size="24" :src="report.user.avatar" />
+                  <strong>{{ report.user.name }}</strong>
+                  <div class="report-date small">{{ formatDate(report.created_at) }}</div>
+                </div>
+                <div class="report-body mini">
+                  <el-tag size="small" type="danger" effect="plain">{{
+                    getReasonLabel(report.reason)
+                  }}</el-tag>
+                  <p class="desc-small">{{ report.description }}</p>
+                </div>
+                <div class="report-footer mini">
+                  <el-tag size="small" :type="getStatusType(report.status)">{{
+                    report.status
+                  }}</el-tag>
+                  <el-button type="primary" link size="small" @click="handleViewDetail(report)">
+                    View
+                  </el-button>
+                </div>
+              </div>
+
+              <div class="related-pagination">
+                <el-pagination
+                  v-model:current-page="relatedCurrentPage"
+                  v-model:page-size="relatedPageSize"
+                  :page-sizes="[10, 20, 50]"
+                  layout="prev, pager, next"
+                  :total="relatedTotalReports"
+                  small
+                />
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </el-dialog>
+    </div>
   </div>
 </template>
 
@@ -326,43 +459,224 @@ const handleCurrentChange = (val: number) => {
 .report-management-view {
   padding: 24px;
   background: white;
-  border-radius: 8px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  min-height: calc(100vh - 120px);
 }
 
 .toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
-.toolbar h2 {
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pagination-container {
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Detail View Styles */
+.detail-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 16px;
+}
+
+.detail-header h2 {
+  margin: 0;
+}
+
+.detail-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.detail-section {
+  margin-bottom: 32px;
+}
+
+.detail-section h3 {
+  margin-bottom: 16px;
+  color: #1a1a1a;
+  font-size: 18px;
+}
+
+.product-card {
+  display: flex;
+  gap: 24px;
+  padding: 20px;
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  background-color: #fcfcfc;
+}
+
+.product-image {
+  width: 120px;
+  height: 120px;
+  border-radius: 8px;
+  border: 1px solid #efefef;
+  flex-shrink: 0;
+}
+
+.product-meta {
+  flex: 1;
+}
+
+.name-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.name-row h4 {
   margin: 0;
   font-size: 20px;
-  color: #1e293b;
 }
 
-.actions {
-  display: flex;
-  gap: 12px;
+.product-meta p {
+  margin: 4px 0;
+  color: #666;
+  font-size: 14px;
 }
 
-.product-cell {
+.product-actions {
+  margin-top: 16px;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+}
+
+@media (max-width: 900px) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.report-card {
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  padding: 20px;
+  background-color: white;
+}
+
+.report-card.main-report {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.report-user-info {
   display: flex;
-  gap: 12px;
   align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  position: relative;
 }
 
-.product-info {
+.user-text {
   display: flex;
   flex-direction: column;
 }
 
-.product-name {
-  font-weight: 500;
-  line-height: 1.2;
-  margin-bottom: 4px;
+.user-text strong {
+  font-size: 16px;
+}
+
+.user-text span {
+  color: #888;
+  font-size: 14px;
+}
+
+.report-date {
+  margin-left: auto;
+  color: #999;
+  font-size: 13px;
+}
+
+.report-body {
+  margin-bottom: 24px;
+  padding: 16px;
+  background-color: #f9f9f9;
+  border-radius: 6px;
+}
+
+.report-tag {
+  margin-bottom: 12px;
+}
+
+.report-tag strong,
+.report-description strong {
+  display: block;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.report-description p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.report-footer {
+  border-top: 1px solid #eee;
+  padding-top: 20px;
+}
+
+.status-actions {
+  display: flex;
+  align-items: center;
+}
+
+.action-buttons {
+  margin-left: auto;
+  display: flex;
+  gap: 12px;
+}
+
+.related-reports {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 500px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.related-report {
+  padding: 12px;
+}
+
+.report-user-info.mini {
+  margin-bottom: 8px;
+  gap: 8px;
+}
+
+.report-user-info.mini strong {
+  font-size: 14px;
+}
+
+.report-date.small {
+  font-size: 11px;
+}
+
+.report-body.mini {
+  margin-bottom: 8px;
+  padding: 8px;
+}
+
+.desc-small {
+  font-size: 12px;
+  margin: 4px 0 0;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   line-clamp: 2;
@@ -370,87 +684,25 @@ const handleCurrentChange = (val: number) => {
   overflow: hidden;
 }
 
-.seller-name {
-  font-size: 12px;
-  color: #64748b;
-}
-
-.pagination-container {
-  margin-top: 20px;
+.report-footer.mini {
   display: flex;
-  justify-content: flex-end;
-}
-
-.report-header {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-.report-product-img {
-  width: 80px;
-  height: 80px;
-  border-radius: 6px;
-}
-
-.report-product-info h3 {
-  margin: 0 0 4px 0;
-  font-size: 16px;
-}
-
-.report-product-info p {
-  color: #64748b;
-  font-size: 13px;
-  margin: 0 0 8px 0;
-}
-
-.reports-list {
-  max-height: 400px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.report-item {
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 12px;
-  background: #f8fafc;
-}
-
-.report-user {
-  display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
+  padding-top: 8px;
 }
 
-.user-meta {
+.related-pagination {
+  margin-top: 16px;
   display: flex;
-  flex-direction: column;
+  justify-content: center;
 }
 
-.username {
-  font-weight: 600;
-  font-size: 13px;
-}
-
-.date {
-  font-size: 11px;
-  color: #94a3b8;
-}
-
-.report-content .tags {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.description {
-  margin: 0;
-  font-size: 13px;
-  color: #334155;
-  line-height: 1.5;
+.no-data {
+  text-align: center;
+  padding: 40px;
+  color: #999;
+  background: #fcfcfc;
+  border: 1px dashed #dcdfe6;
+  border-radius: 8px;
 }
 </style>

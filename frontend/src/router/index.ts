@@ -10,13 +10,11 @@ import RegisterForm from '@/views/authentication/forms/RegisterForm.vue'
 import ForgotPasswordForm from '@/views/authentication/forms/ForgotPasswordForm.vue'
 import ResetPasswordForm from '@/views/authentication/forms/ResetPasswordForm.vue'
 import ProductDetailView from '@/views/customer/ProductDetailView.vue'
-import ProfileView from '@/views/customer/ProfileView/ProfileView.vue'
 import CartView from '@/views/customer/CartView/CartView.vue'
 import SellerView from '@/views/customer/SellerView/SellerView.vue'
 import SearchView from '@/views/customer/SearchView/SearchView.vue'
 import CheckoutView from '@/views/customer/CheckoutView/CheckoutView.vue'
 import ChatView from '@/views/seller/ChatView.vue'
-import SellerProfileView from '@/views/seller/ProfileView.vue'
 import VoucherManagerView from '@/views/seller/VoucherManagerView.vue'
 import OrderManagerView from '@/views/seller/OrderManagerView.vue'
 import StatisticView from '@/views/seller/StatisticView.vue'
@@ -24,6 +22,7 @@ import AdminHomeView from '@/views/admin/HomeView.vue'
 import CategoryManagerView from '@/views/admin/CategoryView.vue'
 import UserView from '@/views/admin/UserView.vue'
 import ReportView from '@/views/admin/ReportView.vue'
+import ProfileView from '@/components/profile/ProfileView.vue'
 import OrderTrackingView from '@/views/customer/OrderTrackingView/OrderTrackingView.vue'
 import MyOrder from '@/views/customer/ProfileView/components/MyOrder.vue'
 import CustomerLayout from '@/views/customer/CustomerLayout.vue'
@@ -92,6 +91,7 @@ const router = createRouter({
         {
           path: 'profile',
           component: ProfileView,
+          props: { role: 'customer' },
           children: [
             {
               path: '',
@@ -204,7 +204,12 @@ const router = createRouter({
         { path: 'category', name: 'category', component: CategoryView },
         { path: 'product', name: 'product', component: ProductView },
         { path: 'chat', name: 'chat', component: ChatView },
-        { path: 'profile', name: 'seller-profile', component: SellerProfileView },
+        {
+          path: 'profile',
+          name: 'seller-profile',
+          component: ProfileView,
+          props: { role: 'seller' },
+        },
         { path: 'voucher', name: 'voucher', component: VoucherManagerView },
         { path: 'order', name: 'order', component: OrderManagerView },
         { path: 'statistic', name: 'statistic', component: StatisticView },
@@ -218,6 +223,12 @@ const router = createRouter({
         { path: 'category', name: 'admin-category', component: CategoryManagerView },
         { path: 'users', name: 'admin-users', component: UserView },
         { path: 'report', name: 'admin-report', component: ReportView },
+        {
+          path: 'profile',
+          name: 'admin-profile',
+          component: ProfileView,
+          props: { role: 'admin' },
+        },
       ],
     },
   ],

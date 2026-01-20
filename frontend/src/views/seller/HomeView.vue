@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import {
-  ArrowDown,
   ArrowRight,
   Goods,
   Menu,
@@ -11,17 +10,9 @@ import {
   TrendCharts,
 } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
-import IconUser from '@/components/icons/IconUser.vue'
-import IconAddress from '@/components/icons/IconAddress.vue'
-import IconLock from '@/components/icons/IconLock.vue'
-import IconLogout from '@/components/icons/IconLogout.vue'
+import UserAvatarDropdown from '@/components/UserAvatarDropdown.vue'
 
 const router = useRouter()
-
-const handleLogout = () => {
-  localStorage.removeItem('access_token')
-  router.push('/login')
-}
 
 const handleOpen = (key: string, keyPath: string[]) => {
   console.log(key, keyPath)
@@ -69,47 +60,7 @@ const handleClose = (key: string, keyPath: string[]) => {
               </div>
             </div>
 
-            <el-dropdown trigger="hover" class="user-dropdown-trigger">
-              <div class="user-section">
-                <img
-                  src="https://placehold.co/40x40"
-                  alt="User Avatar"
-                  class="user-avatar"
-                  style="border-radius: 100%"
-                />
-                <span>John Doe</span>
-                <el-icon><ArrowDown /></el-icon>
-              </div>
-              <template #dropdown>
-                <el-dropdown-menu class="user-dropdown-menu">
-                  <el-dropdown-item
-                    class="dropdown-item"
-                    @click="$router.push('/seller/profile?tab=account-info')"
-                  >
-                    <IconUser />
-                    <span>My Profile</span>
-                  </el-dropdown-item>
-                  <el-dropdown-item
-                    class="dropdown-item"
-                    @click="$router.push('/seller/profile?tab=my-address')"
-                  >
-                    <IconAddress />
-                    <span>My Address</span>
-                  </el-dropdown-item>
-                  <el-dropdown-item
-                    class="dropdown-item"
-                    @click="$router.push('/seller/profile?tab=change-password')"
-                  >
-                    <IconLock />
-                    <span>Change Password</span>
-                  </el-dropdown-item>
-                  <el-dropdown-item divided class="dropdown-item logout-item" @click="handleLogout">
-                    <IconLogout />
-                    <span>Log out</span>
-                  </el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
+            <UserAvatarDropdown role="seller" style="margin-right: 20px" />
           </div>
         </div>
       </el-header>
@@ -267,69 +218,5 @@ a {
 .breadcrumb-current {
   color: #333;
   font-weight: 600;
-}
-
-/* User section */
-.user-dropdown-trigger {
-  margin-left: auto;
-  outline: none;
-}
-
-.user-section {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  padding: 12px 20px;
-  margin-right: 24px;
-  outline: none;
-
-  &:hover {
-    background-color: #f5f5f5;
-  }
-}
-
-/* User Dropdown Styling */
-:deep(.user-dropdown-menu) {
-  padding: 8px;
-  border-radius: 12px;
-  border: 1px solid #f4f4f5;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-}
-
-:deep(.dropdown-item) {
-  display: flex !important;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  color: #3f3f46;
-  font-size: 14px;
-  font-weight: 500;
-  border-radius: 8px;
-  transition: all 0.2s ease;
-  line-height: 1.2;
-}
-
-:deep(.dropdown-item:hover) {
-  background-color: #f0fdf4 !important;
-  color: #22c55e !important;
-}
-
-:deep(.dropdown-item svg) {
-  color: #a1a1aa;
-  transition: color 0.2s ease;
-}
-
-:deep(.dropdown-item:hover svg) {
-  color: #22c55e;
-}
-
-:deep(.logout-item:hover) {
-  background-color: #fef2f2 !important;
-  color: #ef4444 !important;
-}
-
-:deep(.logout-item:hover svg) {
-  color: #ef4444 !important;
 }
 </style>
