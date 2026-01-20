@@ -346,6 +346,8 @@ const handlePlaceOrder = async () => {
         await handleStripePayment(orderId)
       } else {
         ElMessage.success('Order placed successfully!')
+        localStorage.removeItem('checkout_items')
+        localStorage.removeItem('checkout_voucher_id')
         router.push('/profile') // Go to order history
       }
     }
@@ -369,6 +371,8 @@ const handleStripePayment = async (orderId: string) => {
       },
     )
     if (response.data && response.data.payment_url) {
+      localStorage.removeItem('checkout_items')
+      localStorage.removeItem('checkout_voucher_id')
       window.location.href = response.data.payment_url
     } else {
       ElMessage.warning('Payment session created but no URL provided')
@@ -441,6 +445,12 @@ onMounted(async () => {
     ElMessage.info('No items to checkout')
     router.push('/cart')
     return
+  }
+
+  // Load persistence voucher from cart
+  const savedVoucherId = localStorage.getItem('checkout_voucher_id')
+  if (savedVoucherId) {
+    selectedVoucherId.value = savedVoucherId
   }
 
   // Fetch seller address first

@@ -72,6 +72,76 @@ const CartSellerProductWrapperRefs = ref<InstanceType<typeof CartSellerProductWr
 const cartData = ref<CartSeller[]>([])
 const isLoading = ref(false)
 
+// Voucher State
+const vouchers = ref<any[]>([])
+const selectedVoucherId = ref('')
+const showVoucherDialog = ref(false)
+
+const subtotal = computed(() => {
+  return checkedProducts.value.reduce((sum, item) => sum + item.price * (item.quantity || 1), 0)
+})
+
+const selectedVoucher = computed(() => {
+  return vouchers.value.find((v) => v.id === selectedVoucherId.value)
+})
+
+const discountAmount = computed(() => {
+  if (!selectedVoucher.value) return 0
+  const v = selectedVoucher.value.voucher
+
+  // Check min spend
+  if (subtotal.value < v.min_order_value) return 0
+
+  let discount = 0
+  if (v.discount_type === 'FIXED') {
+    discount = v.discount_value
+  } else {
+    discount = subtotal.value * (v.discount_value / 100)
+    if (v.max_discount_value && discount > v.max_discount_value) {
+      discount = v.max_discount_value
+    }
+  }
+  return Math.round(discount)
+})
+
+const totalPayment = computed(() => {
+  const t = subtotal.value - discountAmount.value
+  return t > 0 ? t : 0
+})
+
+const fetchVouchers = async () => {
+  try {
+    const response = await axios.get(`${import.meta.env.VITE_BE_API_URL}/product/saved-vouchers`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+      },
+    })
+    if (response.data) {
+      vouchers.value = response.data
+    }
+  } catch (error) {
+    console.error('Failed to fetch vouchers:', error)
+  }
+}
+
+const selectVoucher = (voucherId: string) => {
+  if (selectedVoucherId.value === voucherId) {
+    selectedVoucherId.value = '' // Deselect
+  } else {
+    selectedVoucherId.value = voucherId
+  }
+  showVoucherDialog.value = false
+}
+
+const validVouchers = computed(() => {
+  const now = new Date()
+  return vouchers.value.filter((v) => {
+    const isExpired = new Date(v.voucher.end_time) <= now
+    const isFullyUsed = v.used_count >= v.max_uses_allowed
+    return !isExpired && !isFullyUsed
+  })
+})
+
 const fetchCart = async () => {
   const token = localStorage.getItem('access_token')
   if (!token) return
@@ -130,11 +200,13 @@ const handleCheckout = () => {
     return
   }
   localStorage.setItem('checkout_items', JSON.stringify(checkedProducts.value))
+  localStorage.setItem('checkout_voucher_id', selectedVoucherId.value)
   router.push('/checkout')
 }
 
 onMounted(() => {
   fetchCart()
+  fetchVouchers()
 })
 
 const handleCheckAll = () => {
@@ -341,25 +413,34 @@ const handleDeleteSelected = async () => {
         <el-button
           size="large"
           style="font-size: 18px; color: var(--main-color); padding: 28px 20px 24px"
+          @click="showVoucherDialog = true"
         >
           <el-icon style="margin-right: 8px; font-size: 24px; position: relative; top: -2px"
             ><Ticket
           /></el-icon>
-          Voucher: Apply Voucher
+          Voucher:
+          <span v-if="selectedVoucher" style="margin-left: 8px; color: #ef4444"
+            >{{ selectedVoucher.voucher.code }} (-{{ formatNumberWithDots(discountAmount) }}đ)</span
+          >
+          <span v-else style="margin-left: 8px">Apply Voucher</span>
         </el-button>
         <div style="display: flex; align-items: center">
-          <span style="font-size: 20px; margin-right: 12px"
-            >Total ({{ checkedProducts.length }} products):
-            <span style="font-size: 24px; color: var(--main-color)">
-              {{
-                formatNumberWithDots(
-                  checkedProducts.reduce((sum, product) => {
-                    return sum + product.price * (product.quantity ?? 1)
-                  }, 0),
-                )
-              }}đ
+          <div
+            style="display: flex; flex-direction: column; align-items: flex-end; margin-right: 12px"
+          >
+            <span
+              v-if="discountAmount > 0"
+              style="font-size: 14px; color: #999; text-decoration: line-through"
+            >
+              Subtotal: {{ formatNumberWithDots(subtotal) }}đ
             </span>
-          </span>
+            <span style="font-size: 20px">
+              Total ({{ checkedProducts.length }} products):
+              <span style="font-size: 24px; color: var(--main-color)">
+                {{ formatNumberWithDots(totalPayment) }}đ
+              </span>
+            </span>
+          </div>
           <el-button
             style="
               font-size: 24px;
@@ -374,6 +455,53 @@ const handleDeleteSelected = async () => {
         </div>
       </div>
     </div>
+
+    <!-- Voucher Dialog -->
+    <el-dialog
+      v-model="showVoucherDialog"
+      title="Select Voucher"
+      width="500px"
+      class="voucher-dialog"
+    >
+      <div v-if="validVouchers.length === 0" class="no-vouchers">
+        <el-empty description="No usable vouchers found" />
+      </div>
+      <div class="voucher-list-dialog" v-else>
+        <div
+          v-for="v in validVouchers"
+          :key="v.id"
+          class="voucher-item-dialog"
+          :class="{
+            selected: selectedVoucherId === v.id,
+            disabled: subtotal < v.voucher.min_order_value,
+          }"
+          @click="subtotal >= v.voucher.min_order_value && selectVoucher(v.id)"
+        >
+          <div class="v-left">
+            <div class="v-code">{{ v.voucher.code }}</div>
+            <div class="v-name">{{ v.voucher.name }}</div>
+            <div class="v-desc">
+              Min. Spend {{ formatNumberWithDots(v.voucher.min_order_value) }}đ
+            </div>
+          </div>
+          <div class="v-right">
+            <div class="v-discount">
+              <span v-if="v.voucher.discount_type === 'FIXED'"
+                >-{{ formatNumberWithDots(v.voucher.discount_value) }}đ</span
+              >
+              <span v-else>-{{ v.voucher.discount_value }}%</span>
+            </div>
+            <el-radio
+              :model-value="selectedVoucherId"
+              :label="v.id"
+              @change="selectVoucher(v.id)"
+              :disabled="subtotal < v.voucher.min_order_value"
+              >{{ '' }}</el-radio
+            >
+          </div>
+        </div>
+      </div>
+    </el-dialog>
 
     <RecentlyViewed style="margin-top: 20px" />
   </div>
@@ -395,6 +523,81 @@ const handleDeleteSelected = async () => {
     color: #22c55e;
     border-color: currentColor;
   }
+}
+
+.voucher-list-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.voucher-item-dialog {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #e4e4e7;
+  padding: 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.voucher-item-dialog:hover:not(.disabled) {
+  border-color: #22c55e;
+  background-color: #f0fdf4;
+}
+
+.voucher-item-dialog.selected {
+  border-color: #22c55e;
+  background-color: #f0fdf4;
+  box-shadow: 0 0 0 1px #22c55e;
+}
+
+.voucher-item-dialog.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: #f9fafb;
+}
+
+.v-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.v-code {
+  font-weight: 700;
+  color: #18181b;
+  font-size: 16px;
+}
+
+.v-name {
+  font-size: 14px;
+  color: #52525b;
+}
+
+.v-desc {
+  font-size: 12px;
+  color: #a1a1aa;
+}
+
+.v-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.v-discount {
+  font-weight: 700;
+  color: #ef4444;
+  font-size: 18px;
+}
+
+.no-vouchers {
+  padding: 40px 0;
 }
 </style>
 
