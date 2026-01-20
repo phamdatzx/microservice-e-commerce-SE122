@@ -23,11 +23,13 @@ const props = withDefaults(
     layout?: 'card' | 'header'
     showFollowButton?: boolean
     showViewShop?: boolean
+    isFollowLoading?: boolean
   }>(),
   {
     layout: 'card',
     showFollowButton: false,
     showViewShop: true,
+    isFollowLoading: false,
   },
 )
 
@@ -78,6 +80,7 @@ const openChat = () => {
                 plain
                 :icon="sellerInfo.sale_info.is_following ? Check : Plus"
                 size="default"
+                :loading="isFollowLoading"
                 @click="emit('toggle-follow')"
               >
                 {{ sellerInfo.sale_info.is_following ? 'Following' : 'Follow' }}

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
 import SellerHeader from './components/SellerHeader.vue'
@@ -22,9 +22,16 @@ interface SellerInfo {
     follow_count: number
     rating_count: number
     rating_average: number
-    product_count: number // Added if available or will derive
+    product_count: number
     is_following: boolean
   }
+}
+
+interface SellerCategory {
+  id: string
+  seller_id: string
+  name: string
+  product_count: number
 }
 
 const sellerInfo = ref<SellerInfo | null>(null)
@@ -39,19 +46,10 @@ const currentPage = ref(1)
 const pageSize = ref(15)
 const sortBy = ref('sold_count')
 const sortDirection = ref('desc')
-
-const categories = [
-  'Cargo Jeans ⭐',
-  'Skinny Jeans ⭐',
-  'WASH RETRO ⭐',
-  'Shorts ⭐',
-  'Trousers ⭐',
-  'Jackets ⭐',
-  'Elastic Cuff Pants ⭐',
-  'BAGGY ⭐',
-  'Windbreakers ⭐',
-  'Thermals ⭐',
-]
+const sellerCategories = ref<SellerCategory[]>([])
+const selectedCategoryId = ref<string | null>(null)
+const activeTab = ref<string>('home')
+const productListRef = ref<any>(null)
 
 const fetchSellerInfo = async () => {
   if (!sellerId.value) return
@@ -71,6 +69,20 @@ const fetchSellerInfo = async () => {
       isNotFound.value = true
     }
     console.error('Error fetching seller info:', error)
+  }
+}
+
+const fetchSellerCategories = async () => {
+  if (!sellerId.value) return
+  try {
+    const response = await axios.get(
+      `${import.meta.env.VITE_BE_API_URL}/product/public/seller/${sellerId.value}/category`,
+    )
+    if (response.data) {
+      sellerCategories.value = response.data
+    }
+  } catch (error) {
+    console.error('Error fetching seller categories:', error)
   }
 }
 
@@ -101,10 +113,11 @@ const fetchSellerProducts = async () => {
           limit: pageSize.value,
           sort_by: sortBy.value,
           sort_direction: sortDirection.value,
+          seller_category: selectedCategoryId.value || undefined,
         },
       },
     )
-    if (response.data) {
+    if (response.data && response.data.products) {
       products.value = response.data.products.map((p: SellerProduct) => ({
         id: p.id,
         name: p.name,
@@ -118,6 +131,9 @@ const fetchSellerProducts = async () => {
         soldCount: p.sold_count,
       }))
       totalItems.value = response.data.pagination.total_items
+    } else {
+      products.value = []
+      totalItems.value = 0
     }
   } catch (error) {
     console.error('Error fetching seller products:', error)
@@ -251,11 +267,49 @@ const handleSortChange = (value: string) => {
   fetchSellerProducts()
 }
 
+const handleCategoryChange = async (
+  categoryId: string | null,
+  scrollTarget: 'top' | 'products' = 'products',
+) => {
+  const isCategoryChanging = selectedCategoryId.value !== categoryId
+  selectedCategoryId.value = categoryId
+  currentPage.value = 1
+
+  if (categoryId === null) {
+    activeTab.value = scrollTarget === 'top' ? 'home' : 'all'
+  } else {
+    activeTab.value = categoryId
+  }
+
+  // Only refetch if filter changed OR we are navigating to the product list
+  if (isCategoryChanging || scrollTarget === 'products') {
+    await fetchSellerProducts()
+  }
+
+  await nextTick()
+  if (scrollTarget === 'top') {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  } else if (productListRef.value) {
+    productListRef.value.scrollIntoView({ behavior: 'smooth' })
+  }
+}
+
 onMounted(() => {
   fetchSellerInfo()
   fetchSellerProducts()
   fetchSellerVouchers()
   fetchSavedVouchers()
+  fetchSellerCategories()
+})
+
+watch(sellerId, () => {
+  selectedCategoryId.value = null
+  currentPage.value = 1
+  fetchSellerInfo()
+  fetchSellerProducts()
+  fetchSellerVouchers()
+  fetchSavedVouchers()
+  fetchSellerCategories()
 })
 
 const sortOptions = computed(() => [
@@ -276,8 +330,12 @@ const pagination = computed(() => ({
       <SellerHeader
         v-if="sellerInfo"
         :seller-info="sellerInfo"
+        :categories="sellerCategories"
+        :selected-category-id="selectedCategoryId"
+        :active-tab="activeTab"
         :is-follow-loading="isFollowLoading"
         @toggle-follow="handleFollowToggle"
+        @category-change="handleCategoryChange"
       />
 
       <div class="content-bg">
@@ -291,27 +349,42 @@ const pagination = computed(() => ({
           <SellerRecommendations />
         </div>
 
-        <ProductList
-          :products="products"
-          :sort-options="sortOptions"
-          :pagination="pagination"
-          :loading="isLoading"
-          @page-change="handlePageChange"
-          @sort-change="handleSortChange"
-        >
-          <template #sidebar>
-            <div class="sidebar-header">
-              <span class="sidebar-icon">≡</span>
-              <span class="sidebar-title">Categories</span>
-            </div>
-            <nav class="category-nav">
-              <a href="#" class="category-item active">All Products</a>
-              <a v-for="cat in categories" :key="cat" href="#" class="category-item">
-                {{ cat }}
-              </a>
-            </nav>
-          </template>
-        </ProductList>
+        <div ref="productListRef">
+          <ProductList
+            :products="products"
+            :sort-options="sortOptions"
+            :pagination="pagination"
+            :loading="isLoading"
+            @page-change="handlePageChange"
+            @sort-change="handleSortChange"
+          >
+            <template #sidebar>
+              <div class="sidebar-header">
+                <span class="sidebar-icon">≡</span>
+                <span class="sidebar-title">Categories</span>
+              </div>
+              <nav class="category-nav">
+                <a
+                  href="javascript:void(0)"
+                  class="category-item"
+                  :class="{ active: !selectedCategoryId }"
+                  @click="handleCategoryChange(null)"
+                  >All Products</a
+                >
+                <a
+                  v-for="cat in sellerCategories"
+                  :key="cat.id"
+                  href="javascript:void(0)"
+                  class="category-item"
+                  :class="{ active: selectedCategoryId === cat.id }"
+                  @click="handleCategoryChange(cat.id)"
+                >
+                  {{ cat.name }} ({{ cat.product_count }})
+                </a>
+              </nav>
+            </template>
+          </ProductList>
+        </div>
       </div>
     </main>
 

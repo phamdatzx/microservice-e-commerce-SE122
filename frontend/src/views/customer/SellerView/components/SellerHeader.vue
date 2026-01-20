@@ -1,8 +1,16 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { ArrowDown } from '@element-plus/icons-vue'
 import ProductSellerInfo from '@/components/ProductSellerInfo.vue'
 
-defineProps<{
+interface SellerCategory {
+  id: string
+  seller_id: string
+  name: string
+  product_count: number
+}
+
+const props = defineProps<{
   sellerInfo: {
     id: string
     name: string
@@ -18,9 +26,19 @@ defineProps<{
       is_following: boolean
     }
   }
+  categories: SellerCategory[]
+  selectedCategoryId: string | null
+  activeTab: string
+  isFollowLoading: boolean
 }>()
 
-defineEmits(['toggle-follow'])
+const emit = defineEmits(['toggle-follow', 'category-change'])
+
+const displayedCategories = computed(() => props.categories.slice(0, 5))
+const moreCategories = computed(() => props.categories.slice(5))
+const isMoreActive = computed(() => {
+  return moreCategories.value.some((c) => c.id === props.activeTab)
+})
 </script>
 
 <template>
@@ -29,6 +47,7 @@ defineEmits(['toggle-follow'])
       <ProductSellerInfo
         layout="header"
         :seller-info="sellerInfo"
+        :is-follow-loading="isFollowLoading"
         :show-follow-button="true"
         :show-view-shop="false"
         @toggle-follow="$emit('toggle-follow')"
@@ -40,35 +59,53 @@ defineEmits(['toggle-follow'])
   <div class="shop-nav">
     <div class="container">
       <el-row class="nav-tabs">
-        <el-col :span="4" class="nav-tab active">
-          <a href="#"><span class="one-line-ellipsis">Home</span></a>
+        <el-col :span="3" class="nav-tab" :class="{ active: activeTab === 'home' }">
+          <a href="javascript:void(0)" @click="emit('category-change', null, 'top')">
+            <span class="one-line-ellipsis">Home</span>
+          </a>
         </el-col>
-        <el-col :span="4" class="nav-tab">
-          <a href="#"><span class="one-line-ellipsis">ALL PRODUCTS</span></a>
+        <el-col :span="3" class="nav-tab" :class="{ active: activeTab === 'all' }">
+          <a href="javascript:void(0)" @click="emit('category-change', null)">
+            <span class="one-line-ellipsis">ALL PRODUCTS</span>
+          </a>
         </el-col>
-        <el-col :span="4" class="nav-tab">
-          <a href="#"><span class="one-line-ellipsis">Cargo Jeans ⭐</span></a>
+        <el-col
+          v-for="cat in displayedCategories"
+          :key="cat.id"
+          :span="3"
+          class="nav-tab"
+          :class="{ active: activeTab === cat.id }"
+        >
+          <a href="javascript:void(0)" @click="emit('category-change', cat.id)">
+            <span class="one-line-ellipsis">{{ cat.name }}</span>
+          </a>
         </el-col>
-        <el-col :span="4" class="nav-tab">
-          <a href="#"><span class="one-line-ellipsis">Skinny Jeans ⭐</span></a>
-        </el-col>
-        <el-col :span="4" class="nav-tab">
-          <a href="#"><span class="one-line-ellipsis">WASH RETRO ...</span></a>
-        </el-col>
-        <el-col :span="4" class="nav-tab">
-          <a href="#"><span class="one-line-ellipsis">Shorts ⭐</span></a>
-        </el-col>
-        <el-col :span="4" class="nav-tab dropdown-tab">
-          <el-dropdown class="dropdown" trigger="hover">
+
+        <el-col
+          v-if="moreCategories.length > 0"
+          :span="3"
+          class="nav-tab dropdown-tab"
+          :class="{ active: isMoreActive }"
+        >
+          <el-dropdown
+            class="dropdown"
+            trigger="hover"
+            @command="(id: string) => emit('category-change', id)"
+          >
             <div class="dropdown-trigger">
               <span class="one-line-ellipsis">More</span>
               <el-icon class="el-icon--right"><ArrowDown /></el-icon>
             </div>
             <template #dropdown>
               <el-dropdown-menu class="custom-dropdown-menu">
-                <el-dropdown-item>Top Sales</el-dropdown-item>
-                <el-dropdown-item>New Arrivals</el-dropdown-item>
-                <el-dropdown-item>Summer Collection</el-dropdown-item>
+                <el-dropdown-item
+                  v-for="cat in moreCategories"
+                  :key="cat.id"
+                  :command="cat.id"
+                  :class="{ 'is-active': activeTab === cat.id }"
+                >
+                  {{ cat.name }}
+                </el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -135,6 +172,11 @@ defineEmits(['toggle-follow'])
 .nav-tab.active {
   color: var(--main-color);
   border-bottom-color: var(--main-color);
+
+  a,
+  .dropdown-trigger {
+    color: var(--main-color);
+  }
 }
 
 .dropdown-tab {
@@ -157,15 +199,17 @@ defineEmits(['toggle-follow'])
   }
 }
 
-:deep(.custom-dropdown-menu) {
+.custom-dropdown-menu {
   padding: 10px 0;
   border-radius: 4px;
   border: none;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-height: 200px;
+  overflow-y: auto;
 
   .el-dropdown-menu__item {
     font-size: 14px;
-    padding: 10px 25px;
+    padding: 10px 32px;
     color: #333;
 
     &:hover {
