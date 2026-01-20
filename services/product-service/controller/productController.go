@@ -56,6 +56,22 @@ func (c *ProductController) GetProductByID(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, product)
 }
 
+func (c *ProductController) GetDisabledProductByID(ctx *gin.Context) {
+	id := ctx.Param("id")
+
+	// Get userID from header if available (optional - for view history tracking)
+	userID := ctx.GetHeader("X-User-Id")
+
+	product, err := c.service.GetDisabledProductByID(id, userID)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, product)
+}
+
+
 func (c *ProductController) GetAllProducts(ctx *gin.Context) {
 	products, err := c.service.GetAllProducts()
 	if err != nil {

@@ -17,6 +17,7 @@ import (
 type ProductService interface {
 	CreateProduct(product *model.Product) error
 	GetProductByID(id string, userID string) (*model.Product, error)
+	GetDisabledProductByID(id string, userID string) (*model.Product, error)
 	GetAllProducts() ([]model.Product, error)
 	UpdateProduct(product *model.Product) error
 	DeleteProduct(id string) error
@@ -85,6 +86,15 @@ func (s *productService) GetProductByID(id string, userID string) (*model.Produc
 		}()
 	}
 
+	return product, nil
+}
+
+func (s *productService) GetDisabledProductByID(id string, userID string) (*model.Product, error) {
+	product, err := s.repo.FindByID(id)
+	if err != nil {
+		return nil, err
+	}
+	
 	return product, nil
 }
 
