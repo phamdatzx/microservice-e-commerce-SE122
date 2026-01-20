@@ -9,8 +9,11 @@ import {
   Van,
   TrendCharts,
 } from '@element-plus/icons-vue'
+import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import UserAvatarDropdown from '@/components/UserAvatarDropdown.vue'
+import NotificationDropdown from '@/components/NotificationDropdown.vue'
+import { socketService, SOCKET_EVENTS } from '@/utils/socket'
 
 const router = useRouter()
 
@@ -20,6 +23,18 @@ const handleOpen = (key: string, keyPath: string[]) => {
 const handleClose = (key: string, keyPath: string[]) => {
   console.log(key, keyPath)
 }
+
+const initSocket = () => {
+  const token = localStorage.getItem('access_token')
+  if (token) {
+    socketService.connect(token)
+    socketService.emit(SOCKET_EVENTS.JOIN_NOTIFICATIONS, {})
+  }
+}
+
+onMounted(() => {
+  initSocket()
+})
 </script>
 
 <template>
@@ -60,7 +75,10 @@ const handleClose = (key: string, keyPath: string[]) => {
               </div>
             </div>
 
-            <UserAvatarDropdown role="seller" style="margin-right: 20px" />
+            <div class="header-right">
+              <NotificationDropdown />
+              <UserAvatarDropdown role="seller" />
+            </div>
           </div>
         </div>
       </el-header>
@@ -127,6 +145,7 @@ a {
 /* Header Styles */
 .container {
   margin: 0 auto;
+  width: 100%;
 }
 
 .header {
@@ -151,6 +170,15 @@ a {
 .header-content {
   display: flex;
   align-items: center;
+  width: 100%;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-left: auto;
+  margin-right: 20px;
 }
 
 .logo {

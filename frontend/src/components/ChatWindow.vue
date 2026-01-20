@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import axios from 'axios'
 import {
@@ -30,6 +31,8 @@ const props = defineProps({
     default: false,
   },
 })
+
+const route = useRoute()
 
 const isChatVisible = ref(props.isEmbedded)
 const searchQuery = ref('')
@@ -350,6 +353,21 @@ onMounted(() => {
   }
 
   window.addEventListener('open-chat', handleOpenChatEvent)
+
+  // Handle focus query param for sellers or direct links
+  const focusId = route.query.focus
+  if (focusId) {
+    // Wait for conversations to load first
+    watch(
+      isLoadingContacts,
+      (loading) => {
+        if (!loading && focusId) {
+          openChatWithSeller(focusId as string)
+        }
+      },
+      { immediate: true },
+    )
+  }
 })
 
 onUnmounted(() => {

@@ -81,6 +81,7 @@ declare module 'vue' {
     MessengerIcon: typeof import('./src/components/icons/MessengerIcon.vue')['default']
     MyAddress: typeof import('./src/components/profile/MyAddress.vue')['default']
     NotFoundView: typeof import('./src/components/NotFoundView.vue')['default']
+    NotificationDropdown: typeof import('./src/components/NotificationDropdown.vue')['default']
     PinIcon: typeof import('./src/components/icons/PinIcon.vue')['default']
     PinterestIcon: typeof import('./src/components/icons/PinterestIcon.vue')['default']
     ProductItem: typeof import('./src/components/ProductItem.vue')['default']
