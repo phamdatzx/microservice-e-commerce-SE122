@@ -569,15 +569,15 @@ const addToCart = async () => {
               <el-icon size="large" style="margin-right: 6px"><Goods /></el-icon>
               Buy Now
             </el-button>
-            <div style="display: flex; align-items: center; margin-top: 24px">
+            <!-- <div style="display: flex; align-items: center; margin-top: 24px">
               <el-icon style="fill: var(--main-color)"><HeartIcon /></el-icon>
-              <!-- <el-icon style="fill: var(--main-color); margin-right: 4px"
+              <el-icon style="fill: var(--main-color); margin-right: 4px"
                 ><HeartFilledIcon
-              /></el-icon> -->
+              /></el-icon>
               <span style="color: var(--main-color); font-size: 14px; margin-left: 8px"
                 >Add to Wishlist</span
               >
-            </div>
+            </div> -->
           </div>
 
           <div style="display: flex; align-items: center; margin-left: 8px; margin-top: 8px">
