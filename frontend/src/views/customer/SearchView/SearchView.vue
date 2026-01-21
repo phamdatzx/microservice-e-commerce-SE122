@@ -84,14 +84,14 @@ const pagination = computed(() => ({
 
 const priceMin = ref<number | undefined>(undefined)
 const priceMax = ref<number | undefined>(undefined)
-const selectedCategory = ref<string | undefined>(undefined)
+const selectedCategory = ref<string[]>([])
 const selectedLocation = ref<string | undefined>(undefined)
 const selectedRating = ref<number | undefined>(undefined)
 
 const clearAll = () => {
   priceMin.value = undefined
   priceMax.value = undefined
-  selectedCategory.value = undefined
+  selectedCategory.value = []
   selectedLocation.value = undefined
   selectedRating.value = undefined
   applyFilters()
@@ -183,10 +183,21 @@ const applyFilters = () => {
   if (selectedRating.value) query.min_rating = selectedRating.value
   else delete query.min_rating
 
-  if (selectedCategory.value) query.category_ids = selectedCategory.value
+  if (selectedCategory.value.length > 0) query.category_ids = selectedCategory.value.join(',')
   else delete query.category_ids
 
   router.push({ query })
+}
+
+const toggleCategory = (id: string, checked: boolean) => {
+  if (checked) {
+    if (!selectedCategory.value.includes(id)) {
+      selectedCategory.value.push(id)
+    }
+  } else {
+    selectedCategory.value = selectedCategory.value.filter((categoryId) => categoryId !== id)
+  }
+  applyFilters()
 }
 
 const handleSortChange = (val: string) => {
@@ -230,7 +241,9 @@ watch(
     priceMin.value = route.query.min_price ? Number(route.query.min_price) : undefined
     priceMax.value = route.query.max_price ? Number(route.query.max_price) : undefined
     selectedRating.value = route.query.min_rating ? Number(route.query.min_rating) : undefined
-    selectedCategory.value = route.query.category_ids as string | undefined
+    selectedCategory.value = route.query.category_ids
+      ? (route.query.category_ids as string).split(',')
+      : []
 
     // Sync currentSort based on URL
     if (route.query.sort_by === 'price') {
@@ -300,13 +313,8 @@ onMounted(() => {
           <h3 class="group-title">By Category</h3>
           <div v-for="cat in displayedCategories" :key="cat.id" class="checkbox-item">
             <el-checkbox
-              :model-value="selectedCategory === cat.id"
-              @change="
-                (val) => {
-                  selectedCategory = val ? cat.id : undefined
-                  applyFilters()
-                }
-              "
+              :model-value="selectedCategory.includes(cat.id)"
+              @change="(val) => toggleCategory(cat.id, val as boolean)"
             >
               {{ cat.name }}
             </el-checkbox>
