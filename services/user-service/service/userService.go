@@ -205,7 +205,6 @@ func (s *userService) GetUserByID(userId string) (dto.UserResponse, error) {
 		}
 	}
 
-
 	return dto.UserResponse{
 		ID:       user.ID.String(),
 		Username: user.Username,
@@ -350,7 +349,7 @@ func (s *userService) GetSellerByID(sellerId string, userId string) (dto.SellerR
 func (s *userService) UpdateProductCount(request dto.UpdateProductCountRequest) (dto.UpdateProductCountResponse, error) {
 	// Determine if we should increment or decrement
 	increment := request.Operation == "increment"
-	
+
 	// Update product count
 	saleInfo, err := s.repo.UpdateProductCount(request.SellerID, increment)
 	if err != nil {

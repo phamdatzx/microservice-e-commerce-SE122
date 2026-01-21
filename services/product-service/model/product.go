@@ -58,9 +58,6 @@ func (p *Product) Validate() error {
 	if p.Name == "" {
 		return fmt.Errorf("product name is required")
 	}
-	if p.SellerID == "" {
-		return fmt.Errorf("seller_id is required")
-	}
 	if len(p.Variants) == 0 {
 		return fmt.Errorf("at least one variant is required")
 	}
