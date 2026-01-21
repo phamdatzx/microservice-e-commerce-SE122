@@ -172,7 +172,7 @@ const orderTabs = [
             @click="handleOrderClick(order)"
           >
             <img
-              :src="item.image || 'https://via.placeholder.com/80'"
+              :src="item.image || 'https://placehold.co/100'"
               :alt="item.product_name"
               class="item-image"
             />
