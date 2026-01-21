@@ -11,14 +11,14 @@ const handleImageError = () => {
 </script>
 
 <template>
-  <RouterLink
-    to="/"
+  <div
     style="
       margin-top: 10px;
       display: flex;
       flex-direction: column;
       align-items: center;
       text-decoration: none;
+      cursor: pointer;
     "
   >
     <div
@@ -46,5 +46,5 @@ const handleImageError = () => {
     <p style="text-align: center; margin-top: 8px; font-size: 14px; color: #18181b">
       {{ props.name }}
     </p>
-  </RouterLink>
+  </div>
 </template>

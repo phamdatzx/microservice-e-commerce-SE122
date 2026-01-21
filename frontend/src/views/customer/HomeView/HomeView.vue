@@ -118,7 +118,7 @@ onMounted(() => {
             <li v-for="category in fetchedCategories" :key="category.id">
               <RouterLink
                 class="category-item"
-                :to="{ path: '/search', query: { categoryId: category.id } }"
+                :to="{ path: '/search', query: { category_ids: category.id } }"
                 >{{ category.name }}</RouterLink
               >
             </li>
@@ -209,7 +209,12 @@ onMounted(() => {
         }"
       >
         <SplideSlide v-for="item in fetchedCategories" :key="item.id">
-          <CategoryItem :image-url="item.image" :name="item.name" />
+          <RouterLink
+            :to="{ path: '/search', query: { category_ids: item.id } }"
+            style="text-decoration: none; color: inherit"
+          >
+            <CategoryItem :image-url="item.image" :name="item.name" />
+          </RouterLink>
         </SplideSlide>
       </Splide>
     </div>
