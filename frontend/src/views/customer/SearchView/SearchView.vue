@@ -10,18 +10,14 @@ import { Loading } from '@element-plus/icons-vue'
 const route = useRoute()
 const router = useRouter()
 
-const categories = [
-  'Computer Components',
-  'Printers & Scanners',
-  'Computer Accessories',
-  'Network Devices',
-  'Laptops',
-  'Software',
-  'Tablets',
-  'Storage Devices',
-  'Monitors',
-  'Input Devices',
-]
+interface Category {
+  id: string
+  name: string
+  image: string
+  product_count: number
+}
+
+const categories = ref<Category[]>([])
 
 const locations = [
   'Ho Chi Minh City',
@@ -38,7 +34,7 @@ const showAllCategories = ref(false)
 const showAllLocations = ref(false)
 
 const displayedCategories = computed(() =>
-  showAllCategories.value ? categories : categories.slice(0, 4),
+  showAllCategories.value ? categories.value : categories.value.slice(0, 4),
 )
 const displayedLocations = computed(() =>
   showAllLocations.value ? locations : locations.slice(0, 4),
@@ -111,6 +107,7 @@ const fetchProducts = async () => {
       min_price: route.query.min_price,
       max_price: route.query.max_price,
       min_rating: route.query.min_rating,
+      category_ids: route.query.category_ids,
       sort_by: route.query.sort_by,
       sort_direction: route.query.sort_direction,
     }
@@ -148,8 +145,9 @@ const fetchProducts = async () => {
       name: p.name,
       price: p.price.min, // Use min price for display
       imageUrl:
-        p.images?.sort((a: any, b: any) => a.order - b.order)[0]?.url ||
-        'https://placehold.co/300x300?text=No+Image',
+        p.images && p.images.length > 0
+          ? p.images.sort((a: any, b: any) => a.order - b.order)[0].url
+          : 'https://placehold.co/300x300?text=No+Image',
       rating: p.rating,
       location: 'Vietnam', // Backend doesn't have location yet
       discount: 0, // Backend doesn't have discount yet
@@ -164,6 +162,15 @@ const fetchProducts = async () => {
   }
 }
 
+const fetchCategories = async () => {
+  try {
+    const response = await axios.get(`${import.meta.env.VITE_BE_API_URL}/product/public/category`)
+    categories.value = response.data
+  } catch (error) {
+    console.error('Error fetching categories:', error)
+  }
+}
+
 const applyFilters = () => {
   const query: any = { ...route.query, page: 1 } // Reset to page 1 on filter change
 
@@ -175,6 +182,9 @@ const applyFilters = () => {
 
   if (selectedRating.value) query.min_rating = selectedRating.value
   else delete query.min_rating
+
+  if (selectedCategory.value) query.category_ids = selectedCategory.value
+  else delete query.category_ids
 
   router.push({ query })
 }
@@ -220,6 +230,7 @@ watch(
     priceMin.value = route.query.min_price ? Number(route.query.min_price) : undefined
     priceMax.value = route.query.max_price ? Number(route.query.max_price) : undefined
     selectedRating.value = route.query.min_rating ? Number(route.query.min_rating) : undefined
+    selectedCategory.value = route.query.category_ids as string | undefined
 
     // Sync currentSort based on URL
     if (route.query.sort_by === 'price') {
@@ -236,6 +247,10 @@ watch(
   },
   { immediate: true },
 )
+
+onMounted(() => {
+  fetchCategories()
+})
 </script>
 
 <template>
@@ -267,7 +282,7 @@ watch(
           <span class="filter-title">SEARCH FILTER</span>
         </div>
         <!-- ... locations ... -->
-        <div class="filter-group">
+        <!-- <div class="filter-group">
           <h3 class="group-title">Shipped From</h3>
           <div v-for="loc in displayedLocations" :key="loc" class="checkbox-item">
             <el-checkbox>{{ loc }}</el-checkbox>
@@ -278,15 +293,29 @@ watch(
               <component :is="showAllLocations ? ArrowUpBold : ArrowDownBold" />
             </el-icon>
           </button>
-        </div>
+        </div> -->
 
         <!-- By Category -->
         <div class="filter-group">
           <h3 class="group-title">By Category</h3>
-          <div v-for="cat in displayedCategories" :key="cat" class="checkbox-item">
-            <el-checkbox>{{ cat }}</el-checkbox>
+          <div v-for="cat in displayedCategories" :key="cat.id" class="checkbox-item">
+            <el-checkbox
+              :model-value="selectedCategory === cat.id"
+              @change="
+                (val) => {
+                  selectedCategory = val ? cat.id : undefined
+                  applyFilters()
+                }
+              "
+            >
+              {{ cat.name }}
+            </el-checkbox>
           </div>
-          <button class="more-btn" @click="showAllCategories = !showAllCategories">
+          <button
+            v-if="categories.length > 4"
+            class="more-btn"
+            @click="showAllCategories = !showAllCategories"
+          >
             {{ showAllCategories ? 'Less' : 'More' }}
             <el-icon>
               <component :is="showAllCategories ? ArrowUpBold : ArrowDownBold" />
