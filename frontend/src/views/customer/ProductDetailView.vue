@@ -580,10 +580,10 @@ const addToCart = async () => {
             </div> -->
           </div>
 
-          <div style="display: flex; align-items: center; margin-left: 8px; margin-top: 8px">
+          <!-- <div style="display: flex; align-items: center; margin-left: 8px; margin-top: 8px">
             <el-icon size="large" style="margin-right: 6px"><ShippingIcon /></el-icon>
             <span> Ships directly from <span style="font-weight: 700">Seller</span> </span>
-          </div>
+          </div> -->
         </el-col>
       </el-row>
     </div>
