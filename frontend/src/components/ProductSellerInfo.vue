@@ -72,7 +72,7 @@ const openChat = () => {
         </div>
         <div class="seller-main">
           <h3 class="seller-name">{{ sellerInfo.name }}</h3>
-          <p class="seller-status">Active 2 minutes ago</p>
+
           <div class="seller-actions">
             <template v-if="showFollowButton">
               <el-button
