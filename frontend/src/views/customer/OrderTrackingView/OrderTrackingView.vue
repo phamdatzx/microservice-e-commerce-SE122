@@ -399,7 +399,7 @@ onMounted(() => {
 
         <!-- Secondary Actions -->
         <div class="secondary-actions">
-          <el-button plain class="sec-btn">Return/Refund Request</el-button>
+          <!-- <el-button plain class="sec-btn">Return/Refund Request</el-button> -->
           <el-button v-if="isLoggedIn" plain class="sec-btn" @click="openChat"
             >Contact Seller</el-button
           >
