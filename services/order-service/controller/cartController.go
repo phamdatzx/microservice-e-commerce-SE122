@@ -51,6 +51,7 @@ func (c *CartController) AddCartItem(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response)
 }
 
+
 func (c *CartController) DeleteCartItem(ctx *gin.Context) {
 	// Get user ID from header
 	userID := ctx.GetHeader("X-User-Id")

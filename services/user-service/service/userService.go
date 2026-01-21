@@ -27,6 +27,7 @@ type UserService interface {
 	UpdateProductCount(request dto.UpdateProductCountRequest) (dto.UpdateProductCountResponse, error)
 	GetAllUsers(page, limit int, role *string, isBanned *bool) (dto.GetAllUsersResponse, error)
 	SetUserBanned(userId string, isBanned bool) error
+	UpdateUserInfo(userId string, request dto.UpdateUserInfoRequest) error
 }
 
 type userService struct {
@@ -435,4 +436,20 @@ func (s *userService) SetUserBanned(userId string, isBanned bool) error {
 
 	user.IsBanned = isBanned
 	return s.repo.Save(user)
+}
+
+func (s *userService) UpdateUserInfo(userId string, request dto.UpdateUserInfoRequest) error {
+	// Check if user exists
+	_, err := s.repo.GetUserByID(userId)
+	if err != nil {
+		return customError.NewAppErrorWithErr(404, "User not found", err)
+	}
+
+	// Update user info
+	err = s.repo.UpdateUserInfo(userId, request.Name, request.Phone, request.Email)
+	if err != nil {
+		return customError.NewAppErrorWithErr(500, "Failed to update user info", err)
+	}
+
+	return nil
 }

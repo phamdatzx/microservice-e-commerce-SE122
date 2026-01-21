@@ -15,6 +15,7 @@ func RegisterOrderRoutes(rg *gin.RouterGroup, c controller.OrderController) {
 		order.GET("/seller/statistics",middleware.RequireSeller(), c.GetSellerStatistics)
 		order.PUT("/:orderId",middleware.RequireSeller(), c.UpdateOrderStatus)
 		order.POST("/checkout", c.Checkout)
+		order.POST("/instant-checkout", c.InstantCheckout)
 		order.POST("/:orderId/payment", c.CreatePayment)
 		order.POST("/public/webhook/stripe", c.StripeWebhook)
 		order.POST("/verify-purchase", c.VerifyPurchase)

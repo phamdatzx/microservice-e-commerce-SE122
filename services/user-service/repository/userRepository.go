@@ -21,6 +21,7 @@ type UserRepository interface {
 	UpdateProductCount(userId string, increment bool) (*model.SaleInfo, error)
 	UpdateFollowCount(userId string, increment bool) (*model.SaleInfo, error)
 	GetAllUsers(skip, limit int, role *string, isBanned *bool) ([]model.User, int64, error)
+	UpdateUserInfo(userId string, name string, phone string, email string) error
 }
 
 type userRepository struct {
@@ -216,4 +217,23 @@ func (r *userRepository) GetAllUsers(skip, limit int, role *string, isBanned *bo
 	}
 
 	return users, total, nil
+}
+
+func (r *userRepository) UpdateUserInfo(userId string, name string, phone string, email string) error {
+	var user model.User
+	err := r.db.First(&user, "id = ?", userId).Error
+	if err != nil {
+		return err
+	}
+
+	if name != "" {
+		user.Name = name
+	}
+	if phone != "" {
+		user.Phone = phone
+	}
+	if email != "" {
+		user.Email = email
+	}
+	return r.db.Save(&user).Error
 }

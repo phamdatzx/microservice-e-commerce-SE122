@@ -423,3 +423,38 @@ func (c *UserController) SetUserBanned(ctx *gin.Context) {
 
 	utils.SuccessResponse(ctx, 200, message, nil)
 }
+
+func (c *UserController) UpdateUserInfo(ctx *gin.Context) {
+	// Get user ID from header
+	userId := ctx.GetHeader("X-User-Id")
+	if userId == "" {
+		ctx.Error(appError.NewAppError(401, "User ID not found in header"))
+		ctx.Abort()
+		return
+	}
+
+	var request dto.UpdateUserInfoRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Validate struct
+	if err := validate.Struct(request); err != nil {
+		var errors string
+		for _, err := range err.(validator.ValidationErrors) {
+			errors += err.Field() + " is invalid: " + err.Tag() + ", "
+		}
+		_ = ctx.Error(appError.NewAppError(400, errors))
+		ctx.Abort()
+		return
+	}
+
+	if err := c.service.UpdateUserInfo(userId, request); err != nil {
+		_ = ctx.Error(err)
+		ctx.Abort()
+		return
+	}
+
+	utils.SuccessResponse(ctx, 200, "User info updated successfully", nil)
+}
