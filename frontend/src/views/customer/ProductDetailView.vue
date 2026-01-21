@@ -389,6 +389,82 @@ const addToCart = async () => {
     isAddingToCart.value = false
   }
 }
+
+// Report Logic
+const reportDialogVisible = ref(false)
+const isReporting = ref(false)
+const reportForm = reactive({
+  reason: '',
+  description: '',
+})
+
+const reportReasons = [
+  { label: 'Fake Product', value: 'fake_product' },
+  { label: 'Forbidden Item', value: 'forbidden_item' },
+  { label: 'Scam', value: 'scam' },
+  { label: 'Wrong Description', value: 'wrong_description' },
+  { label: 'Other', value: 'other' },
+]
+
+const openReportDialog = () => {
+  if (!localStorage.getItem('access_token')) {
+    ElNotification({
+      title: 'Authentication Required',
+      message: 'Please login to report this product.',
+      type: 'warning',
+    })
+    return
+  }
+  reportForm.reason = ''
+  reportForm.description = ''
+  reportDialogVisible.value = true
+}
+
+const submitReport = async () => {
+  if (!reportForm.reason) {
+    ElNotification({
+      title: 'Warning',
+      message: 'Please select a reason.',
+      type: 'warning',
+    })
+    return
+  }
+
+  isReporting.value = true
+  try {
+    const token = localStorage.getItem('access_token')
+    await axios.post(
+      `${import.meta.env.VITE_BE_API_URL}/product/report`,
+      {
+        product_id: product.value?.id,
+        variant_id: selectedVariant.value?.id || null,
+        reason: reportForm.reason,
+        description: reportForm.description,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    )
+
+    ElNotification({
+      title: 'Success',
+      message: 'Report submitted successfully. We will review it shortly.',
+      type: 'success',
+    })
+    reportDialogVisible.value = false
+  } catch (error: any) {
+    console.error('Error submitting report:', error)
+    ElNotification({
+      title: 'Error',
+      message: error.response?.data?.message || 'Failed to submit report.',
+      type: 'error',
+    })
+  } finally {
+    isReporting.value = false
+  }
+}
 </script>
 
 <template>
@@ -452,7 +528,7 @@ const addToCart = async () => {
               <el-divider direction="vertical" />
               <div>{{ quantityFormatNumber(product.sold_count) }} sold</div>
             </div>
-            <el-button :icon="RedFlagIcon">Report</el-button>
+            <el-button :icon="RedFlagIcon" @click="openReportDialog">Report</el-button>
           </div>
           <div style="font-weight: 600; font-size: 28px; padding: 10px 0 12px">
             {{ currentPrice }}đ
@@ -773,6 +849,36 @@ const addToCart = async () => {
     </div>
 
     <RecentlyViewed ref="recentlyViewedRef" />
+
+    <!-- Report Dialog -->
+    <el-dialog v-model="reportDialogVisible" title="Report Product" width="500px">
+      <el-form label-position="top">
+        <el-form-item label="Reason">
+          <el-select v-model="reportForm.reason" placeholder="Select a reason" style="width: 100%">
+            <el-option
+              v-for="item in reportReasons"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="Description">
+          <el-input
+            v-model="reportForm.description"
+            type="textarea"
+            :rows="4"
+            placeholder="Please provide more details..."
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="reportDialogVisible = false">Cancel</el-button>
+          <el-button type="primary" :loading="isReporting" @click="submitReport">Submit</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
   <div
     v-else-if="isLoading"
