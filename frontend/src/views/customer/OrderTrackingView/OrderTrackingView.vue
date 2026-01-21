@@ -28,6 +28,23 @@ const isNotFound = ref(false)
 const order = ref<any>(null)
 const trackingInfo = ref<any>(null)
 
+// Report Dialog State
+const isReportDialogOpen = ref(false)
+const isSubmittingReport = ref(false)
+const selectedReportProduct = ref<any>(null)
+const reportForm = ref({
+  reason: '',
+  description: '',
+})
+
+const reportReasons = [
+  { value: 'fake_product', label: 'Fake Product' },
+  { value: 'prohibited_items', label: 'Prohibited Items' },
+  { value: 'counterfeit', label: 'Counterfeit Goods' },
+  { value: 'scam', label: 'Scam/Fraud' },
+  { value: 'other', label: 'Other' },
+]
+
 const orderInfo = computed(() => ({
   id: order.value?.id ? order.value.id.toUpperCase() : '',
   status: order.value?.status || '',
@@ -54,7 +71,9 @@ const address = computed(() => ({
 const products = computed(() => {
   if (!order.value?.items) return []
   return order.value.items.map((item: any) => ({
-    id: item.variant_id,
+    id: item.variant_id, // For key
+    product_id: item.product_id, // Needed for report
+    variant_id: item.variant_id, // Needed for report
     name: item.product_name,
     variant: item.variant_name,
     price: item.price,
@@ -335,6 +354,46 @@ const handleBack = () => {
   router.back()
 }
 
+const openReportDialog = (product: any) => {
+  selectedReportProduct.value = product
+  reportForm.value = {
+    reason: '',
+    description: '',
+  }
+  isReportDialogOpen.value = true
+}
+
+const submitReport = async () => {
+  if (!reportForm.value.reason || !reportForm.value.description) {
+    ElMessage.warning('Please fill in all fields')
+    return
+  }
+
+  isSubmittingReport.value = true
+  try {
+    const payload = {
+      product_id: selectedReportProduct.value.product_id,
+      variant_id: selectedReportProduct.value.variant_id,
+      reason: reportForm.value.reason,
+      description: reportForm.value.description,
+    }
+
+    await axios.post(`${import.meta.env.VITE_BE_API_URL}/product/report`, payload, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+      },
+    })
+
+    ElMessage.success('Report submitted successfully')
+    isReportDialogOpen.value = false
+  } catch (error: any) {
+    console.error('Failed to submit report:', error)
+    ElMessage.error(error.response?.data?.message || 'Failed to submit report')
+  } finally {
+    isSubmittingReport.value = false
+  }
+}
+
 onMounted(() => {
   isLoggedIn.value = !!localStorage.getItem('access_token')
   fetchOrder()
@@ -461,6 +520,14 @@ onMounted(() => {
                 <h4 class="p-name">{{ product.name }}</h4>
                 <p class="p-variant">Variant: {{ product.variant }}</p>
                 <p class="p-qty">x{{ product.qty }}</p>
+                <el-button
+                  v-if="order && order.status === 'COMPLETED'"
+                  type="danger"
+                  link
+                  size="small"
+                  @click="openReportDialog(product)"
+                  >Report</el-button
+                >
               </div>
               <div class="p-prices">
                 <span class="current-price">{{ formatNumberWithDots(product.price) }}₫</span>
@@ -489,6 +556,38 @@ onMounted(() => {
       title="Order Not Found"
       message="The order you are looking for does not exist or has been removed."
     />
+
+    <!-- Report Dialog -->
+    <el-dialog v-model="isReportDialogOpen" title="Report Product" width="500px">
+      <el-form label-position="top">
+        <el-form-item label="Reason">
+          <el-select v-model="reportForm.reason" placeholder="Select a reason" style="width: 100%">
+            <el-option
+              v-for="item in reportReasons"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="Description">
+          <el-input
+            v-model="reportForm.description"
+            type="textarea"
+            :rows="3"
+            placeholder="Please describe the issue..."
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="isReportDialogOpen = false">Cancel</el-button>
+          <el-button type="danger" :loading="isSubmittingReport" @click="submitReport">
+            Submit Report
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
