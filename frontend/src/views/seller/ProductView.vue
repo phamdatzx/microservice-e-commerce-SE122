@@ -66,6 +66,7 @@ interface Product {
   variants: ProductVariant[]
   category_ids: string[]
   seller_category_ids: string[]
+  address_id: string
 }
 
 type DialogMode = 'add' | 'edit'
@@ -169,6 +170,7 @@ interface RuleForm {
   is_active: boolean
   option_groups: OptionGroup[]
   variants: ProductVariant[]
+  address_id?: string
 }
 
 const ruleFormRef = ref<FormInstance>()
@@ -183,6 +185,7 @@ const ruleForm = reactive<RuleForm>({
   is_active: true,
   option_groups: [],
   variants: [],
+  address_id: '',
 })
 
 const rules = reactive<FormRules<RuleForm>>({
@@ -432,6 +435,7 @@ const handleEditProduct = () => {
     })),
     category_ids: ruleForm.category_ids,
     seller_category_ids: ruleForm.seller_category_ids,
+    address_id: ruleForm.address_id,
   }
 
   const productId = ruleForm.id
@@ -568,6 +572,7 @@ const openModal = (mode: DialogMode, product?: Product) => {
     ruleForm.is_active = product.is_active
     ruleForm.category_ids = product.category_ids
     ruleForm.seller_category_ids = product.seller_category_ids
+    ruleForm.address_id = product.address_id || '20bf6ab1-ec1e-44c4-9157-bd6f3c3cc61f' // Default or from product
     ruleForm.option_groups = (product.option_groups || []).map((g: any) => ({
       key: g.key || g.Key,
       values: g.values || g.Values,
