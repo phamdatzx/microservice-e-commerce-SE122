@@ -197,7 +197,7 @@ const openChat = () => {
 
 .seller-name {
   font-size: 16px;
-  margin: 0 0 4px 0;
+  margin: 0 0 12px 0;
   font-weight: 500;
   color: #000000cc;
 }
