@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import {
   Location,
@@ -16,6 +16,7 @@ import { ElMessage, ElLoading } from 'element-plus'
 import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
 
 const router = useRouter()
+const route = useRoute()
 
 const checkoutItems = ref<any[]>([])
 const addresses = ref<any[]>([])
@@ -304,10 +305,30 @@ const handlePlaceOrder = async () => {
     district_id: selectedAddress.value.district_id ? String(selectedAddress.value.district_id) : '',
   }
 
-  const payload: any = {
-    cart_item_ids: checkoutItems.value.map((item) => item.id), // Assuming item.id is the cart_item_id
-    shipping_address: addressPayload,
-    payment_method: paymentMethod.value,
+  const isInstant = route.query.mode === 'instant'
+
+  let payload: any = {}
+
+  if (isInstant) {
+    // Instant Checkout Payload Structure
+    payload = {
+      items: checkoutItems.value.map((item) => ({
+        seller_id: item.sellerId,
+        product_id: item.productId,
+        variant_id: item.variantId,
+        quantity: item.quantity,
+      })),
+      shipping_address: addressPayload,
+      payment_method: paymentMethod.value,
+      // voucher_id and delivery_service_id added below if exist
+    }
+  } else {
+    // Standard Cart Checkout Payload
+    payload = {
+      cart_item_ids: checkoutItems.value.map((item) => item.id), // Assuming item.id is the cart_item_id
+      shipping_address: addressPayload,
+      payment_method: paymentMethod.value,
+    }
   }
 
   if (selectedVoucher.value?.voucher?.id) {
@@ -328,15 +349,12 @@ const handlePlaceOrder = async () => {
 
   try {
     // 1. Checkout API
-    const response = await axios.post(
-      `${import.meta.env.VITE_BE_API_URL}/order/checkout`,
-      payload,
-      {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-        },
+    const endpoint = isInstant ? '/order/instant-checkout' : '/order/checkout'
+    const response = await axios.post(`${import.meta.env.VITE_BE_API_URL}${endpoint}`, payload, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('access_token')}`,
       },
-    )
+    })
 
     if (response.data) {
       const orderId = response.data.order_id
@@ -346,9 +364,13 @@ const handlePlaceOrder = async () => {
         await handleStripePayment(orderId)
       } else {
         ElMessage.success('Order placed successfully!')
-        localStorage.removeItem('checkout_items')
-        localStorage.removeItem('checkout_voucher_id')
-        router.push('/profile') // Go to order history
+        if (isInstant) {
+          localStorage.removeItem('instant_checkout_item')
+        } else {
+          localStorage.removeItem('checkout_items')
+          localStorage.removeItem('checkout_voucher_id')
+        }
+        router.push('/') // Go to home page
       }
     }
   } catch (error: any) {
@@ -412,6 +434,23 @@ const validVouchers = computed(() => {
 
 const fetchSellerAddress = async () => {
   try {
+    const isInstant = route.query.mode === 'instant'
+
+    if (isInstant) {
+      // For instant checkout, we have the sellerId in the item
+      const item = checkoutItems.value[0]
+      if (!item || !item.sellerId) return
+
+      const response = await axios.get(
+        `${import.meta.env.VITE_BE_API_URL}/user/public/seller/${item.sellerId}`,
+      )
+      if (response.data && response.data.data && response.data.data.address) {
+        sellerAddress.value = response.data.data.address
+      }
+      return
+    }
+
+    // Default flow: fetch from cart to get seller address
     const response = await axios.get(`${import.meta.env.VITE_BE_API_URL}/order/cart`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem('access_token')}`,
@@ -436,14 +475,20 @@ const fetchSellerAddress = async () => {
 
 onMounted(async () => {
   // Load checkout items
-  const storedItems = localStorage.getItem('checkout_items')
+  const isInstant = route.query.mode === 'instant'
+  const storedItems = localStorage.getItem(isInstant ? 'instant_checkout_item' : 'checkout_items')
+
   if (storedItems) {
     checkoutItems.value = JSON.parse(storedItems)
   }
 
   if (checkoutItems.value.length === 0) {
     ElMessage.info('No items to checkout')
-    router.push('/cart')
+    if (isInstant) {
+      router.push('/')
+    } else {
+      router.push('/cart')
+    }
     return
   }
 

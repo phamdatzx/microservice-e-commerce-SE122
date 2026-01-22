@@ -389,6 +389,36 @@ const addToCart = async () => {
     isAddingToCart.value = false
   }
 }
+
+const handleBuyNow = () => {
+  if (!product.value || !selectedVariant.value) return
+
+  const token = localStorage.getItem('access_token')
+  if (!token) {
+    ElNotification({
+      title: 'Authentication Required',
+      message: 'Please login to proceed with checkout.',
+      type: 'warning',
+    })
+    return
+  }
+
+  // Construct item object compatible with checkout expectations
+  const instantItem = {
+    id: 'instant_' + new Date().getTime(), // Temporary ID
+    sellerId: product.value.seller_id,
+    productId: product.value.id,
+    variantId: selectedVariant.value.id,
+    quantity: buyQuantity.value,
+    price: selectedVariant.value.price,
+    productName: product.value.name,
+    imageUrl: selectedVariant.value.image || product.value.images[0]?.url,
+    productOption: Object.values(selectedOptions).join(', '),
+  }
+
+  localStorage.setItem('instant_checkout_item', JSON.stringify([instantItem]))
+  router.push('/checkout?mode=instant')
+}
 </script>
 
 <template>
@@ -565,6 +595,7 @@ const addToCart = async () => {
               size="large"
               :disabled="currentStock <= 0"
               style="width: 100%; margin: 0"
+              @click="handleBuyNow"
             >
               <el-icon size="large" style="margin-right: 6px"><Goods /></el-icon>
               Buy Now
