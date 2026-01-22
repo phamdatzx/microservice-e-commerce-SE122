@@ -27,6 +27,7 @@ type UserService interface {
 	UpdateProductCount(request dto.UpdateProductCountRequest) (dto.UpdateProductCountResponse, error)
 	GetAllUsers(page, limit int, role *string, isBanned *bool) (dto.GetAllUsersResponse, error)
 	SetUserBanned(userId string, isBanned bool) error
+	UpdateUserInfo(userId string, request dto.UpdateUserInfoRequest) error
 }
 
 type userService struct {
@@ -205,7 +206,6 @@ func (s *userService) GetUserByID(userId string) (dto.UserResponse, error) {
 		}
 	}
 
-
 	return dto.UserResponse{
 		ID:       user.ID.String(),
 		Username: user.Username,
@@ -350,7 +350,7 @@ func (s *userService) GetSellerByID(sellerId string, userId string) (dto.SellerR
 func (s *userService) UpdateProductCount(request dto.UpdateProductCountRequest) (dto.UpdateProductCountResponse, error) {
 	// Determine if we should increment or decrement
 	increment := request.Operation == "increment"
-	
+
 	// Update product count
 	saleInfo, err := s.repo.UpdateProductCount(request.SellerID, increment)
 	if err != nil {
@@ -436,4 +436,20 @@ func (s *userService) SetUserBanned(userId string, isBanned bool) error {
 
 	user.IsBanned = isBanned
 	return s.repo.Save(user)
+}
+
+func (s *userService) UpdateUserInfo(userId string, request dto.UpdateUserInfoRequest) error {
+	// Check if user exists
+	_, err := s.repo.GetUserByID(userId)
+	if err != nil {
+		return customError.NewAppErrorWithErr(404, "User not found", err)
+	}
+
+	// Update user info
+	err = s.repo.UpdateUserInfo(userId, request.Name, request.Phone, request.Email)
+	if err != nil {
+		return customError.NewAppErrorWithErr(500, "Failed to update user info", err)
+	}
+
+	return nil
 }

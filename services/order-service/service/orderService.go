@@ -28,6 +28,7 @@ type OrderService interface {
 	UpdateOrderStatus(ctx context.Context, userID string, orderID string, request dto.UpdateOrderStatusRequest) error
 	VerifyVariantPurchase(userID, productID, variantID string) (bool, error)
 	GetSellerStatistics(ctx context.Context, sellerID string, request dto.GetSellerStatisticsRequest) (*dto.GetSellerStatisticsResponse, error)
+	InstantCheckout(userID string, request dto.InstantCheckoutRequest) (*dto.CheckoutResponse, error)
 }
 
 type orderService struct {
@@ -755,5 +756,265 @@ func (s *orderService) GetSellerStatistics(ctx context.Context, sellerID string,
 	}
 
 	return response, nil
+}
+
+func (s *orderService) InstantCheckout(userID string, request dto.InstantCheckoutRequest) (*dto.CheckoutResponse, error) {
+	// Validate all items from same seller
+	if len(request.Items) == 0 {
+		return nil, appError.NewAppError(400, "no items provided")
+	}
+
+	sellerID := request.Items[0].SellerID
+	for _, item := range request.Items {
+		if item.SellerID != sellerID {
+			return nil, appError.NewAppError(400, "all items must be from the same seller")
+		}
+	}
+
+	// Fetch seller info for delivery
+	sellerFetch, err := s.userClient.GetUserByID(sellerID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Fetch User and Seller info
+	user, err := s.userClient.GetUserByID(userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user info: %w", err)
+	}
+
+	seller, err := s.userClient.GetUserByID(sellerID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get seller info: %w", err)
+	}
+
+	// Fetch Variant details and validate stock
+	var orderItems []model.OrderItem
+	var totalAmount float64
+	var variantIDs []string
+
+	for _, item := range request.Items {
+		variantIDs = append(variantIDs, item.VariantID)
+	}
+
+	variants, err := s.productClient.GetVariantsByIds(variantIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get variant details: %w", err)
+	}
+
+	variantMap := make(map[string]dto.ProductVariantDto)
+	for _, v := range variants {
+		variantMap[v.Variant.ID] = dto.ProductVariantDto{
+			ProductName:       v.ProductName,
+			SellerID:          v.SellerID,
+			SellerCategoryIds: v.SellerCategoryIds,
+			Variant: dto.VariantDto{
+				ID:      v.Variant.ID,
+				SKU:     v.Variant.SKU,
+				Options: v.Variant.Options,
+				Price:   v.Variant.Price,
+				Stock:   v.Variant.Stock,
+				Image:   v.Variant.Image,
+			},
+		}
+	}
+
+	for _, item := range request.Items {
+		variantInfo, exists := variantMap[item.VariantID]
+		if !exists {
+			return nil, appError.NewAppError(404, fmt.Sprintf("variant %s not found", item.VariantID))
+		}
+
+		if variantInfo.Variant.Stock < item.Quantity {
+			return nil, appError.NewAppError(409, fmt.Sprintf("not enough stock for product %s", variantInfo.ProductName))
+		}
+
+		itemTotal := float64(variantInfo.Variant.Price * item.Quantity)
+		totalAmount += itemTotal
+
+		// Convert options map to string
+		variantName := ""
+		for k, v := range variantInfo.Variant.Options {
+			variantName += fmt.Sprintf("%s: %s, ", k, v)
+		}
+		if len(variantName) > 2 {
+			variantName = variantName[:len(variantName)-2]
+		}
+
+		orderItems = append(orderItems, model.OrderItem{
+			ProductID:   item.ProductID,
+			ProductName: variantInfo.ProductName,
+			VariantID:   item.VariantID,
+			VariantName: variantName,
+			SKU:         variantInfo.Variant.SKU,
+			Price:       variantInfo.Variant.Price,
+			Quantity:    item.Quantity,
+			Image:       variantInfo.Variant.Image,
+		})
+	}
+
+	// Reserve stock for all items
+	var reserveItems []client.ReserveStockItem
+	for _, item := range request.Items {
+		reserveItems = append(reserveItems, client.ReserveStockItem{
+			VariantID: item.VariantID,
+			Quantity:  item.Quantity,
+		})
+	}
+
+	// Create a temporary order ID for stock reservation
+	tempOrderID := fmt.Sprintf("temp_%s_%d", userID, time.Now().UnixNano())
+
+	if err := s.productClient.ReserveStock(tempOrderID, reserveItems); err != nil {
+		return nil, fmt.Errorf("failed to reserve stock: %w", err)
+	}
+
+	// Apply Voucher
+	var orderVoucher *model.OrderVoucher
+	if request.VoucherID != "" {
+		voucher, err := s.productClient.GetVoucherByID(request.VoucherID)
+		if err != nil {
+			// Rollback: release reserved stock
+			_ = s.productClient.ReleaseStock(tempOrderID)
+			return nil, fmt.Errorf("failed to get voucher: %w", err)
+		}
+
+		if voucher.SellerID != sellerID {
+			// Rollback: release reserved stock
+			_ = s.productClient.ReleaseStock(tempOrderID)
+			return nil, appError.NewAppError(400, "voucher does not belong to seller")
+		}
+
+		// Validate voucher
+		if voucher.Status != "ACTIVE" {
+			// Rollback: release reserved stock
+			_ = s.productClient.ReleaseStock(tempOrderID)
+			return nil, appError.NewAppError(400, "voucher is not active")
+		}
+		if totalAmount < float64(voucher.MinOrderValue) {
+			// Rollback: release reserved stock
+			_ = s.productClient.ReleaseStock(tempOrderID)
+			return nil, appError.NewAppError(400, "order value does not meet voucher minimum requirement")
+		}
+
+		discount := 0.0
+		if voucher.DiscountType == "PERCENTAGE" {
+			discount = totalAmount * float64(voucher.DiscountValue) / 100
+			if discount > float64(voucher.MaxDiscountValue) {
+				discount = float64(voucher.MaxDiscountValue)
+			}
+		} else if voucher.DiscountType == "FIXED" {
+			discount = float64(voucher.DiscountValue)
+		}
+
+		if discount > float64(voucher.MaxDiscountValue) {
+			discount = float64(voucher.MaxDiscountValue)
+		}
+
+		totalAmount -= discount
+		if totalAmount < 0 {
+			totalAmount = 0
+		}
+
+		orderVoucher = &model.OrderVoucher{
+			Code:          voucher.Code,
+			DiscountType:  voucher.DiscountType,
+			DiscountValue: voucher.DiscountValue,
+		}
+	}
+
+	// Create Order record
+	orderStatus := "TO_PAY"
+	if request.PaymentMethod == "COD" {
+		orderStatus = "TO_CONFIRM"
+	}
+
+	order := &model.Order{
+		Status:        orderStatus,
+		PaymentMethod: request.PaymentMethod,
+		PaymentStatus: "PENDING",
+		User: model.User{
+			ID:   user.ID,
+			Name: user.Name,
+		},
+		Seller: model.User{
+			ID:   seller.ID,
+			Name: seller.Name,
+		},
+		Items:             orderItems,
+		Voucher:           orderVoucher,
+		Total:             totalAmount,
+		DeliveryServiceID: request.DeliveryServiceID,
+		ShippingAddress: model.OrderAddress{
+			FullName:    request.ShippingAddress.FullName,
+			Phone:       request.ShippingAddress.Phone,
+			AddressLine: request.ShippingAddress.AddressLine,
+			Ward:        request.ShippingAddress.Ward,
+			District:    request.ShippingAddress.District,
+			Province:    request.ShippingAddress.Province,
+			Country:     request.ShippingAddress.Country,
+			Latitude:    request.ShippingAddress.Latitude,
+			Longitude:   request.ShippingAddress.Longitude,
+			DistrictID:  request.ShippingAddress.DistrictID,
+			WardCode:    request.ShippingAddress.WardCode,
+		},
+	}
+
+	// Calculate delivery fee
+	calculateFeeRequest, err := s.GHNClient.CreateCalculateFeeRequest(*order, *sellerFetch)
+	if err != nil {
+		// Rollback: release reserved stock
+		_ = s.productClient.ReleaseStock(tempOrderID)
+		return nil, fmt.Errorf("failed to create calculate fee request: %w", err)
+	}
+	deliveryFeeResponse, err := s.GHNClient.CalculateFee(*calculateFeeRequest)
+	if err != nil {
+		// Rollback: release reserved stock
+		_ = s.productClient.ReleaseStock(tempOrderID)
+		return nil, fmt.Errorf("failed to get delivery fee: %w", err)
+	}
+	order.DeliveryFee = deliveryFeeResponse.Total
+
+	if err := s.repo.CreateOrder(order); err != nil {
+		// Rollback: release reserved stock
+		_ = s.productClient.ReleaseStock(tempOrderID)
+		return nil, err
+	}
+
+	// Update stock reservation with actual order ID
+	_ = s.productClient.ReleaseStock(tempOrderID)
+	if err := s.productClient.ReserveStock(order.ID, reserveItems); err != nil {
+		// Log error but don't fail the order creation since it's already created
+		fmt.Printf("Warning: failed to update stock reservation with order ID: %v\n", err)
+	}
+
+	// Send notification to seller for COD orders
+	if request.PaymentMethod == "COD" {
+		orderData := map[string]interface{}{
+			"orderId":      order.ID,
+			"total":        order.Total + float64(order.DeliveryFee),
+			"itemCount":    len(order.Items),
+			"customerName": user.Name,
+		}
+
+		err = s.notificationClient.CreateNotification(client.CreateNotificationRequest{
+			UserID:  sellerID,
+			Type:    "order",
+			Title:   "New COD Order",
+			Message: fmt.Sprintf("You have a new COD order from %s", user.Name),
+			Data:    orderData,
+		})
+
+		if err != nil {
+			// Log error but don't fail the checkout
+			fmt.Printf("Warning: failed to send notification to seller: %v\n", err)
+		}
+	}
+
+	return &dto.CheckoutResponse{
+		OrderID:     order.ID,
+		TotalAmount: order.Total + float64(order.DeliveryFee),
+		Status:      order.Status,
+	}, nil
 }
 

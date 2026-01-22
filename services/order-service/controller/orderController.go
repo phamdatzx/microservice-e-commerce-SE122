@@ -259,3 +259,25 @@ func (c *OrderController) GetSellerStatistics(ctx *gin.Context) {
 	ctx.JSON(200, response)
 }
 
+func (c *OrderController) InstantCheckout(ctx *gin.Context) {
+	userID := ctx.GetHeader("X-User-Id")
+	if userID == "" {
+		ctx.Error(appError.NewAppError(401, "User ID not found in header"))
+		return
+	}
+
+	var request dto.InstantCheckoutRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.Error(appError.NewAppErrorWithErr(400, "Invalid request body", err))
+		return
+	}
+
+	response, err := c.service.InstantCheckout(userID, request)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(200, response)
+}
+

@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"fmt"
 	"user-service/model"
 
 	"gorm.io/gorm"
@@ -33,6 +34,10 @@ func (r *followRepository) Delete(userID, sellerID string) error {
 }
 
 func (r *followRepository) IsFollowing(userID, sellerID string) (bool, error) {
+
+	fmt.Println("userID: ", userID)
+	fmt.Println("sellerID: ", sellerID)
+
 	var count int64
 	err := r.db.Model(&model.UserFollow{}).
 		Where("user_id = ? AND seller_id = ?", userID, sellerID).
