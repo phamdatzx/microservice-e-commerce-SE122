@@ -34,6 +34,10 @@ const isValidName = computed(() => {
   return localName.value.length > 1 && localName.value.length <= 100
 })
 
+const isValidPhone = computed(() => {
+  return !localPhone.value || localPhone.value.length <= 15
+})
+
 watch(localName, (newVal) => emit('update:name', newVal))
 watch(localEmail, (newVal) => emit('update:email', newVal))
 watch(localPhone, (newVal) => emit('update:phone', newVal))
@@ -220,7 +224,12 @@ const handleSave = async () => {
             />
           </el-form-item>
 
-          <el-form-item label="Phone Number (Optional)">
+          <el-form-item
+            label="Phone Number (Optional)"
+            :error="
+              localPhone && localPhone.length > 15 ? 'Phone number length should be <= 15' : ''
+            "
+          >
             <el-input v-model="localPhone" size="large" placeholder="Enter your phone number" />
           </el-form-item>
 
@@ -230,7 +239,7 @@ const handleSave = async () => {
               size="large"
               @click="handleSave"
               class="save-btn"
-              :disabled="!isValidName || !isValidEmail"
+              :disabled="!isValidName || !isValidEmail || !isValidPhone"
               style="padding: 22px 40px; font-size: 16px"
               >SAVE</el-button
             >
