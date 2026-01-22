@@ -629,7 +629,7 @@ func (s *orderService) UpdateOrderStatus(ctx context.Context, userID string, ord
 			oldOrder.DeliveryCode = deliveryCode
 		}
 	case "TO_PICKUP":
-		if request.Status != "SHIPPING" && request.Status != "CANCELLED" {
+		if request.Status != "SHIPPING" && request.Status != "CANCELLED" && request.Status != "COMPLETED" {
 			return appError.NewAppError(400, "Invalid status")
 		}
 	case "SHIPPING":
