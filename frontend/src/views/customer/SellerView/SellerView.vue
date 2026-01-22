@@ -54,7 +54,11 @@ const productListRef = ref<any>(null)
 const fetchSellerInfo = async () => {
   if (!sellerId.value) return
   const token = localStorage.getItem('access_token')
-  const headers = token ? { Authorization: `Bearer ${token}` } : {}
+  const userId = localStorage.getItem('user_id')
+  const headers: Record<string, string> = {}
+
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  if (userId) headers['X-User-Id'] = userId
   isNotFound.value = false
   try {
     const response = await axios.get(
