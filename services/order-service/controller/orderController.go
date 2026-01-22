@@ -129,7 +129,7 @@ func (c *OrderController) CreatePayment(ctx *gin.Context) {
 		return
 	}
 
-	response, err := c.service.CreatePaymentForOrder(ctx, orderID)
+	response, err := c.service.CreateCheckoutSession(ctx, orderID)
 	if err != nil {
 		ctx.Error(err)
 		return

@@ -19,10 +19,9 @@ import (
 type OrderService interface {
 	Checkout(userID string, request dto.CheckoutRequest) (*dto.CheckoutResponse, error)
 	UpdateOrderPaymentStatus(ctx context.Context, orderID string, status string) error
-	CreateCheckoutSession(order *model.Order, successURL, cancelURL string) (string, error)
+	CreateCheckoutSession(ctx context.Context, orderID string) (*dto.CreatePaymentResponse, error)
 	HandleCheckoutSessionCompleted(ctx context.Context, orderID, sessionID, paymentIntentID string) error
 	HandlePaymentFailed(ctx context.Context, paymentIntentID string) error
-	CreatePaymentForOrder(ctx context.Context, orderID string) (*dto.CreatePaymentResponse, error)
 	GetUserOrders(ctx context.Context, userID string, request dto.GetOrdersRequest) (*dto.GetOrdersResponse, error)
 	GetSellerOrders(ctx context.Context, sellerID string, request dto.GetOrdersBySellerRequest) (*dto.GetOrdersResponse, error)
 	UpdateOrderStatus(ctx context.Context, userID string, orderID string, request dto.UpdateOrderStatusRequest) error
@@ -374,19 +373,30 @@ func (s *orderService) UpdateOrderPaymentStatus(ctx context.Context, orderID str
 	return s.repo.UpdateOrder(order)
 }
 
-func (s *orderService) CreateCheckoutSession(order *model.Order, successURL, cancelURL string) (string, error) {
+func (s *orderService) CreateCheckoutSession(ctx context.Context, orderID string) (*dto.CreatePaymentResponse, error) {
+
+	// Find the order
+	order, err := s.repo.FindOrderByID(orderID)
+	if err != nil {
+		return nil,  err
+	}
+	if order == nil {
+		return nil,  appError.NewAppError(404 ,"order not found")
+	}
+
 	var lineItems []*stripe.CheckoutSessionLineItemParams
 
-	for _, item := range order.Items {
+	// Add order total (excluding delivery fee) as a line item
+	if order.Total > 0 {
 		lineItems = append(lineItems, &stripe.CheckoutSessionLineItemParams{
 			PriceData: &stripe.CheckoutSessionLineItemPriceDataParams{
 				Currency: stripe.String("vnd"),
 				ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{
-					Name: stripe.String(item.ProductName + " - " + item.VariantName),
+					Name: stripe.String("Order Total"),
 				},
-				UnitAmount: stripe.Int64(int64(item.Price)),
+				UnitAmount: stripe.Int64(int64(order.Total)),
 			},
-			Quantity: stripe.Int64(int64(item.Quantity)),
+			Quantity: stripe.Int64(1),
 		})
 	}
 
@@ -410,8 +420,8 @@ func (s *orderService) CreateCheckoutSession(order *model.Order, successURL, can
 		}),
 		LineItems:  lineItems,
 		Mode:       stripe.String(string(stripe.CheckoutSessionModePayment)),
-		SuccessURL: stripe.String(successURL),
-		CancelURL:  stripe.String(cancelURL),
+		SuccessURL: stripe.String(s.clientURL+"/checkout/success"),
+		CancelURL:  stripe.String(s.clientURL+"/checkout/failure"),
 		Metadata: map[string]string{
 			"order_id": order.ID,
 		},
@@ -419,10 +429,12 @@ func (s *orderService) CreateCheckoutSession(order *model.Order, successURL, can
 
 	sess, err := session.New(params)
 	if err != nil {
-		return "", fmt.Errorf("failed to create checkout session: %w", err)
+		return nil, appError.NewAppError(500, "failed to create checkout session")
 	}
 
-	return sess.URL, nil
+	return &dto.CreatePaymentResponse{
+		PaymentUrl: sess.URL,
+	}, nil
 }
 
 func (s *orderService) HandleCheckoutSessionCompleted(ctx context.Context, orderID, sessionID, paymentIntentID string) error {
@@ -476,27 +488,6 @@ func (s *orderService) HandlePaymentFailed(ctx context.Context, paymentIntentID 
 	// In production, you'd want to find the order by payment intent ID
 	// and update its status accordingly
 	return nil
-}
-
-func (s *orderService) CreatePaymentForOrder(ctx context.Context, orderID string) (*dto.CreatePaymentResponse, error) {
-	// Find the order
-	order, err := s.repo.FindOrderByID(orderID)
-	if err != nil {
-		return nil, err
-	}
-	if order == nil {
-		return nil, fmt.Errorf("order not found: %s", orderID)
-	}
-
-	// Create payment via Stripe
-	paymentUrl, err := s.paymentClient.CreatePayment(order, s.clientURL+"/checkout/success", s.clientURL+"/checkout/failure")
-	if err != nil {
-		return nil, err
-	}
-
-	return &dto.CreatePaymentResponse{
-		PaymentUrl: paymentUrl,
-	}, nil
 }
 
 func (s *orderService) GetUserOrders(ctx context.Context, userID string, request dto.GetOrdersRequest) (*dto.GetOrdersResponse, error) {
