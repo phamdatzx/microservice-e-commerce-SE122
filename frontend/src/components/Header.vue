@@ -11,6 +11,7 @@ import IconLogout from './icons/IconLogout.vue'
 import { socketService, SOCKET_EVENTS } from '@/utils/socket'
 import { Bell, Loading, Clock } from '@element-plus/icons-vue'
 import NotificationDropdown from './NotificationDropdown.vue'
+import { eventBus } from '@/utils/eventBus'
 
 const router = useRouter()
 const isLoggedIn = ref(false)
@@ -74,6 +75,10 @@ onMounted(() => {
     fetchUserInfo()
 
     initSocket()
+
+    eventBus.on('update_user_info', () => {
+      fetchUserInfo()
+    })
   }
 })
 

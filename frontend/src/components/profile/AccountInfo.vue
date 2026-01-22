@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import axios from 'axios'
 import { Loading } from '@element-plus/icons-vue'
 import { ElNotification } from 'element-plus'
+import { eventBus } from '@/utils/eventBus'
 
 const props = defineProps<{
   name: string
@@ -24,6 +25,14 @@ const localPhone = ref(props.phone)
 const avatarPreview = ref(props.avatar || '')
 const selectedFile = ref<File | null>(null)
 const isLoading = ref(false)
+
+const isValidEmail = computed(() => {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(localEmail.value)
+})
+
+const isValidName = computed(() => {
+  return localName.value.length > 1 && localName.value.length <= 100
+})
 
 watch(localName, (newVal) => emit('update:name', newVal))
 watch(localEmail, (newVal) => emit('update:email', newVal))
@@ -107,6 +116,8 @@ const uploadAvatar = async () => {
         type: 'success',
       })
 
+      eventBus.emit('update_user_info')
+
       // Clear selected file after upload
       selectedFile.value = null
 
@@ -124,11 +135,48 @@ const uploadAvatar = async () => {
   }
 }
 
-const handleSave = () => {
-  // Update other info
-  emit('update:name', localName.value)
-  emit('update:email', localEmail.value)
-  emit('update:phone', localPhone.value)
+const handleSave = async () => {
+  const token = localStorage.getItem('access_token')
+  if (!token) return
+
+  isLoading.value = true
+  try {
+    await axios.put(
+      `${import.meta.env.VITE_BE_API_URL}/user/update-info`,
+      {
+        name: localName.value,
+        phone: localPhone.value,
+        email: localEmail.value,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    )
+
+    ElNotification({
+      title: 'Success',
+      message: 'Account info updated successfully',
+      type: 'success',
+    })
+
+    // Update other info
+    emit('update:name', localName.value)
+    emit('update:email', localEmail.value)
+    emit('update:phone', localPhone.value)
+
+    eventBus.emit('update_user_info')
+  } catch (error: any) {
+    console.error('Failed to update user info:', error)
+    ElNotification({
+      title: 'Error',
+      message: error.response?.data?.message || 'Failed to update account info',
+      type: 'error',
+    })
+  } finally {
+    isLoading.value = false
+  }
 }
 </script>
 
@@ -143,12 +191,33 @@ const handleSave = () => {
     <el-row v-else :gutter="40">
       <el-col :span="16">
         <el-form label-position="top">
-          <el-form-item label="Name" required>
+          <el-form-item
+            label="Name"
+            required
+            :error="
+              !localName
+                ? 'Name is required'
+                : localName.length <= 1
+                  ? 'Name length should be > 1'
+                  : localName.length > 100
+                    ? 'Name length should be <= 100'
+                    : ''
+            "
+          >
             <el-input v-model="localName" size="large" placeholder="Enter your name" />
           </el-form-item>
 
-          <el-form-item label="Email Address" required>
-            <el-input v-model="localEmail" size="large" placeholder="Enter your email" />
+          <el-form-item
+            label="Email Address"
+            required
+            :error="!localEmail ? 'Email is required' : !isValidEmail ? 'Invalid email format' : ''"
+          >
+            <el-input
+              v-model="localEmail"
+              type="email"
+              size="large"
+              placeholder="Enter your email"
+            />
           </el-form-item>
 
           <el-form-item label="Phone Number (Optional)">
@@ -160,6 +229,8 @@ const handleSave = () => {
               type="primary"
               size="large"
               @click="handleSave"
+              class="save-btn"
+              :disabled="!isValidName || !isValidEmail"
               style="padding: 22px 40px; font-size: 16px"
               >SAVE</el-button
             >
@@ -273,5 +344,10 @@ const handleSave = () => {
   padding: 100px 0;
   font-size: 40px;
   color: #888;
+}
+
+.save-btn {
+  --el-button-disabled-bg-color: #dcdfe6;
+  --el-button-disabled-border-color: #dcdfe6;
 }
 </style>

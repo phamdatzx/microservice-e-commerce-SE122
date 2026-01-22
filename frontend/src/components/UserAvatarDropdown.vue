@@ -7,6 +7,7 @@ import IconUser from '@/components/icons/IconUser.vue'
 import IconAddress from '@/components/icons/IconAddress.vue'
 import IconLock from '@/components/icons/IconLock.vue'
 import IconLogout from '@/components/icons/IconLogout.vue'
+import { eventBus } from '@/utils/eventBus'
 
 const props = defineProps({
   showAddress: {
@@ -46,6 +47,10 @@ const fetchUserInfo = async () => {
 
 onMounted(() => {
   fetchUserInfo()
+
+  eventBus.on('update_user_info', () => {
+    fetchUserInfo()
+  })
 })
 
 const handleLogout = () => {
