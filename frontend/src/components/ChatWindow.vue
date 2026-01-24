@@ -189,6 +189,7 @@ const markAsReadAPI = async (conversationId: string) => {
         headers: { Authorization: `Bearer ${token}` },
       },
     )
+    window.dispatchEvent(new CustomEvent('trigger-chat-badge-update'))
   } catch (error) {
     console.error('Error marking conversation as read:', error)
   }
@@ -515,10 +516,12 @@ const selectContact = (contact: any) => {
 
   // Mark as read when explicitly selected (clicked)
   if (contact) {
-    contact.unread = 0
-    contact.isRead = true
-    socketService.emit(SOCKET_EVENTS.MESSAGE_READ, { conversationId: contact.id })
-    markAsReadAPI(contact.id)
+    if (contact.unread > 0) {
+      contact.unread = 0
+      contact.isRead = true
+      socketService.emit(SOCKET_EVENTS.MESSAGE_READ, { conversationId: contact.id })
+      markAsReadAPI(contact.id)
+    }
   }
 
   if (contact && contact.messages.length === 0) {

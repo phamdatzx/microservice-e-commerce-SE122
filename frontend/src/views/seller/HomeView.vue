@@ -75,14 +75,20 @@ const initSocket = () => {
   }
 }
 
+const handleBadgeUpdate = () => {
+  fetchUnreadChatCount()
+}
+
 onMounted(() => {
   initSocket()
   setupSocketListeners()
   fetchUnreadChatCount()
+  window.addEventListener('trigger-chat-badge-update', handleBadgeUpdate)
 })
 
 onUnmounted(() => {
   cleanupSocketListeners()
+  window.removeEventListener('trigger-chat-badge-update', handleBadgeUpdate)
 })
 </script>
 
