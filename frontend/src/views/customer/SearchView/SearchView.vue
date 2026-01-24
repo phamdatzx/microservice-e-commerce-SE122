@@ -315,7 +315,7 @@ onMounted(() => {
           <div v-for="cat in displayedCategories" :key="cat.id" class="checkbox-item">
             <el-checkbox
               :model-value="selectedCategory.includes(cat.id)"
-              @change="(val) => toggleCategory(cat.id, val as boolean)"
+              @change="(val: string | number | boolean) => toggleCategory(cat.id, val as boolean)"
             >
               {{ cat.name }}
             </el-checkbox>

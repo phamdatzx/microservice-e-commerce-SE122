@@ -42,11 +42,13 @@ interface OptionGroup {
 }
 
 interface ProductVariant {
+  id?: string
   sku: string
   options: Record<string, string>
   price: number
   stock: number
   images: UploadUserFile[]
+  image?: string
 }
 
 interface Product {
@@ -62,6 +64,11 @@ interface Product {
   is_active: boolean
   created_at: Date
   updated_at: Date
+  price: {
+    min: number
+    max: number
+  }
+  stock: number
   option_groups: OptionGroup[]
   variants: ProductVariant[]
   category_ids: string[]
@@ -83,6 +90,8 @@ const total = ref(0)
 const sortBy = ref('name')
 const sortDirection = ref('asc')
 const filterStatus = ref('')
+const filterCategory = ref('')
+const filterSellerCategory = ref('')
 
 onMounted(() => {
   fetchProducts()
@@ -91,12 +100,18 @@ onMounted(() => {
 const fetchProducts = () => {
   isLoading.value = true
   axios
-    .get(
-      import.meta.env.VITE_BE_API_URL +
-        '/product/public/products/seller/' +
-        userId +
-        `?status=${filterStatus.value}&search=${searchQuery.value}&sort_by=${sortBy.value}&sort_direction=${sortDirection.value}&page=${currentPage.value}&limit=${pageSize.value}`,
-    )
+    .get(import.meta.env.VITE_BE_API_URL + '/product/public/products/seller/' + userId, {
+      params: {
+        status: filterStatus.value || undefined,
+        category: filterCategory.value || undefined,
+        seller_category: filterSellerCategory.value || undefined,
+        search: searchQuery.value || undefined,
+        sort_by: sortBy.value,
+        sort_direction: sortDirection.value,
+        page: currentPage.value,
+        limit: pageSize.value,
+      },
+    })
     .then((response) => {
       productData.value = response.data.products
       total.value = response.data.pagination.total_items
@@ -125,7 +140,6 @@ const dialogContent = ref({
 
 const previewImageDialogVisible = ref(false)
 const previewImageUrl = ref('')
-// Categories will be fetched from API in a real app
 onMounted(() => {
   fetchGeneralCategories()
   fetchSellerCategories()
@@ -228,6 +242,14 @@ const handleFormSubmit = () => {
   }
 }
 
+const getSafeId = () => {
+  try {
+    return crypto.randomUUID()
+  } catch (e) {
+    return 'v-' + Date.now() + '-' + Math.floor(Math.random() * 1000)
+  }
+}
+
 const clearRuleForm = () => {
   ruleFormRef.value?.resetFields()
   ruleForm.id = undefined
@@ -240,7 +262,8 @@ const clearRuleForm = () => {
   ruleForm.category_ids = []
   ruleForm.seller_category_ids = []
   ruleForm.images = []
-  generateVariants() // Initialize with default variant
+  ruleForm.address_id = '20bf6ab1-ec1e-44c4-9157-bd6f3c3cc61f'
+  generateVariants()
 }
 
 const handleChange = (uploadFile: UploadFile, uploadFiles: UploadFiles) => {
@@ -252,7 +275,6 @@ const handleChange = (uploadFile: UploadFile, uploadFiles: UploadFiles) => {
   if (!isImage) {
     ElMessage.error('Only .png, .jpg and .jpeg files are allowed')
 
-    // Remove the invalid file
     const index = ruleForm.images.findIndex((f) => f.uid === uploadFile.uid)
     if (index !== -1) ruleForm.images.splice(index, 1)
     return
@@ -275,12 +297,20 @@ const handleVariantImageChange = (uploadFile: UploadFile, row: ProductVariant) =
   const rawFile = uploadFile.raw
   if (!rawFile) return
 
+  // If a new file is added, the old server image URL is no longer valid
+  row.image = ''
+
   const isImage = rawFile.type.startsWith('image/')
   if (!isImage) {
     ElMessage.error('Only .png, .jpg and .jpeg files are allowed')
-    row.images = [] // Clear invalid file
+    row.images = []
     return
   }
+}
+
+const handleVariantImageRemove = (uploadFile: UploadFile, row: ProductVariant) => {
+  // Clear the server image URL when the image is removed from the UI
+  row.image = ''
 }
 
 const handlePictureCardPreview: UploadProps['onPreview'] = (uploadFile) => {
@@ -298,10 +328,10 @@ const uploadProductImages = async (productId: string, images: UploadUserFile[]) 
     }
   })
 
+  const currentToken = localStorage.getItem('access_token')
   await axios.post(`${import.meta.env.VITE_BE_API_URL}/product/${productId}/images`, formData, {
     headers: {
-      'Content-Type': 'multipart/form-data',
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${currentToken}`,
     },
   })
 }
@@ -315,11 +345,19 @@ const uploadVariantImages = async (
   let hasImages = false
 
   variants.forEach((v) => {
-    if (v.images && v.images.length > 0 && v.images[0].raw) {
-      // Find server variant ID by SKU
-      const serverV = serverVariants.find((sv) => sv.sku === v.sku)
-      if (serverV) {
-        formData.append(serverV.id, v.images[0].raw)
+    const firstImage = v.images?.[0]
+    if (firstImage?.raw) {
+      const vSku = (v.sku || '').toString().trim().toLowerCase()
+
+      const serverV = serverVariants.find((sv: any) => {
+        const sSku = (sv.sku || sv.SKU || '').toString().trim().toLowerCase()
+        return sSku !== '' && sSku === vSku
+      })
+
+      const variantKey = serverV?.id || serverV?.Id || serverV?._id || v.id
+
+      if (variantKey && variantKey.toString().trim() !== '') {
+        formData.append(variantKey.toString(), firstImage.raw)
         hasImages = true
       }
     }
@@ -327,13 +365,17 @@ const uploadVariantImages = async (
 
   if (!hasImages) return
 
+  const currentToken = localStorage.getItem('access_token')
+  const keys = Array.from((formData as any).keys()).filter((k) => k !== '')
+
+  if (keys.length === 0) return
+
   await axios.post(
     `${import.meta.env.VITE_BE_API_URL}/product/${productId}/variants/images`,
     formData,
     {
       headers: {
-        'Content-Type': 'multipart/form-data',
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${currentToken}`,
       },
     },
   )
@@ -346,30 +388,45 @@ const handleAddProduct = () => {
     background: 'rgba(0, 0, 0, 0.7)',
   })
 
-  // Format the payload according to the user example
+  const currentToken = localStorage.getItem('access_token')
+  const currentUserId = localStorage.getItem('user_id')
+
+  if (!currentToken || !currentUserId) {
+    ElNotification({
+      title: 'Auth Error',
+      message: 'Please log in again.',
+      type: 'error',
+    })
+    return
+  }
+
   const payload = {
     name: ruleForm.name,
     description: ruleForm.description,
     status: ruleForm.status,
     is_active: ruleForm.is_active,
+    address_id: ruleForm.address_id,
+    seller_id: currentUserId,
     option_groups: ruleForm.option_groups.map((g) => ({
       key: g.key,
       values: g.values,
     })),
     variants: ruleForm.variants.map((v) => ({
+      id: v.id,
       sku: v.sku,
       options: v.options,
       price: v.price,
       stock: v.stock,
     })),
-    category_ids: ruleForm.category_ids,
     seller_category_ids: ruleForm.seller_category_ids,
+    category_ids: ruleForm.category_ids,
+    images: [], // Initialize as empty array to avoid MongoDB null error
   }
 
   axios
     .post(import.meta.env.VITE_BE_API_URL + '/product', payload, {
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${currentToken}`,
       },
     })
     .then(async (response: any) => {
@@ -377,7 +434,6 @@ const handleAddProduct = () => {
       const serverVariants = response.data.variants
 
       try {
-        // Sequentially upload images
         await uploadProductImages(productId, ruleForm.images)
         await uploadVariantImages(productId, ruleForm.variants, serverVariants)
 
@@ -389,9 +445,14 @@ const handleAddProduct = () => {
         dialogVisible.value = false
         fetchProducts()
       } catch (uploadError: any) {
+        console.error('Detailed Image Upload Error:', uploadError)
+        const errorMsg =
+          uploadError.response?.data?.message ||
+          uploadError.response?.data?.internal_error ||
+          uploadError.message
         ElNotification({
           title: 'Partial Success',
-          message: 'Product added, but image upload failed: ' + uploadError.message,
+          message: 'Product added, but image upload failed: ' + errorMsg,
           type: 'warning',
         })
         dialogVisible.value = false
@@ -399,9 +460,12 @@ const handleAddProduct = () => {
       }
     })
     .catch((error) => {
+      console.error('Detailed Create Product Error:', error)
+      const errorMsg =
+        error.response?.data?.message || error.response?.data?.internal_error || error.message
       ElNotification({
         title: 'Error!',
-        message: 'Add product failed: ' + error.message,
+        message: 'Add product failed: ' + errorMsg,
         type: 'error',
       })
     })
@@ -417,41 +481,61 @@ const handleEditProduct = () => {
     background: 'rgba(0, 0, 0, 0.7)',
   })
 
-  // Format the payload according to the user example
+  const currentToken = localStorage.getItem('access_token')
+  const currentUserId = localStorage.getItem('user_id')
+
+  if (!currentToken || !currentUserId) {
+    ElNotification({
+      title: 'Auth Error',
+      message: 'Please log in again.',
+      type: 'error',
+    })
+    return
+  }
+
   const payload = {
     name: ruleForm.name,
     description: ruleForm.description,
     status: ruleForm.status,
     is_active: ruleForm.is_active,
+    address_id: ruleForm.address_id,
+    seller_id: currentUserId,
     option_groups: ruleForm.option_groups.map((g) => ({
       key: g.key,
       values: g.values,
     })),
     variants: ruleForm.variants.map((v) => ({
+      id: v.id,
       sku: v.sku,
       options: v.options,
       price: v.price,
       stock: v.stock,
+      // Only keep the image URL if there's still an image in the list and it's not a new upload
+      image: v.images.length > 0 && !v.images[0]?.raw ? v.image : '',
     })),
-    category_ids: ruleForm.category_ids,
     seller_category_ids: ruleForm.seller_category_ids,
-    address_id: ruleForm.address_id,
+    category_ids: ruleForm.category_ids,
+    // Preserve existing images that don't have .raw (meaning they weren't just uploaded)
+    images: ruleForm.images
+      .filter((img) => !img.raw)
+      .map((img, idx) => ({
+        id: img.name,
+        url: img.url,
+        order: idx + 1,
+      })),
   }
 
   const productId = ruleForm.id
-
   axios
-    .put(import.meta.env.VITE_BE_API_URL + '/product/seller/products/' + productId, payload, {
+    .put(import.meta.env.VITE_BE_API_URL + '/product/' + productId, payload, {
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${currentToken}`,
       },
     })
     .then(async (response: any) => {
       const serverVariants = response.data.variants
 
       try {
-        // Sequentially upload images
-        // We only upload images that have a 'raw' property (newly selected files)
         const newImages = ruleForm.images.filter((img) => !!img.raw)
         if (newImages.length > 0) {
           await uploadProductImages(productId!, newImages)
@@ -467,9 +551,14 @@ const handleEditProduct = () => {
         dialogVisible.value = false
         fetchProducts()
       } catch (uploadError: any) {
+        console.error('Detailed Image Update Error:', uploadError)
+        const errorMsg =
+          uploadError.response?.data?.message ||
+          uploadError.response?.data?.internal_error ||
+          uploadError.message
         ElNotification({
           title: 'Partial Success',
-          message: 'Product details updated, but image upload failed: ' + uploadError.message,
+          message: 'Product details updated, but image upload failed: ' + errorMsg,
           type: 'warning',
         })
         dialogVisible.value = false
@@ -477,9 +566,12 @@ const handleEditProduct = () => {
       }
     })
     .catch((error) => {
+      console.error('Detailed Update Product Error:', error)
+      const errorMsg =
+        error.response?.data?.message || error.response?.data?.internal_error || error.message
       ElNotification({
         title: 'Error!',
-        message: 'Update product failed: ' + error.message,
+        message: 'Update product failed: ' + errorMsg,
         type: 'error',
       })
     })
@@ -500,7 +592,7 @@ const handleSortChange = ({ prop, order }: { prop: string; order: string }) => {
     return
   }
 
-  // Map prop to API sort keys if needed
+  // Map prop to API sort keys
   if (prop === 'quantity') {
     sortBy.value = 'stock'
   } else {
@@ -537,7 +629,10 @@ const getStatusTagContent = (status: string) => {
 }
 
 const getStatusTagType = (status: string) => {
-  return ''
+  if (status === 'AVAILABLE') return 'success'
+  else if (status === 'OUT_OF_STOCK') return 'danger'
+  else if (status === 'HIDDEN') return 'info'
+  return 'info'
 }
 
 const filterTag = (value: string, row: any) => {
@@ -578,11 +673,12 @@ const openModal = (mode: DialogMode, product?: Product) => {
       values: g.values || g.Values,
     }))
     ruleForm.variants = (product.variants || []).map((v: any) => ({
+      id: v.id || v._id || v.Id || getSafeId(),
       sku: v.sku,
       options: v.options,
       price: v.price,
       stock: v.stock,
-      // Map the single image string from server to the images array for UI preview
+      image: v.image,
       images: v.image
         ? [
             {
@@ -592,7 +688,6 @@ const openModal = (mode: DialogMode, product?: Product) => {
           ]
         : [],
     }))
-    // Main product images
     ruleForm.images = (product.images || []).map((img) => ({
       name: img.id,
       url: img.url,
@@ -619,6 +714,27 @@ const removeOptionGroup = (index: number) => {
   ruleForm.option_groups.splice(index, 1)
 }
 
+let searchTimer: any = null
+watch(searchQuery, (newVal) => {
+  if (searchTimer) clearTimeout(searchTimer)
+
+  if (!newVal) {
+    currentPage.value = 1
+    fetchProducts()
+    return
+  }
+
+  searchTimer = setTimeout(() => {
+    currentPage.value = 1
+    fetchProducts()
+  }, 300)
+})
+
+watch([filterCategory, filterSellerCategory], () => {
+  currentPage.value = 1
+  fetchProducts()
+})
+
 watch(
   [() => ruleForm.option_groups, () => ruleForm.name],
   () => {
@@ -631,18 +747,17 @@ const generateVariants = () => {
   const groups = ruleForm.option_groups.filter((g) => g.key && g.values.length > 0)
 
   if (groups.length === 0) {
-    // If no option groups, ensure exactly one default variant exists
     const oldV = ruleForm.variants[0]
     const namePart = ruleForm.name.replace(/\s+/g, '-')
     const autoSku = namePart ? namePart + '-DEFAULT' : ''
     const currentSku = oldV?.sku || ''
 
-    // Overwrite if SKU is empty, is the old placeholder, or was auto-generated
     const shouldOverwrite =
       !currentSku || currentSku === 'S1-DEFAULT' || currentSku.endsWith('-DEFAULT')
 
     ruleForm.variants = [
       {
+        id: oldV?.id ?? getSafeId(),
         sku: shouldOverwrite ? autoSku : currentSku,
         options: {},
         price: oldV?.price ?? 0,
@@ -669,7 +784,6 @@ const generateVariants = () => {
 
   const allCombinations = combinations(0, {})
 
-  // Preserve existing variant data (price, stock, images) if possible
   const oldVariants = [...ruleForm.variants]
   ruleForm.variants = allCombinations.map((options) => {
     const existing = oldVariants.find((v) => {
@@ -680,18 +794,18 @@ const generateVariants = () => {
       .map((ov: any) => ov.toString().replace(/\s+/g, '-'))
       .join('-')
 
-    // Generate SKU logic: Name-Val1-Val2
     const sku = (ruleForm.name.replace(/\s+/g, '-') || '') + '-' + optionsPart
 
     if (existing) {
-      // If the existing SKU is empty or starts with a dash (meaning name was empty), update it
       if (!existing.sku || existing.sku.startsWith('-')) {
         existing.sku = sku
       }
       return existing
     }
 
+    const newId = getSafeId()
     return {
+      id: newId,
       sku: sku,
       options: options,
       price: 0,
@@ -727,15 +841,41 @@ const download = (images: ProductImage[], index: number) => {
   <div class="seller-product-view">
     <div class="toolbar">
       <h2>Product Management</h2>
-      <div style="display: flex; gap: 12px">
+      <div style="display: flex; gap: 12px; align-items: center">
+        <el-select
+          v-model="filterCategory"
+          placeholder="General Category"
+          clearable
+          filterable
+          style="width: 180px"
+        >
+          <el-option
+            v-for="item in generalCategoryOptions"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
+        </el-select>
+        <el-select
+          v-model="filterSellerCategory"
+          placeholder="Seller Category"
+          clearable
+          filterable
+          style="width: 180px"
+        >
+          <el-option
+            v-for="item in sellerCategoryOptions"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
+        </el-select>
         <el-input
           v-model="searchQuery"
           placeholder="Search products..."
           :prefix-icon="Search"
           style="width: 240px"
           clearable
-          @change="fetchProducts"
-          @clear="fetchProducts"
         />
         <el-button size="large" :icon="Plus" color="var(--main-color)" @click="openModal('add')">
           Add Product
@@ -810,16 +950,18 @@ const download = (images: ProductImage[], index: number) => {
           <template #default="scope">
             <el-image
               style="width: 56px; height: 56px; position: relative; top: 3px"
-              :src="scope.row.images[0]?.url ?? 'https://placehold.co/56x56'"
+              :src="scope.row.images?.[0]?.url ?? 'https://placehold.co/56x56'"
               fit="contain"
               show-progress
               preview-teleported
-              :preview-src-list="scope.row.images.map((image: ProductImage) => image.url)"
+              :preview-src-list="
+                scope.row.images ? scope.row.images.map((image: ProductImage) => image.url) : []
+              "
             >
               <template #toolbar="{ actions, prev, next, reset, activeIndex, setActiveItem }">
                 <el-icon @click="prev"><Back /></el-icon>
                 <el-icon @click="next"><Right /></el-icon>
-                <el-icon @click="setActiveItem(scope.row.images.length - 1)">
+                <el-icon @click="setActiveItem((scope.row.images?.length || 1) - 1)">
                   <DArrowRight />
                 </el-icon>
                 <el-icon @click="actions('zoomOut')"><ZoomOut /></el-icon>
@@ -831,7 +973,9 @@ const download = (images: ProductImage[], index: number) => {
                 </el-icon>
                 <el-icon @click="actions('anticlockwise')"><RefreshLeft /></el-icon>
                 <el-icon @click="reset"><Refresh /></el-icon>
-                <el-icon @click="download(scope.row.images, activeIndex)"><Download /></el-icon>
+                <el-icon @click="download(scope.row.images || [], activeIndex)"
+                  ><Download
+                /></el-icon>
               </template>
             </el-image>
           </template>
@@ -840,31 +984,16 @@ const download = (images: ProductImage[], index: number) => {
         <el-table-column prop="sold_count" label="Sold count" width="120" sortable="custom" />
         <el-table-column prop="price" label="Price" width="180" sortable="custom">
           <template #default="scope">
-            <p v-if="scope.row.variants?.length > 1">
-              {{
-                formatNumberWithDots(
-                  Math.min(...scope.row.variants.map((x: ProductVariant) => x.price)),
-                ) +
-                'đ ~ ' +
-                formatNumberWithDots(
-                  Math.max(...scope.row.variants.map((x: ProductVariant) => x.price)),
-                )
-              }}đ
+            <p v-if="scope.row.price.min !== scope.row.price.max">
+              {{ formatNumberWithDots(scope.row.price.min) }}đ ~
+              {{ formatNumberWithDots(scope.row.price.max) }}đ
             </p>
-            <p v-else>{{ formatNumberWithDots(scope.row.variants[0].price) }}đ</p>
+            <p v-else>{{ formatNumberWithDots(scope.row.price.min) }}đ</p>
           </template>
         </el-table-column>
         <el-table-column prop="quantity" label="Stock" width="100" sortable="custom">
           <template #default="scope">
-            <p v-if="scope.row.variants?.length > 1">
-              {{
-                scope.row.variants.reduce(
-                  (sum: number, item: ProductVariant) => sum + item.stock!,
-                  0,
-                )
-              }}
-            </p>
-            <p v-else>{{ scope.row.variants[0].stock }}</p>
+            {{ scope.row.stock }}
           </template>
         </el-table-column>
         <el-table-column
@@ -1025,7 +1154,7 @@ const download = (images: ProductImage[], index: number) => {
             <div style="display: flex; gap: 20px">
               <el-form-item label="Price" style="flex: 1" prop="variants">
                 <el-input-number
-                  v-model="ruleForm.variants[0].price"
+                  v-model="ruleForm.variants[0]!.price"
                   :min="1"
                   controls-position="right"
                   style="width: 100%"
@@ -1034,7 +1163,7 @@ const download = (images: ProductImage[], index: number) => {
               </el-form-item>
               <el-form-item label="Stock" style="flex: 1">
                 <el-input-number
-                  v-model="ruleForm.variants[0].stock"
+                  v-model="ruleForm.variants[0]!.stock"
                   :min="0"
                   controls-position="right"
                   style="width: 100%"
@@ -1043,7 +1172,7 @@ const download = (images: ProductImage[], index: number) => {
               </el-form-item>
             </div>
             <el-form-item label="SKU">
-              <el-input v-model="ruleForm.variants[0].sku" placeholder="SKU" size="large" />
+              <el-input v-model="ruleForm.variants[0]!.sku" placeholder="SKU" size="large" />
             </el-form-item>
           </div>
 
@@ -1082,6 +1211,7 @@ const download = (images: ProductImage[], index: number) => {
                   :limit="1"
                   :on-preview="handlePictureCardPreview"
                   :on-change="(file: any) => handleVariantImageChange(file, row)"
+                  :on-remove="(file: any) => handleVariantImageRemove(file, row)"
                 >
                   <el-icon><Plus /></el-icon>
                 </el-upload>

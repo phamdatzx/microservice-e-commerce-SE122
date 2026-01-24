@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Splide, SplideSlide, Options } from '@splidejs/vue-splide'
+import { Splide, SplideSlide, type Options } from '@splidejs/vue-splide'
 import { onMounted, ref, computed, reactive, watch, inject } from 'vue'
 import { quantityFormatNumber } from '@/utils/quantityFormatNumber'
 import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
@@ -130,9 +130,9 @@ const selectedVariant = computed(() => {
 
 const displayImages = computed(() => {
   if (!product.value) return []
-  const productImages = [...product.value.images]
-    .sort((a, b) => a.order - b.order)
-    .map((img) => img.url)
+  const productImages = product.value.images
+    ? [...product.value.images].sort((a, b) => a.order - b.order).map((img) => img.url)
+    : []
   const variantImages = product.value.variants
     .map((v) => v.image)
     .filter((img) => img && !productImages.includes(img))
@@ -412,7 +412,8 @@ const handleBuyNow = () => {
     quantity: buyQuantity.value,
     price: selectedVariant.value.price,
     productName: product.value.name,
-    imageUrl: selectedVariant.value.image || product.value.images[0]?.url,
+    imageUrl:
+      selectedVariant.value.image || (product.value.images && product.value.images[0]?.url) || '',
     productOption: Object.values(selectedOptions).join(', '),
   }
 
