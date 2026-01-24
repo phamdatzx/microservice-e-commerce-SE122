@@ -371,107 +371,126 @@ onMounted(() => {
   }
 })
 
-onUnmounted(() => {
-  socketService.disconnect()
-  window.removeEventListener('open-chat', handleOpenChatEvent)
-})
-
-const setupSocketListeners = () => {
-  socketService.on(SOCKET_EVENTS.NEW_MESSAGE, (message: any) => {
-    const existingContact = contacts.value.find(
-      (c) => String(c.id) === String(message.conversationId),
+const handleNewMessage = (message: any) => {
+  const existingContact = contacts.value.find(
+    (c) => String(c.id) === String(message.conversationId),
+  )
+  if (existingContact) {
+    const isDuplicate = existingContact.messages.some(
+      (m: any) =>
+        String(m.id) === String(message._id) ||
+        (m.text === message.content &&
+          m.image === message.image &&
+          Math.abs(new Date(m.createdAt).getTime() - new Date(message.createdAt).getTime()) < 5000),
     )
-    if (existingContact) {
-      const isDuplicate = existingContact.messages.some(
-        (m: any) =>
-          String(m.id) === String(message._id) ||
-          (m.text === message.content &&
-            m.image === message.image &&
-            Math.abs(new Date(m.createdAt).getTime() - new Date(message.createdAt).getTime()) <
-              5000),
-      )
-      if (isDuplicate) return
+    if (isDuplicate) return
+  }
+
+  const updatedContact = updateContactInList(message)
+  if (updatedContact) {
+    const formattedMsg = formatMessage(message, updatedContact)
+    updatedContact.messages.push(formattedMsg)
+
+    if (activeContact.value && String(activeContact.value.id) === String(message.conversationId)) {
+      scrollToBottom()
     }
 
-    const updatedContact = updateContactInList(message)
+    // Always increment unread count for new messages, even if active
+    // User must click to mark as read
+    updatedContact.unread++
+    updatedContact.isRead = false
+  } else {
+    fetchConversations()
+  }
+}
+
+const handleMessageSent = (message: any) => {
+  const contact = updateContactInList(message)
+  if (contact) {
+    const isDuplicate = contact.messages.some(
+      (m: any) =>
+        String(m.id) === String(message._id) ||
+        (m.text === message.content &&
+          m.image === message.image &&
+          Math.abs(new Date(m.createdAt).getTime() - new Date(message.createdAt).getTime()) < 5000),
+    )
+
+    if (!isDuplicate) {
+      const formattedMsg = formatMessage(message, contact)
+      contact.messages.push(formattedMsg)
+      scrollToBottom()
+    }
+  }
+}
+
+const handleUserTyping = (data: any) => {
+  if (activeContact.value?.id === data.conversationId) {
+    otherUserTyping.value = data.isTyping
+  }
+}
+
+const handleMessagesUpdated = (data: any) => {
+  const contact = contacts.value.find((c) => c.id === data.conversationId)
+  if (contact) {
+    contact.unread = 0
+    contact.isRead = true
+  }
+}
+
+const handleNewNotification = (notification: any) => {
+  if (notification.type === 'chat' && notification.data) {
+    const messageData = {
+      conversationId: notification.data.conversationId,
+      content: notification.message,
+      createdAt: notification.createdAt,
+      image: notification.data.hasImage ? '[Image]' : null,
+    }
+
+    const updatedContact = updateContactInList(messageData)
     if (updatedContact) {
-      const formattedMsg = formatMessage(message, updatedContact)
-      updatedContact.messages.push(formattedMsg)
-
-      if (
-        activeContact.value &&
-        String(activeContact.value.id) === String(message.conversationId)
-      ) {
-        scrollToBottom()
-      }
-
-      // Always increment unread count for new messages, even if active
-      // User must click to mark as read
       updatedContact.unread++
       updatedContact.isRead = false
     } else {
       fetchConversations()
     }
-  })
-
-  socketService.on(SOCKET_EVENTS.MESSAGE_SENT, (message: any) => {
-    const contact = updateContactInList(message)
-    if (contact) {
-      const isDuplicate = contact.messages.some(
-        (m: any) =>
-          String(m.id) === String(message._id) ||
-          (m.text === message.content &&
-            m.image === message.image &&
-            Math.abs(new Date(m.createdAt).getTime() - new Date(message.createdAt).getTime()) <
-              5000),
-      )
-
-      if (!isDuplicate) {
-        const formattedMsg = formatMessage(message, contact)
-        contact.messages.push(formattedMsg)
-        scrollToBottom()
-      }
-    }
-  })
-
-  socketService.on(SOCKET_EVENTS.USER_TYPING, (data: any) => {
-    if (activeContact.value?.id === data.conversationId) {
-      otherUserTyping.value = data.isTyping
-    }
-  })
-
-  socketService.on(SOCKET_EVENTS.MESSAGES_UPDATED, (data: any) => {
-    const contact = contacts.value.find((c) => c.id === data.conversationId)
-    if (contact) {
-      contact.unread = 0
-      contact.isRead = true
-    }
-  })
-
-  socketService.on(SOCKET_EVENTS.NEW_NOTIFICATION, (notification: any) => {
-    if (notification.type === 'chat' && notification.data) {
-      const messageData = {
-        conversationId: notification.data.conversationId,
-        content: notification.message,
-        createdAt: notification.createdAt,
-        image: notification.data.hasImage ? '[Image]' : null,
-      }
-
-      const updatedContact = updateContactInList(messageData)
-      if (updatedContact) {
-        updatedContact.unread++
-        updatedContact.isRead = false
-      } else {
-        fetchConversations()
-      }
-    }
-  })
-
-  socketService.on(SOCKET_EVENTS.ERROR, (error: any) => {
-    console.error('Socket error event:', error)
-    ElMessage.error(error.message || 'Socket error occurred')
-  })
+  }
 }
+
+const handleSocketError = (error: any) => {
+  console.error('Socket error event:', error)
+  ElMessage.error(error.message || 'Socket error occurred')
+}
+
+const handleSocketConnect = () => {
+  if (activeContact.value) {
+    socketService.emit(SOCKET_EVENTS.JOIN_CONVERSATION, { conversationId: activeContact.value.id })
+  }
+}
+
+const setupSocketListeners = () => {
+  socketService.on(SOCKET_EVENTS.NEW_MESSAGE, handleNewMessage)
+  socketService.on(SOCKET_EVENTS.MESSAGE_SENT, handleMessageSent)
+  socketService.on(SOCKET_EVENTS.USER_TYPING, handleUserTyping)
+  socketService.on(SOCKET_EVENTS.MESSAGES_UPDATED, handleMessagesUpdated)
+  socketService.on(SOCKET_EVENTS.NEW_NOTIFICATION, handleNewNotification)
+  socketService.on(SOCKET_EVENTS.ERROR, handleSocketError)
+  socketService.on('connect', handleSocketConnect)
+}
+
+const cleanupSocketListeners = () => {
+  socketService.off(SOCKET_EVENTS.NEW_MESSAGE, handleNewMessage)
+  socketService.off(SOCKET_EVENTS.MESSAGE_SENT, handleMessageSent)
+  socketService.off(SOCKET_EVENTS.USER_TYPING, handleUserTyping)
+  socketService.off(SOCKET_EVENTS.MESSAGES_UPDATED, handleMessagesUpdated)
+  socketService.off(SOCKET_EVENTS.NEW_NOTIFICATION, handleNewNotification)
+  socketService.off(SOCKET_EVENTS.ERROR, handleSocketError)
+  socketService.off('connect', handleSocketConnect)
+}
+
+onUnmounted(() => {
+  cleanupSocketListeners()
+  window.removeEventListener('open-chat', handleOpenChatEvent)
+})
 
 watch(activeContact, (newVal, oldVal) => {
   if (oldVal) {

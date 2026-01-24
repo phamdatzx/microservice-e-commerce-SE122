@@ -41,7 +41,16 @@ class SocketService {
   private socket: Socket | null = null
 
   connect(token: string) {
-    if (this.socket?.connected) return
+    if (this.socket) {
+      if (!this.socket.connected) {
+        const socketAny = this.socket as any
+        if (socketAny.auth) {
+          socketAny.auth.token = token
+        }
+        this.socket.connect()
+      }
+      return
+    }
 
     this.socket = io(SOCKET_URL, {
       auth: { token },
@@ -50,6 +59,7 @@ class SocketService {
 
     this.socket.on('connect', () => {
       console.log('Connected to socket server')
+      this.socket?.emit(SOCKET_EVENTS.JOIN_NOTIFICATIONS, {})
     })
 
     this.socket.on('connect_error', (error) => {
