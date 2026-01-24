@@ -788,10 +788,10 @@ const handleBuyNow = () => {
           <ProductItem
             :image-url="item.imageUrl"
             :name="item.name"
-            :price="item.price"
+            :min-price="item.minPrice"
+            :max-price="item.maxPrice"
             :rating="item.rating"
             :location="item.location"
-            :discount="item.discount"
             :sold-count="item.soldCount"
             :id="item.id"
           />

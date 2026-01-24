@@ -5,56 +5,56 @@ const recommendedProducts = [
   {
     id: 101,
     name: 'Jeans for Men Skinny Fit White Plain Stretchable Office Stylish Fashion',
-    price: 149600,
+    minPrice: 149600,
+    maxPrice: 149600,
     imageUrl: '/src/assets/product-imgs/product1.png',
     rating: 4.8,
     location: 'Ho Chi Minh City',
-    discount: 28,
   },
   {
     id: 102,
     name: 'Cargo Jeans for Men Wide Leg Relaxed Fit Loose Fashion Trendy',
-    price: 175000,
+    minPrice: 175000,
+    maxPrice: 175000,
     imageUrl: '/src/assets/product-imgs/product1.png',
     rating: 4.8,
     location: 'Ha Noi',
-    discount: 32,
   },
   {
     id: 103,
     name: 'Skinny Jeans Men Black Washed Casual Comfort Fit Elastic',
-    price: 125000,
+    minPrice: 125000,
+    maxPrice: 125000,
     imageUrl: '/src/assets/product-imgs/product1.png',
     rating: 4.8,
     location: 'Da Nang',
-    discount: 37,
   },
   {
     id: 104,
     name: 'WASH RETRO Jeans Men Dark Grey Loose Fit Vintage Style',
-    price: 174999,
+    minPrice: 174999,
+    maxPrice: 174999,
     imageUrl: '/src/assets/product-imgs/product1.png',
     rating: 4.8,
     location: 'Ho Chi Minh City',
-    discount: 24,
   },
   {
     id: 105,
     name: 'Elastic Cuff Pants for Men Casual Streetwear Jogger Style',
-    price: 92900,
+    minPrice: 92900,
+    maxPrice: 92900,
     imageUrl: '/src/assets/product-imgs/product1.png',
     rating: 4.9,
     location: 'Binh Duong',
-    discount: 45,
   },
   {
     id: 106,
     name: 'Skinny Jeans Men Black Washed Casual Comfort Fit Elastic',
-    price: 125000,
+    minPrice: 125000,
+    maxPrice: 125000,
     imageUrl: '/src/assets/product-imgs/product1.png',
     rating: 4.8,
     location: 'Da Nang',
-    discount: 37,
   },
 ]
 </script>
@@ -72,10 +72,10 @@ const recommendedProducts = [
           :id="product.id"
           :name="product.name"
           :imageUrl="product.imageUrl"
-          :price="product.price"
+          :min-price="product.minPrice"
+          :max-price="product.maxPrice"
           :rating="product.rating"
           :location="product.location"
-          :discount="product.discount"
         />
       </div>
     </div>

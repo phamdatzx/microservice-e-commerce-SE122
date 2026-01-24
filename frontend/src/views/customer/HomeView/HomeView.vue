@@ -31,10 +31,10 @@ const fetchBestSellers = async () => {
           p.images.length > 0
             ? p.images.sort((a: any, b: any) => a.order - b.order)[0]?.url || ''
             : '',
-        price: p.price.min,
+        minPrice: p.price.min,
+        maxPrice: p.price.max,
         rating: p.rating,
         location: 'Vietnam',
-        discount: 0,
         soldCount: p.sold_count,
       }))
     }
@@ -234,10 +234,10 @@ onMounted(() => {
           <ProductItem
             :image-url="item.imageUrl"
             :name="item.name"
-            :price="item.price"
+            :min-price="item.minPrice"
+            :max-price="item.maxPrice"
             :rating="item.rating"
             :location="item.location"
-            :discount="item.discount"
             :sold-count="item.soldCount"
             :id="item.id"
           />

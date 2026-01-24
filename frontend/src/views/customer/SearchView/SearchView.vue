@@ -58,11 +58,12 @@ interface Product {
 interface DisplayProduct {
   id: string
   name: string
-  price: number
+  minPrice: number
+  maxPrice: number
   imageUrl: string
   rating: number
   location: string
-  discount: number
+  soldCount?: number
 }
 
 const products = ref<DisplayProduct[]>([])
@@ -143,14 +144,14 @@ const fetchProducts = async () => {
     products.value = rawProducts.map((p: any) => ({
       id: p.id,
       name: p.name,
-      price: p.price.min, // Use min price for display
+      minPrice: p.price.min,
+      maxPrice: p.price.max,
       imageUrl:
         p.images && p.images.length > 0
           ? p.images.sort((a: any, b: any) => a.order - b.order)[0].url
           : 'https://placehold.co/300x300?text=No+Image',
       rating: p.rating,
       location: 'Vietnam', // Backend doesn't have location yet
-      discount: 0, // Backend doesn't have discount yet
       soldCount: p.sold_count,
     }))
   } catch (error) {

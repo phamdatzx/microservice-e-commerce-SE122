@@ -5,11 +5,11 @@ import { ArrowDownBold, ArrowLeft, ArrowRight, Loading } from '@element-plus/ico
 interface Product {
   id: number | string
   name: string
-  price: number
+  minPrice: number
+  maxPrice: number
   imageUrl: string
   rating: number
   location: string
-  discount: number
   soldCount?: number
 }
 
@@ -122,10 +122,10 @@ defineEmits(['sort-change', 'page-change'])
               :id="product.id"
               :name="product.name"
               :imageUrl="product.imageUrl"
-              :price="product.price"
+              :min-price="product.minPrice"
+              :max-price="product.maxPrice"
               :rating="product.rating"
               :location="product.location"
-              :discount="product.discount"
               :soldCount="product.soldCount"
             />
           </div>

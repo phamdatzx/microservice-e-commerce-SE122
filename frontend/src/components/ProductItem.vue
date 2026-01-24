@@ -8,10 +8,10 @@ import { Picture } from '@element-plus/icons-vue'
 const props = defineProps([
   'imageUrl',
   'name',
-  'price',
+  'minPrice',
+  'maxPrice',
   'rating',
   'location',
-  'discount',
   'id',
   'soldCount',
 ])
@@ -34,22 +34,11 @@ const props = defineProps([
     <div style="padding: 12px 8px">
       <p class="product-name two-line-ellipsis">{{ props.name }}</p>
       <div style="display: flex; align-items: center; margin-top: 8px">
-        <p class="product-price">{{ formatNumberWithDots(props.price) }}₫</p>
-        <span
-          v-if="props.discount > 0"
-          style="
-            line-height: 14px;
-            height: 14px;
-            display: block;
-            background-color: #f0fdf4;
-            margin-left: 4px;
-            padding: 0 4px;
-            color: var(--main-color);
-            font-size: 10px;
-            border-radius: 2px;
-          "
-          >-{{ props.discount }}%</span
-        >
+        <p class="product-price">
+          {{ formatNumberWithDots(props.minPrice) }}₫{{
+            props.minPrice !== props.maxPrice ? ` - ${formatNumberWithDots(props.maxPrice)}₫` : ''
+          }}
+        </p>
       </div>
       <div
         style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px"

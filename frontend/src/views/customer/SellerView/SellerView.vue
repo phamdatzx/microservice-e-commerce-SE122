@@ -125,13 +125,13 @@ const fetchSellerProducts = async () => {
       products.value = response.data.products.map((p: SellerProduct) => ({
         id: p.id,
         name: p.name,
-        price: p.price.min,
+        minPrice: p.price.min,
+        maxPrice: p.price.max,
         imageUrl:
           p.images?.sort((a, b) => a.order - b.order)[0]?.url ||
           'https://placehold.co/300x300?text=No+Image',
         rating: p.rating,
         location: sellerInfo.value?.address?.province || 'Vietnam',
-        discount: 0,
         soldCount: p.sold_count,
       }))
       totalItems.value = response.data.pagination.total_items
