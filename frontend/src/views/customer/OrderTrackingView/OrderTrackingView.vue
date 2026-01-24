@@ -515,9 +515,13 @@ onMounted(() => {
 
           <div class="product-list">
             <div v-for="product in products" :key="product.id" class="product-item">
-              <el-image :src="product.img" class="p-img" fit="cover" />
+              <RouterLink :to="`/product/${product.product_id}`">
+                <el-image :src="product.img" class="p-img" fit="cover" />
+              </RouterLink>
               <div class="p-info">
-                <h4 class="p-name">{{ product.name }}</h4>
+                <RouterLink :to="`/product/${product.product_id}`" class="product-link">
+                  <h4 class="p-name">{{ product.name }}</h4>
+                </RouterLink>
                 <p class="p-variant">Variant: {{ product.variant }}</p>
                 <p class="p-qty">x{{ product.qty }}</p>
                 <el-button
@@ -891,6 +895,16 @@ onMounted(() => {
 .info-icon {
   font-size: 14px;
   vertical-align: middle;
+  color: var(--main-color);
+}
+
+.product-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.product-link:hover .p-name {
   color: var(--main-color);
 }
 </style>
