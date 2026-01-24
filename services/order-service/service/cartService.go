@@ -176,6 +176,21 @@ func (s *cartService) UpdateCartItemQuantity(userID, cartItemID string, quantity
 		return nil, appError.NewAppError(401, "unauthorized: you can only update your own cart items")
 	}
 
+	//get variant information to validate stock
+	productVariants, err := s.productClient.GetVariantsByIds([]string{cartItem.Variant.ID})
+	if err != nil {
+		return nil, appError.NewAppError(500, "failed to get variant details")
+	}
+
+	if len(productVariants) == 0 {
+		return nil, appError.NewAppError(404, "variant not found")
+	}
+
+	stock := productVariants[0].Variant.Stock
+	if stock < quantity {
+		return nil, appError.NewAppError(409, "not enough stock")
+	}
+
 	// Update the quantity
 	err = s.repo.UpdateCartItemQuantity(cartItemID, quantity)
 	if err != nil {
