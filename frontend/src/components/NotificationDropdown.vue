@@ -177,7 +177,8 @@ const handleClickOutside = (event: MouseEvent) => {
 
 const handleNewNotification = (notification: any) => {
   notifications.value.unshift(notification)
-  fetchUnreadCount()
+  // Optimistic update
+  unreadCount.value++
 }
 
 const handleNotificationUpdated = (payload: any) => {
@@ -200,6 +201,8 @@ const handleNotificationUpdated = (payload: any) => {
 const initSocket = () => {
   const token = localStorage.getItem('access_token')
   if (token) {
+    socketService.connect(token)
+    socketService.emit(SOCKET_EVENTS.JOIN_NOTIFICATIONS, {})
     socketService.on(SOCKET_EVENTS.NEW_NOTIFICATION, handleNewNotification)
     socketService.on(SOCKET_EVENTS.NOTIFICATION_UPDATED, handleNotificationUpdated)
   }
