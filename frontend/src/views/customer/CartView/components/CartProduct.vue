@@ -24,10 +24,14 @@ const props = withDefaults(defineProps<Props>(), {
   }),
 })
 
-const emits = defineEmits(['delete'])
+const emits = defineEmits(['delete', 'change'])
 
 const handleDelete = () => {
   emits('delete', props.product.id)
+}
+
+const handleQuantityChange = (newVal: number) => {
+  emits('change', props.product.id, newVal)
 }
 </script>
 
@@ -68,6 +72,7 @@ const handleDelete = () => {
         :max="props.product.stock"
         size="large"
         style="width: 140px"
+        @change="handleQuantityChange"
       />
     </span>
     <span style="width: 114px; text-align: center"

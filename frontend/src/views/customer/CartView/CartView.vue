@@ -337,6 +337,33 @@ const handleDeleteSelected = async () => {
     }
   }
 }
+
+const updateCartQuantity = async (cartItemId: string, quantity: number) => {
+  const token = localStorage.getItem('access_token')
+  if (!token) return
+
+  try {
+    await axios.put(
+      `${import.meta.env.VITE_BE_API_URL}/order/cart/${cartItemId}`,
+      { quantity },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    )
+    fetchCartCount?.()
+  } catch (error) {
+    console.error('Error updating cart quantity:', error)
+    ElNotification({
+      title: 'Error',
+      message: 'Failed to update cart quantity',
+      type: 'error',
+    })
+    // Optional: Refresh cart to revert local change if API fails
+    fetchCart()
+  }
+}
 </script>
 
 <template>
@@ -378,6 +405,7 @@ const handleDeleteSelected = async () => {
         :seller="seller"
         @checked-products-change="handleCheckedProductsChange"
         @delete-product="removeFromCart"
+        @update-quantity="updateCartQuantity"
       />
     </template>
 

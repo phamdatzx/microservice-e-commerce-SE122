@@ -24,7 +24,7 @@ const props = withDefaults(defineProps<Props>(), {
   }),
 })
 
-const emits = defineEmits(['checkedProductsChange', 'deleteProduct'])
+const emits = defineEmits(['checkedProductsChange', 'deleteProduct', 'updateQuantity'])
 
 const checkAll = ref(false)
 const checkedProducts = ref<Product[]>([])
@@ -102,6 +102,7 @@ defineExpose({ checkedProducts, handleCheckAll, handleUncheckAll })
         :key="product.id"
         :product="product"
         @delete="(id) => emits('deleteProduct', id)"
+        @change="(id, val) => emits('updateQuantity', id, val)"
       />
     </el-checkbox-group>
   </div>
