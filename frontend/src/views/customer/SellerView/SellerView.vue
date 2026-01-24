@@ -4,7 +4,6 @@ import { useRoute } from 'vue-router'
 import axios from 'axios'
 import SellerHeader from './components/SellerHeader.vue'
 import SellerVouchers from './components/SellerVouchers.vue'
-import SellerRecommendations from './components/SellerRecommendations.vue'
 import ProductList from '@/components/ProductList.vue'
 import NotFoundView from '@/components/NotFoundView.vue'
 
@@ -348,10 +347,6 @@ const pagination = computed(() => ({
           :saved-voucher-ids="savedVoucherIds"
           @save="handleSaveVoucher"
         />
-
-        <div class="container">
-          <SellerRecommendations />
-        </div>
 
         <div ref="productListRef">
           <ProductList
