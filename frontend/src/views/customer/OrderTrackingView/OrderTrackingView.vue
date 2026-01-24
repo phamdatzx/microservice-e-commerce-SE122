@@ -180,6 +180,13 @@ const handleTrackGHN = () => {
   }
 }
 
+const viewShop = () => {
+  const sellerId = order.value?.seller?.id || order.value?.seller?._id
+  if (sellerId) {
+    router.push(`/seller-page/${sellerId}`)
+  }
+}
+
 const handleBack = () => {
   router.back()
 }
@@ -336,7 +343,9 @@ onMounted(() => {
                 @click="openChat"
                 >Chat</el-button
               >
-              <el-button link :icon="Shop" class="view-shop-btn">View Shop</el-button>
+              <el-button link :icon="Shop" class="view-shop-btn" @click="viewShop"
+                >View Shop</el-button
+              >
             </div>
           </div>
 
