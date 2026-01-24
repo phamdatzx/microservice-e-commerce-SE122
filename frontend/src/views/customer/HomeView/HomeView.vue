@@ -187,11 +187,6 @@ onMounted(() => {
     >
       <div style="display: flex; margin-bottom: 20px">
         <h3 style="font-weight: bold">TOP CATEGORIES</h3>
-        <RouterLink
-          to="/"
-          style="position: relative; top: 3px; margin-left: 20px; color: #999; font-size: 13px"
-          >View All</RouterLink
-        >
       </div>
 
       <Splide
