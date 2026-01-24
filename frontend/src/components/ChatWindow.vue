@@ -896,7 +896,14 @@ const getMsgClass = (msg: any) => {
                     <div class="msg-row" :class="getMsgClass(msg)">
                       <div class="msg-bubble">
                         <div v-if="msg.image" class="msg-image-container">
-                          <img :src="msg.image" class="msg-image" @load="scrollToBottom" />
+                          <el-image
+                            :src="msg.image"
+                            class="msg-image"
+                            @load="scrollToBottom"
+                            :preview-src-list="[msg.image]"
+                            :preview-teleported="true"
+                            fit="cover"
+                          />
                         </div>
                         <span v-if="msg.text">{{ msg.text }}</span>
                         <span class="msg-time">{{ msg.time }}</span>
