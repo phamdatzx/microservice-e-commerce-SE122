@@ -26,7 +26,6 @@ const isLoading = ref(false)
 const isNotFound = ref(false)
 
 const order = ref<any>(null)
-const trackingInfo = ref<any>(null)
 
 // Report Dialog State
 const isReportDialogOpen = ref(false)
@@ -52,13 +51,11 @@ const orderInfo = computed(() => ({
 
 const steps = ref([
   { title: 'Order Placed', time: '', completed: false, icon: Tickets, key: 'ready_to_pick' },
-  { title: 'Order Paid', time: '', completed: false, icon: Wallet, key: 'paid' }, // 'paid' isn't a GHN status, handled separately
+  { title: 'Order Paid', time: '', completed: false, icon: Wallet, key: 'paid' },
   { title: 'Handing over to carrier', time: '', completed: false, icon: Van, key: 'picked' },
   { title: 'Out for delivery', time: '', completed: false, icon: Box, key: 'delivering' },
-  { title: 'Completed', time: '', completed: false, icon: CircleCheck, key: 'completed' }, // Internal status
+  { title: 'Completed', time: '', completed: false, icon: CircleCheck, key: 'completed' },
 ])
-
-const timeline = ref<any[]>([])
 
 const address = computed(() => ({
   name: order.value?.shipping_address?.full_name || '',
@@ -71,9 +68,9 @@ const address = computed(() => ({
 const products = computed(() => {
   if (!order.value?.items) return []
   return order.value.items.map((item: any) => ({
-    id: item.variant_id, // For key
-    product_id: item.product_id, // Needed for report
-    variant_id: item.variant_id, // Needed for report
+    id: item.variant_id,
+    product_id: item.product_id,
+    variant_id: item.variant_id,
     name: item.product_name,
     variant: item.variant_name,
     price: item.price,
@@ -81,8 +78,6 @@ const products = computed(() => {
     img: item.image || 'https://placehold.co/80x80',
   }))
 })
-
-const costs = computed(() => [])
 
 const paymentMethod = computed(() => order.value?.payment_method || '')
 const total = computed(() => `${formatNumberWithDots(order.value?.total || 0)}đ`)
@@ -98,163 +93,16 @@ const openChat = () => {
   }
 }
 
-const fetchOrder = async () => {
-  const orderId = route.params.id
-  if (!orderId) return
-
-  isLoading.value = true
-  isNotFound.value = false
-  try {
-    let orderData = null
-
-    // Check for state passed from MyOrder
-    if (history.state.orderData) {
-      try {
-        orderData = JSON.parse(history.state.orderData)
-        console.log('Using order data from state:', orderData)
-      } catch (e) {
-        console.error('Failed to parse order state', e)
-      }
-    }
-
-    if (!orderData) {
-      // Fallback: Fetch internal order details
-      const token = localStorage.getItem('access_token')
-      const orderResponse = await axios.get(`${import.meta.env.VITE_BE_API_URL}/order/${orderId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      orderData = orderResponse.data.data || orderResponse.data
-    }
-
-    order.value = orderData
-
-    // Update steps based on internal status first
-    updateStepsFromInternalStatus(orderData)
-
-    // 2. Fetch GHN Tracking if shipping_code exists
-    const shippingCode = orderData.shipping_code || orderData.delivery_code
-
-    if (shippingCode) {
-      await fetchGHNTracking(shippingCode)
-    }
-  } catch (error: any) {
-    if (error.response?.status === 404) {
-      isNotFound.value = true
-    }
-    console.error('Error fetching order:', error)
-  } finally {
-    isLoading.value = false
+const shippingStatusMessage = computed(() => {
+  const status = order.value?.status
+  if (status === 'TO_PAY') {
+    return 'Waiting for payment... Your order will be prepared once payment is confirmed.'
   }
-}
-
-const fetchGHNTracking = async (orderCode: string) => {
-  try {
-    const response = await axios.post(
-      'https://dev-online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/detail',
-      { order_code: orderCode },
-      {
-        headers: {
-          token: import.meta.env.VITE_GHN_TOKEN,
-          'Content-Type': 'application/json',
-        },
-      },
-    )
-
-    if (response.data.code === 200) {
-      const data = response.data.data
-      console.log('GHN Data:', data)
-      trackingInfo.value = data
-
-      // Update timeline from log
-      let ghnTimeline: any[] = []
-      if (data.log) {
-        ghnTimeline = data.log
-          .map((log: any) => ({
-            time: new Date(log.updated_date).toLocaleString(),
-            title: formatGHNStatus(log.status),
-            desc: getStatusDescription(log.status),
-            type: log.status === 'delivered' || log.status === 'returned' ? 'success' : 'info',
-          }))
-          .reverse()
-      }
-
-      // Append internal events (Order Placed, Payment)
-      const internalEvents = []
-
-      // Payment - only for STRIPE
-      if (order.value.payment_method === 'STRIPE') {
-        if (order.value.status !== 'TO_PAY') {
-          internalEvents.push({
-            time: '',
-            title: 'Order Paid',
-            desc: 'Payment has been confirmed',
-            type: 'success',
-          })
-        } else {
-          internalEvents.push({
-            time: new Date(order.value.created_at).toLocaleString(),
-            title: 'To Pay',
-            desc: 'Order is waiting for payment',
-            type: 'warning',
-          })
-        }
-      }
-
-      // Order Placed
-      internalEvents.push({
-        time: new Date(order.value.created_at).toLocaleString(),
-        title: 'Order Placed',
-        desc: 'Order has been created',
-        type: 'info',
-      })
-
-      timeline.value = [...ghnTimeline, ...internalEvents]
-
-      // Update steps based on GHN status
-      updateStepsFromGHN(data)
-    }
-  } catch (error) {
-    console.error('Error fetching tracking info:', error)
+  if (status === 'TO_PICKUP') {
+    return 'The seller is preparing your order. Tracking info will be available soon.'
   }
-}
-
-const formatGHNStatus = (status: string) => {
-  const map: Record<string, string> = {
-    ready_to_pick: 'Ready to Pick',
-    picking: 'Picking',
-    cancel: 'Cancelled',
-    picked: 'Picked',
-    storing: 'Storing',
-    transporting: 'Transporting',
-    sorting: 'Sorting',
-    delivering: 'Delivering',
-    delivered: 'Delivered',
-    delivery_fail: 'Delivery Failed',
-    waiting_to_return: 'Waiting to Return',
-    return: 'Returning',
-    returned: 'Returned',
-  }
-  return map[status] || status
-}
-
-const getStatusDescription = (status: string) => {
-  const descs: Record<string, string> = {
-    ready_to_pick: 'Shipping order has just been created',
-    picking: 'Shipper is coming to pick up the goods',
-    cancel: 'Shipping order has been cancelled',
-    picked: 'Shipper is picked the goods',
-    storing: 'The goods has been shipped to GHN sorting hub',
-    transporting: 'The goods are being rotated',
-    sorting: 'The goods are being classified',
-    delivering: 'Shipper is delivering the goods to customer',
-    delivered: 'The goods has been delivered to customer',
-    delivery_fail: "The goods hasn't been delivered to customer",
-    waiting_to_return: 'The goods are pending delivery',
-    return: 'The goods are waiting to return to seller',
-    returned: 'The goods has been returned to seller',
-  }
-  return descs[status] || 'Status updated'
-}
+  return 'Your order is being processed. Shipping information will be updated shortly.'
+})
 
 const updateStepsFromInternalStatus = (orderData: any) => {
   const createdDate = new Date(orderData.created_at).toLocaleString()
@@ -264,7 +112,6 @@ const updateStepsFromInternalStatus = (orderData: any) => {
     steps.value[0].completed = true
   }
 
-  // Update step title based on payment method
   if (steps.value[1]) {
     if (orderData.payment_method !== 'STRIPE') {
       steps.value[1].title = 'Payment Information Confirmed'
@@ -276,7 +123,6 @@ const updateStepsFromInternalStatus = (orderData: any) => {
       steps.value[1].completed = true
     }
 
-    // Highlight based on user request
     if (orderData.status === 'TO_PICKUP') {
       if (steps.value[2]) steps.value[2].completed = true
     } else if (orderData.status === 'SHIPPING') {
@@ -288,65 +134,49 @@ const updateStepsFromInternalStatus = (orderData: any) => {
       if (steps.value[4]) steps.value[4].completed = true
     }
   }
-
-  // Initialize timeline with internal events
-  const internalEvents = []
-
-  // Payment - only for STRIPE
-  if (orderData.payment_method === 'STRIPE') {
-    if (orderData.status !== 'TO_PAY') {
-      internalEvents.push({
-        time: '',
-        title: 'Order Paid',
-        desc: 'Payment has been confirmed',
-        type: 'success',
-      })
-    } else {
-      internalEvents.push({
-        time: createdDate,
-        title: 'To Pay',
-        desc: 'Order is waiting for payment',
-        type: 'warning',
-      })
-    }
-  }
-
-  internalEvents.push({
-    time: createdDate,
-    title: 'Order Placed',
-    desc: 'Order has been created',
-    type: 'info',
-  })
-
-  // Set timeline initially (GHN will prepend to this if fetched)
-  timeline.value = internalEvents
 }
 
-const updateStepsFromGHN = (ghnData: any) => {
-  // Map GHN logs/status to step completion
-  const logs = ghnData.log || []
-  const hasLog = (status: string) => logs.some((l: any) => l.status === status)
+const fetchOrder = async () => {
+  const orderId = route.params.id
+  if (!orderId) return
 
-  // Handed over (picked/storing)
-  const pickedLog = logs.find((l: any) => ['picked', 'storing', 'transporting'].includes(l.status))
-  if (pickedLog && steps.value[2]) {
-    steps.value[2].completed = true
-    steps.value[2].time = new Date(pickedLog.updated_date).toLocaleString()
+  isLoading.value = true
+  isNotFound.value = false
+  try {
+    let orderData = null
+
+    if (history.state.orderData) {
+      try {
+        orderData = JSON.parse(history.state.orderData)
+      } catch (e) {
+        console.error('Failed to parse order state', e)
+      }
+    }
+
+    if (!orderData) {
+      const token = localStorage.getItem('access_token')
+      const orderResponse = await axios.get(`${import.meta.env.VITE_BE_API_URL}/order/${orderId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      orderData = orderResponse.data.data || orderResponse.data
+    }
+
+    order.value = orderData
+    updateStepsFromInternalStatus(orderData)
+  } catch (error: any) {
+    if (error.response?.status === 404) {
+      isNotFound.value = true
+    }
+    console.error('Error fetching order:', error)
+  } finally {
+    isLoading.value = false
   }
+}
 
-  // Out for delivery (delivering)
-  const deliveringLog = logs.find((l: any) => l.status === 'delivering')
-  if (deliveringLog && steps.value[3]) {
-    steps.value[3].completed = true
-    steps.value[3].time = new Date(deliveringLog.updated_date).toLocaleString()
-  }
-
-  // Completed/Rating (delivered)
-  const deliveredLog = logs.find((l: any) => l.status === 'delivered')
-  if (deliveredLog) {
-    if (steps.value[4]) steps.value[4].completed = true
-    if (steps.value[3]) steps.value[3].completed = true
-    if (steps.value[2]) steps.value[2].completed = true
+const handleTrackGHN = () => {
+  const code = order.value?.delivery_code || order.value?.shipping_code
+  if (code) {
+    window.open(`https://tracking.ghn.dev/?order_code=${code}`, '_blank')
   }
 }
 
@@ -475,23 +305,20 @@ onMounted(() => {
             </div>
           </div>
 
-          <div class="timeline-card card">
-            <el-timeline>
-              <el-timeline-item
-                v-for="(item, index) in timeline"
-                :key="index"
-                :timestamp="item.time"
-                placement="top"
-                :type="item.type"
-                :hollow="index !== 0"
-              >
-                <div class="timeline-content">
-                  <span class="timeline-title">{{ item.title }}</span>
-                  <p class="timeline-desc">{{ item.desc }}</p>
-                  <!-- Removals: "View delivery image" link removed -->
-                </div>
-              </el-timeline-item>
-            </el-timeline>
+          <div class="delivery-card card">
+            <h3 class="section-title">Shipping Information</h3>
+            <div class="delivery-body">
+              <div v-if="order.delivery_code || order.shipping_code" class="ghn-link-container">
+                <p class="delivery-code-label">
+                  GHN Tracking Code:
+                  <span class="code">{{ order.delivery_code || order.shipping_code }}</span>
+                </p>
+                <el-button type="primary" plain :icon="Van" @click="handleTrackGHN">
+                  Track on GHN Express
+                </el-button>
+              </div>
+              <p v-else class="no-code">{{ shippingStatusMessage }}</p>
+            </div>
           </div>
         </div>
 
@@ -761,7 +588,7 @@ onMounted(() => {
   color: #888;
 }
 
-.timeline-card {
+.delivery-card {
   border-left: 2px dashed #f5f5f5;
 }
 
@@ -896,6 +723,33 @@ onMounted(() => {
   font-size: 14px;
   vertical-align: middle;
   color: var(--main-color);
+}
+
+.delivery-card {
+  border-left: 2px dashed #f5f5f5;
+}
+
+.ghn-link-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.delivery-code-label {
+  font-size: 14px;
+  color: #666;
+}
+
+.delivery-code-label .code {
+  font-weight: bold;
+  color: var(--main-color);
+  margin-left: 4px;
+}
+
+.no-code {
+  color: #999;
+  font-style: italic;
 }
 
 .product-link {
