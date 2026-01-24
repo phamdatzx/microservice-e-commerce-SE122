@@ -9,13 +9,56 @@ import {
   Van,
   TrendCharts,
 } from '@element-plus/icons-vue'
-import { onMounted } from 'vue'
+import { onMounted, ref, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import axios from 'axios'
 import UserAvatarDropdown from '@/components/UserAvatarDropdown.vue'
 import NotificationDropdown from '@/components/NotificationDropdown.vue'
 import { socketService, SOCKET_EVENTS } from '@/utils/socket'
 
 const router = useRouter()
+const unreadChatCount = ref(0)
+
+const fetchUnreadChatCount = async () => {
+  const token = localStorage.getItem('access_token')
+  if (!token) return
+
+  try {
+    const response = await axios.get(
+      `${import.meta.env.VITE_BE_API_URL}/notification/chat/conversations`,
+      {
+        params: { limit: 1000 },
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    )
+
+    if (response.data && response.data.data) {
+      unreadChatCount.value = response.data.data.reduce(
+        (total: number, conv: any) => total + (conv.unreadCount || 0),
+        0,
+      )
+    }
+  } catch (error) {
+    console.error('Error fetching unread chat count:', error)
+  }
+}
+
+const setupSocketListeners = () => {
+  socketService.on(SOCKET_EVENTS.NEW_MESSAGE, fetchUnreadChatCount)
+  socketService.on(SOCKET_EVENTS.MESSAGE_READ, fetchUnreadChatCount)
+  socketService.on(SOCKET_EVENTS.MESSAGES_UPDATED, fetchUnreadChatCount)
+  socketService.on(SOCKET_EVENTS.NEW_NOTIFICATION, (notification: any) => {
+    if (notification.type === 'chat') {
+      fetchUnreadChatCount()
+    }
+  })
+}
+
+const cleanupSocketListeners = () => {
+  socketService.off(SOCKET_EVENTS.NEW_MESSAGE, fetchUnreadChatCount)
+  socketService.off(SOCKET_EVENTS.MESSAGE_READ, fetchUnreadChatCount)
+  socketService.off(SOCKET_EVENTS.MESSAGES_UPDATED, fetchUnreadChatCount)
+}
 
 const handleOpen = (key: string, keyPath: string[]) => {
   console.log(key, keyPath)
@@ -34,6 +77,12 @@ const initSocket = () => {
 
 onMounted(() => {
   initSocket()
+  setupSocketListeners()
+  fetchUnreadChatCount()
+})
+
+onUnmounted(() => {
+  cleanupSocketListeners()
 })
 </script>
 
@@ -116,9 +165,15 @@ onMounted(() => {
               </el-menu-item>
             </RouterLink>
             <RouterLink to="/seller/chat">
-              <el-menu-item index="4">
+              <el-menu-item index="4" class="menu-item-with-badge">
                 <el-icon><ChatDotRound /></el-icon>
                 <span>Chat</span>
+                <el-badge
+                  :value="unreadChatCount"
+                  :max="99"
+                  :hidden="unreadChatCount === 0"
+                  class="badge-inline"
+                />
               </el-menu-item>
             </RouterLink>
             <RouterLink to="/seller/profile">
@@ -246,5 +301,25 @@ a {
 .breadcrumb-current {
   color: #333;
   font-weight: 600;
+}
+
+.menu-item-with-badge {
+  display: flex !important;
+  align-items: center !important;
+}
+
+.badge-inline {
+  margin-left: 8px;
+  top: -18px;
+}
+
+:deep(.badge-inline .el-badge__content) {
+  border: none;
+  box-shadow: none;
+  background-color: var(--main-color) !important; /* Set to main color */
+}
+
+.el-menu-item span {
+  margin-left: 8px;
 }
 </style>
