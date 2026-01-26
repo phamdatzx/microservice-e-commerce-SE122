@@ -18,6 +18,7 @@ type AppRouter struct {
 	RatingController            *controller.RatingController
 	SearchHistoryController     *controller.SearchHistoryController
 	ReportController            *controller.ReportController
+	ChatBotController           *controller.ChatBotController
 }
 
 // SetupRouter builds the main Gin router and registers all module routes
@@ -57,6 +58,9 @@ func SetupRouter(engine *gin.Engine, appRouter *AppRouter) *gin.Engine {
 
 		// Report routes
 		RegisterReportRoutes(productGroup, appRouter.ReportController)
+
+		// ChatBot routes
+		RegisterChatBotRoutes(productGroup, appRouter.ChatBotController)
 	}
 
 	return engine

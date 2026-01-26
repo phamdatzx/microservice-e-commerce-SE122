@@ -73,6 +73,11 @@ func main() {
 	reportService := service.NewReportService(reportRepo, orderClient, userClient)
 	reportController := controller.NewReportController(reportService)
 
+	// Wiring dependencies - ChatBot
+	chatBotClient := client.NewChatBotClient()
+	chatBotService := service.NewChatBotService(chatBotClient, productRepo, categoryRepo, sellerCategoryRepo, voucherRepo, userClient)
+	chatBotController := controller.NewChatBotController(chatBotService)
+
 	r := gin.Default()
 	r.Use(cors.Default())
 
@@ -87,6 +92,7 @@ func main() {
 		RatingController:           ratingController,
 		SearchHistoryController:    searchHistoryController,
 		ReportController:           reportController,
+		ChatBotController:          chatBotController,
 	})
 
 	r.Run(":8085")

@@ -191,69 +191,17 @@ func (s *orderService) Checkout(userID string, request dto.CheckoutRequest) (*dt
 	}
 
 	// 5. Apply Voucher
-	var orderVoucher *model.OrderVoucher
+	var saveOrderVoucher *model.OrderVoucher
 	if request.VoucherID != "" {
-		voucher, err := s.productClient.GetVoucherByID(request.VoucherID)
+		newTotalAmount, orderVoucher, err := s.ApplyVoucher(request.VoucherID, totalAmount, sellerID)
 		if err != nil {
 			// Rollback: release reserved stock
 			_ = s.productClient.ReleaseStock(tempOrderID)
-			return nil, fmt.Errorf("failed to get voucher: %w", err)
+			return nil, err
 		}
 
-		if voucher.SellerID != sellerID {
-			// Rollback: release reserved stock
-			_ = s.productClient.ReleaseStock(tempOrderID)
-			return nil, appError.NewAppError(400, "voucher does not belong to seller")
-		}
-
-		// Validate voucher (basic validation, more complex logic might be needed)
-		if voucher.Status != "ACTIVE" {
-			// Rollback: release reserved stock
-			_ = s.productClient.ReleaseStock(tempOrderID)
-			return nil, appError.NewAppError(400, "voucher is not active")
-		}
-		if totalAmount < float64(voucher.MinOrderValue) {
-			// Rollback: release reserved stock
-			_ = s.productClient.ReleaseStock(tempOrderID)
-			return nil, appError.NewAppError(400, "order value does not meet voucher minimum requirement")
-		}
-		// TODO: Validate usage limit, date, seller/category applicability
-
-		discount := 0.0
-		if voucher.DiscountType == "PERCENTAGE" {
-			discount = totalAmount * float64(voucher.DiscountValue) / 100
-			if discount > float64(voucher.MaxDiscountValue) {
-				discount = float64(voucher.MaxDiscountValue)
-			}
-		} else if voucher.DiscountType == "FIXED" {
-			discount = float64(voucher.DiscountValue)
-		}
-
-		if discount > float64(voucher.MaxDiscountValue) {
-			discount = float64(voucher.MaxDiscountValue)
-		}
-
-		totalAmount -= discount
-		if totalAmount < 0 {
-			totalAmount = 0
-		}
-
-		orderVoucher = &model.OrderVoucher{
-			Code:          voucher.Code,
-			DiscountType:  voucher.DiscountType,
-			DiscountValue: voucher.DiscountValue,
-		}
-	}
-
-	if err != nil {
-		// Rollback: release reserved stock
-		_ = s.productClient.ReleaseStock(tempOrderID)
-		return nil, fmt.Errorf("failed to create calculate fee request: %w", err)
-	}
-	if err != nil {
-		// Rollback: release reserved stock
-		_ = s.productClient.ReleaseStock(tempOrderID)
-		return nil, fmt.Errorf("failed to get delivery fee: %w", err)
+		totalAmount = newTotalAmount
+		saveOrderVoucher = orderVoucher
 	}
 
 	// 6. Create Order record
@@ -275,7 +223,7 @@ func (s *orderService) Checkout(userID string, request dto.CheckoutRequest) (*dt
 			Name: seller.Name,
 		},
 		Items:             orderItems,
-		Voucher:           orderVoucher,
+		Voucher:           saveOrderVoucher,
 		Total:             totalAmount,
 		DeliveryServiceID: request.DeliveryServiceID,
 		ShippingAddress: model.OrderAddress{
@@ -592,7 +540,7 @@ func (s *orderService) UpdateOrderStatus(ctx context.Context, userID string, ord
 	if oldOrder == nil {
 		return appError.NewAppError(404, "Order not found")
 	}
-	if oldOrder.Seller.ID != userID {
+	if oldOrder.Seller.ID != userID && oldOrder.User.ID != userID {
 		return appError.NewAppError(403, "You are not authorized to update this order")
 	}
 
@@ -864,54 +812,8 @@ func (s *orderService) InstantCheckout(userID string, request dto.InstantCheckou
 	var orderVoucher *model.OrderVoucher
 	if request.VoucherID != "" {
 		voucher, err := s.productClient.GetVoucherByID(request.VoucherID)
-		if err != nil {
-			// Rollback: release reserved stock
-			_ = s.productClient.ReleaseStock(tempOrderID)
-			return nil, fmt.Errorf("failed to get voucher: %w", err)
-		}
 
-		if voucher.SellerID != sellerID {
-			// Rollback: release reserved stock
-			_ = s.productClient.ReleaseStock(tempOrderID)
-			return nil, appError.NewAppError(400, "voucher does not belong to seller")
-		}
-
-		// Validate voucher
-		if voucher.Status != "ACTIVE" {
-			// Rollback: release reserved stock
-			_ = s.productClient.ReleaseStock(tempOrderID)
-			return nil, appError.NewAppError(400, "voucher is not active")
-		}
-		if totalAmount < float64(voucher.MinOrderValue) {
-			// Rollback: release reserved stock
-			_ = s.productClient.ReleaseStock(tempOrderID)
-			return nil, appError.NewAppError(400, "order value does not meet voucher minimum requirement")
-		}
-
-		discount := 0.0
-		if voucher.DiscountType == "PERCENTAGE" {
-			discount = totalAmount * float64(voucher.DiscountValue) / 100
-			if discount > float64(voucher.MaxDiscountValue) {
-				discount = float64(voucher.MaxDiscountValue)
-			}
-		} else if voucher.DiscountType == "FIXED" {
-			discount = float64(voucher.DiscountValue)
-		}
-
-		if discount > float64(voucher.MaxDiscountValue) {
-			discount = float64(voucher.MaxDiscountValue)
-		}
-
-		totalAmount -= discount
-		if totalAmount < 0 {
-			totalAmount = 0
-		}
-
-		orderVoucher = &model.OrderVoucher{
-			Code:          voucher.Code,
-			DiscountType:  voucher.DiscountType,
-			DiscountValue: voucher.DiscountValue,
-		}
+		
 	}
 
 	// Create Order record
@@ -1009,3 +911,54 @@ func (s *orderService) InstantCheckout(userID string, request dto.InstantCheckou
 	}, nil
 }
 
+func (s *orderService) ApplyVoucher(voucherId string, totalAmount float64, sellerId string) (float64, *model.OrderVoucher, error) {
+
+	voucher, err := s.productClient.GetVoucherByID(voucherId)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	// Voucher should belong to seller
+	if voucher.SellerID != sellerId {
+		return 0, nil, appError.NewAppError(400, "voucher does not belong to seller")
+	}
+
+	// Validate status
+	if voucher.Status != "ACTIVE" {
+		return 0, nil, appError.NewAppError(400, "voucher is not active")
+	}
+
+	// Validate min order value
+	if totalAmount < float64(voucher.MinOrderValue) {
+		return 0, nil, appError.NewAppError(400, "order value does not meet voucher minimum requirement")
+	}
+
+	// Calculate discount
+	var discount float64
+	if voucher.DiscountType == "PERCENTAGE" {
+		discount = totalAmount * float64(voucher.DiscountValue) / 100
+		if discount > float64(voucher.MaxDiscountValue) {
+			discount = float64(voucher.MaxDiscountValue)
+		}
+	} else if voucher.DiscountType == "FIXED" {
+		discount = float64(voucher.DiscountValue)
+	}
+
+	if voucher.MaxDiscountValue > 0 && discount > float64(voucher.MaxDiscountValue) {
+		discount = float64(voucher.MaxDiscountValue)
+	}
+
+	totalAmount -= discount
+	if totalAmount < 0 {
+		totalAmount = 0
+	}
+
+	orderVoucher := &model.OrderVoucher{
+		Code:          voucher.Code,
+		DiscountType:  voucher.DiscountType,
+		DiscountValue: voucher.DiscountValue,
+	}
+
+	return totalAmount, orderVoucher, nil
+}
+	
