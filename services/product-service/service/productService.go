@@ -379,13 +379,11 @@ func (s *productService) SearchProducts(params dto.SearchProductsQueryParams, us
 	}
 
 	// Text search filter
-	sortByTextScore := false
 	if params.SearchQuery != "" {
 		filter["$text"] = bson.M{
 			"$search": params.SearchQuery,
 			"$diacriticSensitive": false,
 		}
-		sortByTextScore = true
 	}
 
 	// Determine sort field and direction
@@ -408,7 +406,7 @@ func (s *productService) SearchProducts(params dto.SearchProductsQueryParams, us
 	}
 
 	// Call repository method
-	products, total, err := s.repo.SearchProducts(filter, params.GetSkip(), params.Limit, sortByTextScore, sortField, sortDirection)
+	products, total, err := s.repo.SearchProducts(filter, params.GetSkip(), params.Limit, false, sortField, sortDirection)
 	if err != nil {
 		return nil, err
 	}
