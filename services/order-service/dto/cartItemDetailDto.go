@@ -18,6 +18,7 @@ type VariantDto struct {
 // ProductVariantDto mirrors product-service's CartVariantDto
 type ProductVariantDto struct {
 	ProductName       string     `json:"product_name"`
+	CategoryIds       []string   `json:"category_ids"`
 	SellerID          string     `json:"seller_id"`
 	SellerCategoryIds []string   `json:"seller_category_ids"`
 	Variant           VariantDto `json:"variant"`

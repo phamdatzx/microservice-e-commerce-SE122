@@ -16,4 +16,6 @@ type VoucherResponse struct {
 	Status                 string    `json:"status"`
 	SellerID          string    `json:"seller_id"`
 	ApplySellerCategoryIds []string  `json:"apply_seller_category_ids"`
+	ApplyScope             string               `json:"apply_scope"`
+
 }
