@@ -540,7 +540,7 @@ func (s *orderService) UpdateOrderStatus(ctx context.Context, userID string, ord
 	if oldOrder == nil {
 		return appError.NewAppError(404, "Order not found")
 	}
-	if oldOrder.Seller.ID != userID {
+	if oldOrder.Seller.ID != userID && oldOrder.User.ID != userID {
 		return appError.NewAppError(403, "You are not authorized to update this order")
 	}
 
