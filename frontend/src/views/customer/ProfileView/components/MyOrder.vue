@@ -5,6 +5,7 @@ import { Search, ChatDotRound, Shop } from '@element-plus/icons-vue'
 import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
 import { formatStatus } from '@/utils/formatStatus'
 import axios from 'axios'
+import { ElMessageBox, ElNotification } from 'element-plus'
 
 const router = useRouter()
 const isLoggedIn = ref(false)
@@ -110,6 +111,41 @@ const orderTabs = [
   { label: 'Completed', value: 'completed' },
   { label: 'Cancelled', value: 'cancelled' },
 ]
+
+const handleCancelOrder = (order: any) => {
+  ElMessageBox.confirm('Are you sure you want to cancel this order?', 'Cancel Order', {
+    confirmButtonText: 'Yes, Cancel',
+    cancelButtonText: 'No',
+    type: 'warning',
+  })
+    .then(async () => {
+      try {
+        await axios.put(
+          `${import.meta.env.VITE_BE_API_URL}/order/${order.id}`,
+          { status: 'CANCELLED' },
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+            },
+          },
+        )
+        ElNotification({
+          title: 'Success',
+          message: 'Order cancelled successfully',
+          type: 'success',
+        })
+        fetchOrders()
+      } catch (error) {
+        console.error('Failed to cancel order:', error)
+        ElNotification({
+          title: 'Error',
+          message: 'Failed to cancel order',
+          type: 'error',
+        })
+      }
+    })
+    .catch(() => {})
+}
 </script>
 
 <template>
@@ -194,13 +230,23 @@ const orderTabs = [
 
         <div class="order-footer">
           <div class="total-section">
+            <template v-if="order.voucher">
+              <span class="total-label">Voucher Discount:</span>
+              <span class="total-amount" style="color: #26aa99; margin-right: 20px">
+                -{{
+                  order.voucher.discount_type === 'FIXED'
+                    ? formatNumberWithDots(order.voucher.discount_value) + 'đ'
+                    : order.voucher.discount_value + '%'
+                }}
+              </span>
+            </template>
             <span class="total-label">Order Total:</span>
             <span class="total-amount">{{ formatNumberWithDots(order.total) }}đ</span>
           </div>
           <div class="order-actions">
             <template v-if="order.status === 'TO_PAY'">
               <el-button type="primary" size="large">Pay Order</el-button>
-              <el-button size="large">Cancel Order</el-button>
+              <el-button size="large" @click="handleCancelOrder(order)">Cancel Order</el-button>
               <el-button
                 v-if="isLoggedIn"
                 size="large"
@@ -209,7 +255,7 @@ const orderTabs = [
               >
             </template>
             <template v-else-if="order.status === 'TO_CONFIRM'">
-              <el-button size="large">Cancel Order</el-button>
+              <el-button size="large" @click="handleCancelOrder(order)">Cancel Order</el-button>
               <el-button
                 v-if="isLoggedIn"
                 size="large"
@@ -218,7 +264,7 @@ const orderTabs = [
               >
             </template>
             <template v-else-if="order.status === 'TO_PICKUP'">
-              <el-button size="large">Cancel Order</el-button>
+              <el-button size="large" @click="handleCancelOrder(order)">Cancel Order</el-button>
               <el-button
                 v-if="isLoggedIn"
                 size="large"
