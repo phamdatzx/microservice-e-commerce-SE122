@@ -9,6 +9,7 @@ import { ShoppingCart } from '@element-plus/icons-vue'
 import CategoryItem from './components/CategoryItem.vue'
 import SellerFollowItem from './components/SellerFollowItem.vue'
 import axios from 'axios'
+import { eventBus } from '@/utils/eventBus'
 
 const fetchedCategories = ref<any[]>([])
 const bestSellers = ref<any[]>([])
@@ -16,6 +17,7 @@ const bestSellers = ref<any[]>([])
 const loadingCategories = ref(false)
 const loadingBestSellers = ref(false)
 const loadingFollowedSellers = ref(false)
+const isLoggedIn = ref(false)
 
 const fetchBestSellers = async () => {
   loadingBestSellers.value = true
@@ -96,9 +98,14 @@ const fetchFollowedSellers = async () => {
 }
 
 onMounted(() => {
+  isLoggedIn.value = !!localStorage.getItem('access_token')
   fetchCategories()
   fetchFollowedSellers()
   fetchBestSellers()
+
+  eventBus.on('user_logged_out', () => {
+    isLoggedIn.value = false
+  })
 })
 </script>
 
@@ -245,7 +252,7 @@ onMounted(() => {
       </el-row>
     </div>
 
-    <RecentlyViewed />
+    <RecentlyViewed v-if="isLoggedIn" />
   </main>
 </template>
 

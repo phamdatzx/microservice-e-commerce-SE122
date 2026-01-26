@@ -79,6 +79,13 @@ onMounted(() => {
     eventBus.on('update_user_info', () => {
       fetchUserInfo()
     })
+
+    eventBus.on('user_logged_out', () => {
+      isLoggedIn.value = false
+      userInfo.value = null
+      cleanupSocket()
+      socketService.disconnect()
+    })
   }
 })
 
