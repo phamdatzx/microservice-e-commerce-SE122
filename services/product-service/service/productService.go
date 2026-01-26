@@ -305,6 +305,7 @@ func (s *productService) GetVariantsByIds(variantIDs []string) ([]dto.CartVarian
 			if variant.ID == variantID {
 				result = append(result, dto.CartVariantDto{
 					ProductName:       product.Name,
+					CategoryIds:       product.CategoryIDs,
 					SellerID:          product.SellerID,
 					SellerCategoryIds: product.SellerCategoryIDs,
 					Variant:           variant,
