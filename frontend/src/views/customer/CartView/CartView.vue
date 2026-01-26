@@ -631,8 +631,8 @@ const updateCartQuantity = async (cartItemId: string, quantity: number) => {
 
 <style>
 .el-checkbox-group {
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: 14px !important;
+  line-height: 1.6 !important;
 }
 
 .cartCheckbox {
