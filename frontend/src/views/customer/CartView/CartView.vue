@@ -185,6 +185,17 @@ const fetchCart = async () => {
     }, {})
 
     cartData.value = Object.values(grouped)
+
+    // Handle initial selection from query
+    const selectedVariantIdsQuery = router.currentRoute.value.query.selected_variants as string
+    if (selectedVariantIdsQuery) {
+      const selectedVariantIds = selectedVariantIdsQuery.split(',')
+      setTimeout(() => {
+        CartSellerProductWrapperRefs.value.forEach((ref) => {
+          ref.checkProducts(selectedVariantIds)
+        })
+      }, 100)
+    }
   } catch (error) {
     console.error('Error fetching cart:', error)
   } finally {

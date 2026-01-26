@@ -60,7 +60,19 @@ const openChat = () => {
   window.dispatchEvent(event)
 }
 
-defineExpose({ checkedProducts, handleCheckAll, handleUncheckAll })
+const checkProducts = (variantIds: string[]) => {
+  const productsToCheck = props.seller.products.filter((p) => variantIds.includes(p.variantId))
+  checkedProducts.value = [...checkedProducts.value, ...productsToCheck]
+
+  // Unique Check
+  const uniqueProducts = new Map()
+  checkedProducts.value.forEach((p) => uniqueProducts.set(p.id, p))
+  checkedProducts.value = Array.from(uniqueProducts.values())
+
+  checkAll.value = checkedProducts.value.length === props.seller.products.length
+}
+
+defineExpose({ checkedProducts, handleCheckAll, handleUncheckAll, checkProducts })
 </script>
 
 <template>

@@ -230,6 +230,70 @@ const handleOrderReceived = (order: any) => {
     })
     .catch(() => {})
 }
+
+const handleBuyAgain = async (order: any) => {
+  const loadingInstance = ElLoading.service({
+    lock: true,
+    text: 'Adding items to cart...',
+    background: 'rgba(0, 0, 0, 0.7)',
+  })
+
+  try {
+    const variantIds: string[] = []
+    const promises = order.items.map(async (item: any) => {
+      // Assuming item.variant_id is available. If the item was deleted, this might fail, ideally backend handles checks.
+      try {
+        await axios.post(
+          `${import.meta.env.VITE_BE_API_URL}/order/cart`,
+          {
+            seller_id: order.seller.id,
+            product_id: item.product_id,
+            variant_id: item.variant_id,
+            quantity: 1, // Default to 1 for buy again
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+            },
+          },
+        )
+        variantIds.push(item.variant_id)
+      } catch (err) {
+        // Find existing cart item to still select it if it was already there?
+        // Actually if post fails (e.g. already in cart?), likely we still want to select it.
+        // But backend usually returns error if stock issue, or adds quantity if exists.
+        // If simply adding quantity, it succeeds.
+        // If error, we might still want to try selecting it (e.g. max quantity reached).
+        variantIds.push(item.variant_id)
+      }
+    })
+
+    await Promise.all(promises)
+
+    loadingInstance.close()
+
+    if (variantIds.length > 0) {
+      router.push({
+        path: '/cart',
+        query: { selected_variants: variantIds.join(',') },
+      })
+    } else {
+      ElNotification({
+        title: 'Warning',
+        message: 'Could not add any items to cart (product might be unavailable).',
+        type: 'warning',
+      })
+    }
+  } catch (error) {
+    loadingInstance.close()
+    console.error('Failed to buy again:', error)
+    ElNotification({
+      title: 'Error',
+      message: 'Failed to process Buy Again request',
+      type: 'error',
+    })
+  }
+}
 </script>
 
 <template>
@@ -367,7 +431,9 @@ const handleOrderReceived = (order: any) => {
               >
             </template>
             <template v-else-if="order.status === 'COMPLETED'">
-              <el-button type="primary" size="large">Buy Again</el-button>
+              <el-button type="primary" size="large" @click="handleBuyAgain(order)"
+                >Buy Again</el-button
+              >
               <el-button size="large">Rate</el-button>
               <el-button size="large" @click.stop="openChat(order.seller?.id || order.seller?._id)"
                 >Contact Seller</el-button
