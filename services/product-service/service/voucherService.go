@@ -237,6 +237,15 @@ func (s *voucherService) UseVoucher(userID string, voucherID string) (dto.UseVou
 		}, err
 	}
 
+	savedVoucher, err := s.savedVoucherRepo.FindByUserAndVoucher(userID, voucherID)
+	savedVoucher.UsedCount++
+	if err := s.savedVoucherRepo.Update(savedVoucher); err != nil {
+		return dto.UseVoucherResponse{
+			Success: false,
+			Message: "Failed to update saved voucher",
+		}, err
+	}
+
 	// 7. Increment voucher used quantity
 	voucher.UsedQuantity++
 	if err := s.repo.Update(voucher); err != nil {
