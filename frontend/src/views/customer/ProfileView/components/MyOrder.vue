@@ -184,6 +184,52 @@ const handlePayOrder = async (order: any) => {
     })
   }
 }
+
+const handleOrderReceived = (order: any) => {
+  ElMessageBox.confirm(
+    'Are you sure you have received this order? This action cannot be undone.',
+    'Confirm Receipt',
+    {
+      confirmButtonText: 'Yes, Received',
+      cancelButtonText: 'Cancel',
+      type: 'warning',
+    },
+  )
+    .then(async () => {
+      const loadingInstance = ElLoading.service({
+        lock: true,
+        text: 'Updating Order...',
+        background: 'rgba(0, 0, 0, 0.7)',
+      })
+      try {
+        await axios.put(
+          `${import.meta.env.VITE_BE_API_URL}/order/${order.id}`,
+          { status: 'COMPLETED' },
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+            },
+          },
+        )
+        loadingInstance.close()
+        ElNotification({
+          title: 'Success',
+          message: 'Order completed successfully',
+          type: 'success',
+        })
+        fetchOrders()
+      } catch (error) {
+        loadingInstance.close()
+        console.error('Failed to update order status:', error)
+        ElNotification({
+          title: 'Error',
+          message: 'Failed to update order status',
+          type: 'error',
+        })
+      }
+    })
+    .catch(() => {})
+}
 </script>
 
 <template>
@@ -313,7 +359,9 @@ const handlePayOrder = async (order: any) => {
               >
             </template>
             <template v-else-if="order.status === 'SHIPPING'">
-              <el-button type="primary" size="large">Order Received</el-button>
+              <el-button type="primary" size="large" @click="handleOrderReceived(order)"
+                >Order Received</el-button
+              >
               <el-button size="large" @click.stop="openChat(order.seller?.id || order.seller?._id)"
                 >Contact Seller</el-button
               >
