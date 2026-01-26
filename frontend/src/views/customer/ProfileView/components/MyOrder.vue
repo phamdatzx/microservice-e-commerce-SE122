@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Search, ChatDotRound, Shop } from '@element-plus/icons-vue'
+import { Plus, Search, ChatDotRound, Shop } from '@element-plus/icons-vue'
 import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
 import { formatStatus } from '@/utils/formatStatus'
 import axios from 'axios'
@@ -294,6 +294,109 @@ const handleBuyAgain = async (order: any) => {
     })
   }
 }
+
+// Rating Logic
+const showRateDialog = ref(false)
+const selectedOrderForRating = ref<any>(null)
+const ratingForms = ref<Record<string, { star: number; content: string; fileList: any[] }>>({})
+
+const handleRateClick = (order: any) => {
+  selectedOrderForRating.value = order
+  ratingForms.value = {}
+  // Initialize form for each item
+  order.items.forEach((item: any) => {
+    ratingForms.value[item.variant_id] = {
+      star: 5,
+      content: '',
+      fileList: [],
+    }
+  })
+  showRateDialog.value = true
+}
+
+const handleRateImageChange = (uploadFile: any, variantId: string) => {
+  const isJPG = uploadFile.raw.type === 'image/jpeg' || uploadFile.raw.type === 'image/jpg'
+  const isPNG = uploadFile.raw.type === 'image/png'
+
+  if (!isJPG && !isPNG) {
+    ElNotification({
+      title: 'Error',
+      message: 'Image must be JPG, JPEG or PNG format!',
+      type: 'error',
+    })
+
+    // Remove from fileList
+    if (ratingForms.value[variantId]) {
+      const list = ratingForms.value[variantId].fileList
+      const index = list.indexOf(uploadFile)
+      if (index > -1) {
+        list.splice(index, 1)
+      } else {
+        const idx = list.findIndex((f) => f.uid === uploadFile.uid)
+        if (idx > -1) list.splice(idx, 1)
+      }
+    }
+    return
+  }
+}
+
+const submitRating = async (item: any) => {
+  const form = ratingForms.value[item.variant_id]
+  if (!form) return
+
+  if (!form.content.trim()) {
+    ElNotification({
+      title: 'Warning',
+      message: 'Please write some review content.',
+      type: 'warning',
+    })
+    return
+  }
+
+  const loadingInstance = ElLoading.service({
+    lock: true,
+    text: 'Submitting Review...',
+    background: 'rgba(0, 0, 0, 0.7)',
+  })
+
+  try {
+    const formData = new FormData()
+    formData.append('product_id', item.product_id)
+    formData.append('variant_id', item.variant_id)
+    formData.append('content', form.content)
+    formData.append('star', form.star.toString())
+
+    form.fileList.forEach((file) => {
+      if (file.raw) {
+        formData.append('image', file.raw)
+      }
+    })
+
+    await axios.post(`${import.meta.env.VITE_BE_API_URL}/product/rating`, formData, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+
+    ElNotification({
+      title: 'Success',
+      message: 'Review submitted successfully!',
+      type: 'success',
+    })
+
+    showRateDialog.value = false
+  } catch (error: any) {
+    console.error('Failed to submit rating:', error)
+    ElNotification({
+      title: 'Error',
+      message: error.response?.data?.message || 'Failed to submit review',
+      type: 'error',
+    })
+  } finally {
+    loadingInstance.close()
+  }
+}
 </script>
 
 <template>
@@ -434,7 +537,7 @@ const handleBuyAgain = async (order: any) => {
               <el-button type="primary" size="large" @click="handleBuyAgain(order)"
                 >Buy Again</el-button
               >
-              <el-button size="large">Rate</el-button>
+              <el-button size="large" @click="handleRateClick(order)">Rate</el-button>
               <el-button size="large" @click.stop="openChat(order.seller?.id || order.seller?._id)"
                 >Contact Seller</el-button
               >
@@ -460,6 +563,73 @@ const handleBuyAgain = async (order: any) => {
         <el-empty description="No orders found" />
       </div>
     </div>
+
+    <!-- Rating Dialog -->
+    <el-dialog v-model="showRateDialog" title="Rate Product" width="600px" destroy-on-close>
+      <div v-if="selectedOrderForRating" class="rate-product-list">
+        <div v-for="item in selectedOrderForRating.items" :key="item.variant_id" class="rate-item">
+          <div class="rate-item-header">
+            <img
+              :src="item.image || 'https://placehold.co/100'"
+              alt="Product Image"
+              class="rate-item-image"
+            />
+            <div class="rate-item-info">
+              <div class="rate-item-name">{{ item.product_name }}</div>
+              <div
+                class="rate-item-variant"
+                v-if="item.variant_name && item.variant_name.toLowerCase() !== 'default'"
+              >
+                Variant: {{ item.variant_name }}
+              </div>
+            </div>
+          </div>
+
+          <div class="rate-form" v-if="ratingForms[item.variant_id]">
+            <div class="rate-stars">
+              <span>Product Quality</span>
+              <el-rate
+                v-model="ratingForms[item.variant_id]!.star"
+                size="large"
+                show-text
+                :texts="['Very Bad', 'Bad', 'Average', 'Good', 'Excellent']"
+              />
+            </div>
+
+            <div class="rate-input">
+              <el-input
+                v-model="ratingForms[item.variant_id]!.content"
+                type="textarea"
+                :rows="3"
+                placeholder="Share your experience about this product..."
+              />
+            </div>
+
+            <div class="rate-upload">
+              <el-upload
+                v-model:file-list="ratingForms[item.variant_id]!.fileList"
+                action="#"
+                list-type="picture-card"
+                :auto-upload="false"
+                :on-change="(file: any) => handleRateImageChange(file, item.variant_id)"
+                multiple
+                :limit="5"
+                accept=".jpg,.jpeg,.png"
+              >
+                <el-icon><Plus /></el-icon>
+              </el-upload>
+            </div>
+
+            <div class="rate-actions">
+              <el-button type="primary" @click="submitRating(item)">Submit Review</el-button>
+            </div>
+          </div>
+          <el-divider
+            v-if="item !== selectedOrderForRating.items[selectedOrderForRating.items.length - 1]"
+          />
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -645,5 +815,59 @@ const handleBuyAgain = async (order: any) => {
 
 .shop-action-btn:hover {
   color: var(--main-color) !important;
+}
+
+.rate-item {
+  margin-bottom: 20px;
+}
+
+.rate-item-header {
+  display: flex;
+  margin-bottom: 15px;
+}
+
+.rate-item-image {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  margin-right: 15px;
+  border: 1px solid #e0e0e0;
+}
+
+.rate-item-info {
+  flex: 1;
+}
+
+.rate-item-name {
+  font-weight: 500;
+  margin-bottom: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.rate-item-variant {
+  font-size: 13px;
+  color: #888;
+}
+
+.rate-stars {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.rate-input {
+  margin-bottom: 15px;
+}
+
+.rate-upload {
+  margin-bottom: 15px;
+}
+
+.rate-actions {
+  text-align: right;
 }
 </style>
