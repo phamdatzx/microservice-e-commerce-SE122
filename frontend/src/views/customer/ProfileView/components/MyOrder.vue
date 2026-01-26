@@ -5,7 +5,7 @@ import { Search, ChatDotRound, Shop } from '@element-plus/icons-vue'
 import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
 import { formatStatus } from '@/utils/formatStatus'
 import axios from 'axios'
-import { ElMessageBox, ElNotification } from 'element-plus'
+import { ElMessageBox, ElNotification, ElLoading } from 'element-plus'
 
 const router = useRouter()
 const isLoggedIn = ref(false)
@@ -146,6 +146,44 @@ const handleCancelOrder = (order: any) => {
     })
     .catch(() => {})
 }
+
+const handlePayOrder = async (order: any) => {
+  const loadingInstance = ElLoading.service({
+    lock: true,
+    text: 'Processing Payment...',
+    background: 'rgba(0, 0, 0, 0.7)',
+  })
+  try {
+    const response = await axios.post(
+      `${import.meta.env.VITE_BE_API_URL}/order/${order.id}/payment`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+        },
+      },
+    )
+
+    if (response.data && response.data.payment_url) {
+      window.location.href = response.data.payment_url
+    } else {
+      loadingInstance.close()
+      ElNotification({
+        title: 'Error',
+        message: 'Failed to retrieve payment URL',
+        type: 'error',
+      })
+    }
+  } catch (error) {
+    loadingInstance.close()
+    console.error('Failed to initiate payment:', error)
+    ElNotification({
+      title: 'Error',
+      message: 'Failed to initiate payment',
+      type: 'error',
+    })
+  }
+}
 </script>
 
 <template>
@@ -245,7 +283,9 @@ const handleCancelOrder = (order: any) => {
           </div>
           <div class="order-actions">
             <template v-if="order.status === 'TO_PAY'">
-              <el-button type="primary" size="large">Pay Order</el-button>
+              <el-button type="primary" size="large" @click="handlePayOrder(order)"
+                >Pay Order</el-button
+              >
               <el-button size="large" @click="handleCancelOrder(order)">Cancel Order</el-button>
               <el-button
                 v-if="isLoggedIn"
