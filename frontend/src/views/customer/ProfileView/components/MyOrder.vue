@@ -397,6 +397,88 @@ const submitRating = async (item: any) => {
     loadingInstance.close()
   }
 }
+
+// Report Logic
+const showReportDialog = ref(false)
+const selectedOrderForReport = ref<any>(null)
+const reportForms = ref<Record<string, { reason: string; description: string }>>({})
+
+const reportReasons = [
+  { label: 'Fake Product', value: 'fake_product' },
+  { label: 'Quality Issue', value: 'quality_issue' },
+  { label: 'Misleading Description', value: 'misleading_description' },
+  { label: 'Counterfeit', value: 'counterfeit' },
+  { label: 'Damaged Product', value: 'damaged_product' },
+  { label: 'Other', value: 'other' },
+]
+
+const handleReportClick = (order: any) => {
+  selectedOrderForReport.value = order
+  reportForms.value = {}
+  order.items.forEach((item: any) => {
+    reportForms.value[item.variant_id] = {
+      reason: '',
+      description: '',
+    }
+  })
+  showReportDialog.value = true
+}
+
+const submitReport = async (item: any) => {
+  const form = reportForms.value[item.variant_id]
+  if (!form) return
+
+  if (!form.reason) {
+    ElNotification({
+      title: 'Warning',
+      message: 'Please select a reason for reporting.',
+      type: 'warning',
+    })
+    return
+  }
+
+  const loadingInstance = ElLoading.service({
+    lock: true,
+    text: 'Submitting Report...',
+    background: 'rgba(0, 0, 0, 0.7)',
+  })
+
+  try {
+    await axios.post(
+      `${import.meta.env.VITE_BE_API_URL}/product/report`,
+      {
+        product_id: item.product_id,
+        variant_id: item.variant_id,
+        reason: form.reason,
+        description: form.description,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+        },
+      },
+    )
+
+    ElNotification({
+      title: 'Success',
+      message: 'Report submitted successfully',
+      type: 'success',
+    })
+
+    form.reason = ''
+    form.description = ''
+    showReportDialog.value = false
+  } catch (error: any) {
+    console.error('Failed to submit report:', error)
+    ElNotification({
+      title: 'Error',
+      message: error.response?.data?.message || 'Failed to submit report',
+      type: 'error',
+    })
+  } finally {
+    loadingInstance.close()
+  }
+}
 </script>
 
 <template>
@@ -538,6 +620,7 @@ const submitRating = async (item: any) => {
                 >Buy Again</el-button
               >
               <el-button size="large" @click="handleRateClick(order)">Rate</el-button>
+              <el-button size="large" @click="handleReportClick(order)">Report</el-button>
               <el-button size="large" @click.stop="openChat(order.seller?.id || order.seller?._id)"
                 >Contact Seller</el-button
               >
@@ -626,6 +709,69 @@ const submitRating = async (item: any) => {
           </div>
           <el-divider
             v-if="item !== selectedOrderForRating.items[selectedOrderForRating.items.length - 1]"
+          />
+        </div>
+      </div>
+    </el-dialog>
+
+    <!-- Report Dialog -->
+    <el-dialog v-model="showReportDialog" title="Report Product" width="600px" destroy-on-close>
+      <div v-if="selectedOrderForReport" class="report-product-list">
+        <div
+          v-for="item in selectedOrderForReport.items"
+          :key="item.variant_id"
+          class="report-item"
+        >
+          <div class="report-item-header">
+            <img
+              :src="item.image || 'https://placehold.co/100'"
+              alt="Product Image"
+              class="report-item-image"
+            />
+            <div class="report-item-info">
+              <div class="report-item-name">{{ item.product_name }}</div>
+              <div
+                class="report-item-variant"
+                v-if="item.variant_name && item.variant_name.toLowerCase() !== 'default'"
+              >
+                Variant: {{ item.variant_name }}
+              </div>
+            </div>
+          </div>
+
+          <div class="report-form" v-if="reportForms[item.variant_id]">
+            <div class="report-input-group">
+              <label class="report-label">Reason</label>
+              <el-select
+                v-model="reportForms[item.variant_id]!.reason"
+                placeholder="Select a reason"
+                class="report-select"
+              >
+                <el-option
+                  v-for="option in reportReasons"
+                  :key="option.value"
+                  :label="option.label"
+                  :value="option.value"
+                />
+              </el-select>
+            </div>
+
+            <div class="report-input-group">
+              <label class="report-label">Description</label>
+              <el-input
+                v-model="reportForms[item.variant_id]!.description"
+                type="textarea"
+                :rows="3"
+                placeholder="Please describe the issue..."
+              />
+            </div>
+
+            <div class="report-actions">
+              <el-button type="danger" @click="submitReport(item)">Submit Report</el-button>
+            </div>
+          </div>
+          <el-divider
+            v-if="item !== selectedOrderForReport.items[selectedOrderForReport.items.length - 1]"
           />
         </div>
       </div>
@@ -844,6 +990,7 @@ const submitRating = async (item: any) => {
   display: -webkit-box;
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
+  line-clamp: 1;
   overflow: hidden;
 }
 
@@ -868,6 +1015,72 @@ const submitRating = async (item: any) => {
 }
 
 .rate-actions {
+  text-align: right;
+}
+
+/* Report Dialog Styles */
+.report-item {
+  margin-bottom: 20px;
+}
+
+.report-item-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.report-item-image {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  margin-right: 15px;
+  border: 1px solid #e0e0e0;
+}
+
+.report-item-info {
+  flex: 1;
+  padding-right: 10px;
+}
+
+.report-item-name {
+  font-weight: 500;
+  margin-bottom: 4px;
+  font-size: 14px;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  line-clamp: 1;
+  overflow: hidden;
+}
+
+.report-item-variant {
+  font-size: 13px;
+  color: #888;
+}
+
+.report-form {
+  background-color: #f9f9f9;
+  padding: 15px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+}
+
+.report-input-group {
+  margin-bottom: 15px;
+}
+
+.report-label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.report-select {
+  width: 100%;
+}
+
+.report-actions {
   text-align: right;
 }
 </style>
