@@ -19,3 +19,16 @@ type VoucherResponse struct {
 	ApplyScope             string               `json:"apply_scope"`
 
 }
+
+type UseVoucherRequest struct {
+	UserID    string `json:"user_id"`
+	VoucherID string `json:"voucher_id"`
+}
+
+type UseVoucherResponse struct {
+	Success   bool      `json:"success"`
+	Message   string    `json:"message"`
+	UsageID   string    `json:"usage_id,omitempty"`
+	UsedAt    time.Time `json:"used_at,omitempty"`
+	VoucherID string    `json:"voucher_id,omitempty"`
+}

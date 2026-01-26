@@ -64,3 +64,15 @@ type SavedVoucherResponse struct {
 	Voucher        VoucherResponse `json:"voucher"`
 }
 
+type UseVoucherRequest struct {
+	UserID    string `json:"user_id" validate:"required"`
+	VoucherID string `json:"voucher_id" validate:"required"`
+}
+
+type UseVoucherResponse struct {
+	Success   bool      `json:"success"`
+	Message   string    `json:"message"`
+	UsageID   string    `json:"usage_id,omitempty"`
+	UsedAt    time.Time `json:"used_at,omitempty"`
+	VoucherID string    `json:"voucher_id,omitempty"`
+}

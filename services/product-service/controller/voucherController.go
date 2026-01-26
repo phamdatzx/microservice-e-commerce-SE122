@@ -178,3 +178,30 @@ func (c *VoucherController) GetVouchersBySellerPublic(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, response)
 }
+
+func (c *VoucherController) UseVoucher(ctx *gin.Context) {
+	var request dto.UseVoucherRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := validate.Struct(request); err != nil {
+		var errors string
+		for _, err := range err.(validator.ValidationErrors) {
+			errors += err.Field() + " is invalid: " + err.Tag() + ", "
+		}
+		_ = ctx.Error(appError.NewAppError(400, errors))
+		ctx.Abort()
+		return
+	}
+
+	response, err := c.service.UseVoucher(request.UserID, request.VoucherID)
+	if err != nil {
+		_ = ctx.Error(err)
+		ctx.Abort()
+		return
+	}
+
+	ctx.JSON(http.StatusOK, response)
+}

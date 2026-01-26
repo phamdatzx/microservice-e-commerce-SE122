@@ -5,6 +5,7 @@ import (
 	appError "product-service/error"
 	"product-service/model"
 	"product-service/repository"
+	"time"
 )
 
 type VoucherService interface {
@@ -13,17 +14,20 @@ type VoucherService interface {
 	GetVouchersBySeller(sellerID string, userID string) ([]dto.VoucherResponse, error)
 	UpdateVoucher(id string, sellerID string, request dto.VoucherRequest) (dto.VoucherResponse, error)
 	DeleteVoucher(id string, sellerID string) error
+	UseVoucher(userID string, voucherID string) (dto.UseVoucherResponse, error)
 }
 
 type voucherService struct {
 	repo             repository.VoucherRepository
 	savedVoucherRepo repository.SavedVoucherRepository
+	usageRepo        repository.VoucherUsageRepository
 }
 
-func NewVoucherService(repo repository.VoucherRepository, savedVoucherRepo repository.SavedVoucherRepository) VoucherService {
+func NewVoucherService(repo repository.VoucherRepository, savedVoucherRepo repository.SavedVoucherRepository, usageRepo repository.VoucherUsageRepository) VoucherService {
 	return &voucherService{
 		repo:             repo,
 		savedVoucherRepo: savedVoucherRepo,
+		usageRepo:        usageRepo,
 	}
 }
 
@@ -161,4 +165,92 @@ func (s *voucherService) mapToResponse(voucher *model.Voucher, userID string) dt
 	}
 
 	return response
+}
+
+func (s *voucherService) UseVoucher(userID string, voucherID string) (dto.UseVoucherResponse, error) {
+	// 1. Get voucher
+	voucher, err := s.repo.FindByID(voucherID)
+	if err != nil {
+		return dto.UseVoucherResponse{
+			Success: false,
+			Message: "Voucher not found",
+		}, appError.NewAppErrorWithErr(404, "voucher not found", err)
+	}
+
+	// 2. Check if voucher is active
+	if voucher.Status != "ACTIVE" {
+		return dto.UseVoucherResponse{
+			Success: false,
+			Message: "Voucher is not active",
+		}, appError.NewAppError(400, "voucher is not active")
+	}
+
+	// 3. Check if voucher is within valid time range
+	now := time.Now()
+	if now.Before(voucher.StartTime) {
+		return dto.UseVoucherResponse{
+			Success: false,
+			Message: "Voucher has not started yet",
+		}, appError.NewAppError(400, "voucher has not started yet")
+	}
+	if now.After(voucher.EndTime) {
+		return dto.UseVoucherResponse{
+			Success: false,
+			Message: "Voucher has expired",
+		}, appError.NewAppError(400, "voucher has expired")
+	}
+
+	// 4. Check if voucher has remaining quantity
+	if voucher.UsedQuantity >= voucher.TotalQuantity {
+		return dto.UseVoucherResponse{
+			Success: false,
+			Message: "Voucher has been fully used",
+		}, appError.NewAppError(400, "voucher has been fully used")
+	}
+
+	// 5. Check user's usage count for this voucher
+	userUsageCount, err := s.usageRepo.CountByUserAndVoucher(userID, voucherID)
+	if err != nil {
+		return dto.UseVoucherResponse{
+			Success: false,
+			Message: "Failed to check user usage",
+		}, err
+	}
+
+	if int(userUsageCount) >= voucher.UsageLimitPerUser {
+		return dto.UseVoucherResponse{
+			Success: false,
+			Message: "User has reached the usage limit for this voucher",
+		}, appError.NewAppError(400, "user has reached the usage limit for this voucher")
+	}
+
+	// 6. Create usage record
+	usage := &model.VoucherUsage{
+		UserID:    userID,
+		VoucherID: voucherID,
+	}
+
+	if err := s.usageRepo.Create(usage); err != nil {
+		return dto.UseVoucherResponse{
+			Success: false,
+			Message: "Failed to record voucher usage",
+		}, err
+	}
+
+	// 7. Increment voucher used quantity
+	voucher.UsedQuantity++
+	if err := s.repo.Update(voucher); err != nil {
+		return dto.UseVoucherResponse{
+			Success: false,
+			Message: "Failed to update voucher",
+		}, err
+	}
+
+	return dto.UseVoucherResponse{
+		Success:   true,
+		Message:   "Voucher used successfully",
+		UsageID:   usage.ID,
+		UsedAt:    usage.UsedAt,
+		VoucherID: voucherID,
+	}, nil
 }
