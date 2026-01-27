@@ -187,9 +187,7 @@ const handleExport = () => {
   URL.revokeObjectURL(link.href)
 }
 
-const handleBatchDelivery = () => {
-  console.log('Batch delivery clicked')
-}
+const handleBatchDelivery = () => {}
 
 const handleUpdateStatus = async (orderId: string, status: string) => {
   if (status === 'CANCELLED') {
@@ -208,7 +206,6 @@ const handleUpdateStatus = async (orderId: string, status: string) => {
     }
   }
   try {
-    console.log(`Updating order ${orderId} to status: ${status}`)
     const loading = ElLoading.service({
       lock: true,
       text: `Moving to ${status.replace('_', ' ')}...`,
@@ -219,7 +216,7 @@ const handleUpdateStatus = async (orderId: string, status: string) => {
       { status },
       { headers: { Authorization: `Bearer ${token}` } },
     )
-    console.log('Update response:', response.data)
+
     ElNotification.success(`Order status updated to ${formatStatus(status)}`)
     fetchOrders()
     fetchAllTabCounts()

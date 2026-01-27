@@ -281,7 +281,6 @@ const removeFromCart = async (cartItemId: string, showNotification = true) => {
       },
     })
 
-    // Remove from cartData
     cartData.value = cartData.value
       .map((seller) => ({
         ...seller,
@@ -289,7 +288,6 @@ const removeFromCart = async (cartItemId: string, showNotification = true) => {
       }))
       .filter((seller) => seller.products.length > 0)
 
-    // Remove from checkedProducts
     checkedProducts.value = checkedProducts.value.filter((p) => p.id !== cartItemId)
 
     if (showNotification) {

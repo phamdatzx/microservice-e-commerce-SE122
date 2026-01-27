@@ -70,9 +70,6 @@ watch(searchQuery, () => {
   }, 300)
 })
 
-// const currentPage = ref(1)
-// const pageSize = ref(10)
-
 const filteredData = computed(() => {
   return categoryData.value
 })

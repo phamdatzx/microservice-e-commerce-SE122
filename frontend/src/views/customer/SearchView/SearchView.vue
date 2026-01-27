@@ -128,8 +128,6 @@ const fetchProducts = async () => {
       params.sort_direction = 'desc'
     }
 
-    console.log('Fetching products with params:', params)
-
     const response = await axios.get(`${import.meta.env.VITE_BE_API_URL}/product/public/search`, {
       params,
       headers: {

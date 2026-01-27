@@ -26,7 +26,6 @@ onMounted(() => {
   axios
     .post(`${USER_API_URL}/activate?token=${token}`)
     .then((response) => {
-      console.log(response.data)
       if (response.data.status === 200) {
         activationStatus.value = 'success'
       } else {

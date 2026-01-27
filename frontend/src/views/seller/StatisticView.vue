@@ -140,7 +140,6 @@ const fetchStatistics = async () => {
 
     if (response.data) {
       const data = response.data
-      console.log(data)
 
       // Update Summary Cards
       salesData.value.value = new Intl.NumberFormat('vi-VN').format(data.total_revenue || 0)

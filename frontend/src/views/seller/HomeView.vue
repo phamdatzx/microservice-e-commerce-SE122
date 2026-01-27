@@ -60,12 +60,8 @@ const cleanupSocketListeners = () => {
   socketService.off(SOCKET_EVENTS.MESSAGES_UPDATED, fetchUnreadChatCount)
 }
 
-const handleOpen = (key: string, keyPath: string[]) => {
-  console.log(key, keyPath)
-}
-const handleClose = (key: string, keyPath: string[]) => {
-  console.log(key, keyPath)
-}
+const handleOpen = (key: string, keyPath: string[]) => {}
+const handleClose = (key: string, keyPath: string[]) => {}
 
 const initSocket = () => {
   const token = localStorage.getItem('access_token')

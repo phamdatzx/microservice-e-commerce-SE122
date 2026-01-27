@@ -236,7 +236,6 @@ const handleRateImageChange = (uploadFile: any, variantId: string) => {
       type: 'error',
     })
 
-    // Remove from fileList
     if (ratingForms.value[variantId]) {
       const list = ratingForms.value[variantId].fileList
       const index = list.indexOf(uploadFile)

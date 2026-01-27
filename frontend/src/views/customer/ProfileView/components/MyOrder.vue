@@ -71,9 +71,8 @@ const fetchOrders = async () => {
     })
 
     if (response.data && response.data.orders) {
-      console.log('Orders Response:', response.data)
       orders.value = response.data.orders
-      console.log('Populated Orders:', orders.value)
+
       totalItems.value = response.data.total_count
     } else {
       orders.value = []
@@ -325,7 +324,6 @@ const handleRateImageChange = (uploadFile: any, variantId: string) => {
       type: 'error',
     })
 
-    // Remove from fileList
     if (ratingForms.value[variantId]) {
       const list = ratingForms.value[variantId].fileList
       const index = list.indexOf(uploadFile)

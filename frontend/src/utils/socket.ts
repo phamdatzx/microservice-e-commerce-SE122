@@ -58,7 +58,6 @@ class SocketService {
     })
 
     this.socket.on('connect', () => {
-      console.log('Connected to socket server')
       this.socket?.emit(SOCKET_EVENTS.JOIN_NOTIFICATIONS, {})
     })
 
@@ -66,9 +65,7 @@ class SocketService {
       console.error('Socket connection error:', error)
     })
 
-    this.socket.on('disconnect', (reason) => {
-      console.log('Disconnected from socket server:', reason)
-    })
+    this.socket.on('disconnect', (reason) => {})
   }
 
   disconnect() {

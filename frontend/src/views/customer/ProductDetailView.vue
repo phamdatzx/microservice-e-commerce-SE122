@@ -405,7 +405,7 @@ const handleBuyNow = () => {
 
   // Construct item object compatible with checkout expectations
   const instantItem = {
-    id: 'instant_' + new Date().getTime(), // Temporary ID
+    id: 'instant_' + new Date().getTime(),
     sellerId: product.value.seller_id,
     productId: product.value.id,
     variantId: selectedVariant.value.id,

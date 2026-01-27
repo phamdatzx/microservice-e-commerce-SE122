@@ -240,8 +240,6 @@ const calculateLeadTime = async () => {
     service_id: selectedService.value.service_id,
   }
 
-  console.log('Calculating Lead Time Body:', JSON.stringify(body, null, 2))
-
   try {
     const response = await axios.post(
       'https://dev-online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/leadtime',
@@ -339,8 +337,6 @@ const handlePlaceOrder = async () => {
     payload.delivery_service_id = selectedService.value.service_id
   }
 
-  console.log('Checkout Payload:', JSON.stringify(payload, null, 2))
-
   const loading = ElLoading.service({
     lock: true,
     text: 'Placing Order...',
@@ -427,7 +423,7 @@ const validVouchers = computed(() => {
     const isExpired = new Date(v.voucher.end_time) <= now
     const isFullyUsed = v.used_count >= v.max_uses_allowed
     // Also check if applicable to current cart value? Optional but good UX
-    // const isApplicable = subtotal.value >= v.voucher.min_order_value
+
     return !isExpired && !isFullyUsed
   })
 })

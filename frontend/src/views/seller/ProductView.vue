@@ -229,7 +229,6 @@ const submitForm = async (formEl: FormInstance | undefined) => {
     if (valid) {
       handleFormSubmit()
     } else {
-      console.log('error submit!', fields)
     }
   })
 }
@@ -289,9 +288,7 @@ const handleExceed: UploadProps['onExceed'] = (files, uploadFiles) => {
   )
 }
 
-const handleRemove: UploadProps['onRemove'] = (uploadFile, uploadFiles) => {
-  console.log(uploadFile, uploadFiles)
-}
+const handleRemove: UploadProps['onRemove'] = (uploadFile, uploadFiles) => {}
 
 const handleVariantImageChange = (uploadFile: UploadFile, row: ProductVariant) => {
   const rawFile = uploadFile.raw
