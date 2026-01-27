@@ -28,7 +28,9 @@ func main() {
 	productRepo := repository.NewProductRepository(config.DB)
 	userClient := client.NewUserServiceClient()
 	searchHistoryRepo := repository.NewSearchHistoryRepository(config.DB)
-	productService := service.NewProductService(productRepo, userClient, searchHistoryRepo)
+	ratingRepo := repository.NewRatingRepository(config.DB)
+	reportRepo := repository.NewReportRepository(config.DB)
+	productService := service.NewProductService(productRepo, userClient, searchHistoryRepo, ratingRepo, reportRepo)
 	productController := controller.NewProductController(productService)
 
 	// Wiring dependencies - Category
@@ -62,7 +64,6 @@ func main() {
 	stockReservationController := controller.NewStockReservationController(stockReservationService)
 
 	// Wiring dependencies - Rating
-	ratingRepo := repository.NewRatingRepository(config.DB)
 	orderClient := client.NewOrderServiceClient()
 	ratingService := service.NewRatingService(ratingRepo,productRepo, orderClient, userClient)
 	ratingController := controller.NewRatingController(ratingService)
@@ -72,7 +73,6 @@ func main() {
 	searchHistoryController := controller.NewSearchHistoryController(searchHistoryService)
 
 	// Wiring dependencies - Report
-	reportRepo := repository.NewReportRepository(config.DB)
 	reportService := service.NewReportService(reportRepo, orderClient, userClient)
 	reportController := controller.NewReportController(reportService)
 

@@ -466,6 +466,49 @@ func (s *orderService) GetUserOrders(ctx context.Context, userID string, request
 		orderDtos[i] = convertOrderToDto(order)
 	}
 
+	// Call API to get rated, reported status
+	// Collect all unique product IDs from orders
+	productIDSet := make(map[string]bool)
+	for _, order := range orders {
+		for _, item := range order.Items {
+			productIDSet[item.ProductID] = true
+		}
+	}
+
+	// Convert set to slice
+	var productIDs []string
+	for productID := range productIDSet {
+		productIDs = append(productIDs, productID)
+	}
+
+	// Call product service to get status
+	if len(productIDs) > 0 {
+		statusMap, err := s.productClient.CheckProductsStatus(userID, productIDs)
+		if err != nil {
+			// Log error but don't fail the request
+			fmt.Printf("Warning: failed to get product status: %v\n", err)
+		} else {
+			// Update orderDtos with status information
+			for i := range orderDtos {
+				// Check if any product in the order is rated or reported
+				isRated := false
+				isReported := false
+				for _, item := range orders[i].Items {
+					if status, exists := statusMap[item.ProductID]; exists {
+						if status.IsRated {
+							isRated = true
+						}
+						if status.IsReported {
+							isReported = true
+						}
+					}
+				}
+				orderDtos[i].IsRated = isRated
+				orderDtos[i].IsReported = isReported
+			}
+		}
+	}
+
 	// Calculate total pages
 	totalPages := int(totalCount) / limit
 	if int(totalCount)%limit > 0 {
