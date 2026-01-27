@@ -503,6 +503,12 @@ onMounted(async () => {
 
   fetchAddresses()
 })
+
+const goToProductDetail = (item: any) => {
+  if (item.productId) {
+    router.push(`/product/${item.productId}`)
+  }
+}
 </script>
 
 <template>
@@ -554,8 +560,13 @@ onMounted(async () => {
             <h3>Products Ordered</h3>
             <div class="product-list">
               <div v-for="item in checkoutItems" :key="item.id" class="product-item">
-                <img :src="item.imageUrl" alt="Product" class="item-img" />
-                <div class="item-info">
+                <img
+                  :src="item.imageUrl"
+                  alt="Product"
+                  class="item-img"
+                  @click="goToProductDetail(item)"
+                />
+                <div class="item-info" @click="goToProductDetail(item)">
                   <div class="item-name">{{ item.productName }}</div>
                   <div class="item-variant" v-if="item.productOption">
                     Variant: {{ item.productOption }}
@@ -916,15 +927,23 @@ onMounted(async () => {
   height: 60px;
   object-fit: cover;
   border: 1px solid #eee;
+  cursor: pointer;
 }
 
 .item-info {
   flex: 1;
+  cursor: pointer;
 }
 
 .item-name {
   font-weight: 500;
+  line-height: 1.2;
   margin-bottom: 4px;
+  transition: color 0.2s;
+}
+
+.item-name:hover {
+  color: var(--main-color);
 }
 
 .item-variant {
