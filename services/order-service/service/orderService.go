@@ -328,10 +328,10 @@ func (s *orderService) CreateCheckoutSession(ctx context.Context, orderID string
 	// Find the order
 	order, err := s.repo.FindOrderByID(orderID)
 	if err != nil {
-		return nil,  err
+		return nil, err
 	}
 	if order == nil {
-		return nil,  appError.NewAppError(404 ,"order not found")
+		return nil, appError.NewAppError(404, "order not found")
 	}
 
 	var lineItems []*stripe.CheckoutSessionLineItemParams
@@ -370,8 +370,8 @@ func (s *orderService) CreateCheckoutSession(ctx context.Context, orderID string
 		}),
 		LineItems:  lineItems,
 		Mode:       stripe.String(string(stripe.CheckoutSessionModePayment)),
-		SuccessURL: stripe.String(s.clientURL+"/checkout/success"),
-		CancelURL:  stripe.String(s.clientURL+"/checkout/failure"),
+		SuccessURL: stripe.String(s.clientURL + "/checkout/success"),
+		CancelURL:  stripe.String(s.clientURL + "/checkout/failure"),
 		Metadata: map[string]string{
 			"order_id": order.ID,
 		},
@@ -408,10 +408,10 @@ func (s *orderService) HandleCheckoutSessionCompleted(ctx context.Context, order
 
 	// Send notification to seller about the paid order
 	orderData := map[string]interface{}{
-		"orderId":      order.ID,
-		"total":        order.Total + float64(order.DeliveryFee),
-		"itemCount":    len(order.Items),
-		"customerName": order.User.Name,
+		"orderId":       order.ID,
+		"total":         order.Total + float64(order.DeliveryFee),
+		"itemCount":     len(order.Items),
+		"customerName":  order.User.Name,
 		"paymentMethod": order.PaymentMethod,
 	}
 
@@ -607,9 +607,9 @@ func convertOrderToDto(order *model.Order) dto.OrderDto {
 	var voucherDto *dto.OrderVoucherDto
 	if order.Voucher != nil {
 		voucherDto = &dto.OrderVoucherDto{
-			Code:                   order.Voucher.Code,
-			DiscountType:           order.Voucher.DiscountType,
-			DiscountValue:          order.Voucher.DiscountValue,
+			Code:          order.Voucher.Code,
+			DiscountType:  order.Voucher.DiscountType,
+			DiscountValue: order.Voucher.DiscountValue,
 		}
 	}
 
@@ -686,7 +686,7 @@ func (s *orderService) GetSellerStatistics(ctx context.Context, sellerID string,
 			period := item["_id"].(string)
 			count := int(item["count"].(int32))
 			revenue := item["revenue"].(float64)
-			
+
 			breakdown = append(breakdown, dto.PeriodStatistics{
 				Period:     period,
 				OrderCount: count,
@@ -813,7 +813,7 @@ func (s *orderService) InstantCheckout(userID string, request dto.InstantCheckou
 	// Apply Voucher
 	var saveOrderVoucher *model.OrderVoucher
 	if request.VoucherID != "" {
-		newTotalAmount, orderVoucher, err := s.ApplyVoucher(request.VoucherID, totalAmount, sellerID,variants,userID)
+		newTotalAmount, orderVoucher, err := s.ApplyVoucher(request.VoucherID, totalAmount, sellerID, variants, userID)
 		if err != nil {
 			// Rollback: release reserved stock
 			_ = s.productClient.ReleaseStock(tempOrderID)
@@ -933,7 +933,7 @@ func (s *orderService) ApplyVoucher(voucherId string, totalAmount float64, selle
 
 	// Validate status
 	if voucher.Status != "ACTIVE" {
-		return 0, nil, appError.NewAppError(400, "voucher is not active")	
+		return 0, nil, appError.NewAppError(400, "voucher is not active")
 	}
 
 	// Validate min order value
@@ -941,8 +941,8 @@ func (s *orderService) ApplyVoucher(voucherId string, totalAmount float64, selle
 		return 0, nil, appError.NewAppError(400, "order value does not meet voucher minimum requirement")
 	}
 
-	//validate time 
-	if time.Now().Before(voucher.StartDate) || time.Now().After(voucher.EndDate) {
+	//validate time
+	if time.Now().Before(voucher.StartTime) || time.Now().After(voucher.EndTime) {
 		return 0, nil, appError.NewAppError(400, "voucher time has ended or not started")
 	}
 	//validate scope
@@ -950,7 +950,7 @@ func (s *orderService) ApplyVoucher(voucherId string, totalAmount float64, selle
 		if voucher.ApplySellerCategoryIds == nil {
 			return 0, nil, appError.NewAppError(400, "voucher apply scope is category but no category id")
 		}
-		
+
 		for _, variant := range variants {
 			if !HasAny(voucher.ApplySellerCategoryIds, variant.CategoryIds) {
 				return 0, nil, appError.NewAppError(400, "voucher apply scope is category but no category id")
@@ -959,9 +959,9 @@ func (s *orderService) ApplyVoucher(voucherId string, totalAmount float64, selle
 	}
 
 	//call use voucher api
-	useVoucherResponse, err := s.productClient.UseVoucher(voucherId, userId)
+	_, err = s.productClient.UseVoucher(userId, voucherId)
 	if err != nil {
-		return 0, nil, appError.NewAppError(400, useVoucherResponse.Message)
+		return 0, nil, appError.NewAppError(400, "fail to use voucher")
 	}
 
 	// Calculate discount
@@ -992,7 +992,7 @@ func (s *orderService) ApplyVoucher(voucherId string, totalAmount float64, selle
 
 	return totalAmount, orderVoucher, nil
 }
-	
+
 func HasAny(a, b []string) bool {
 	for _, x := range a {
 		if slices.Contains(b, x) {

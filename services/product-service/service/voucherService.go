@@ -148,6 +148,7 @@ func (s *voucherService) mapToResponse(voucher *model.Voucher, userID string) dt
 		Status:                 voucher.Status,
 		CreatedAt:              voucher.CreatedAt,
 		UpdatedAt:              voucher.UpdatedAt,
+		
 	}
 
 	// If userID is provided, check if user has saved this voucher
@@ -174,7 +175,7 @@ func (s *voucherService) UseVoucher(userID string, voucherID string) (dto.UseVou
 		return dto.UseVoucherResponse{
 			Success: false,
 			Message: "Voucher not found",
-		}, appError.NewAppErrorWithErr(404, "voucher not found", err)
+		}, appError.NewAppErrorWithErr(404, "voucher not found" + voucherID, err)
 	}
 
 	// 2. Check if voucher is active
