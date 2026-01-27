@@ -995,7 +995,7 @@ func (s *orderService) ApplyVoucher(voucherId string, totalAmount float64, selle
 		}
 
 		for _, variant := range variants {
-			if !HasAny(voucher.ApplySellerCategoryIds, variant.CategoryIds) {
+			if !HasAny(voucher.ApplySellerCategoryIds, variant.SellerCategoryIds) {
 				return 0, nil, appError.NewAppError(400, "voucher apply scope is category but no category id")
 			}
 		}
@@ -1037,8 +1037,8 @@ func (s *orderService) ApplyVoucher(voucherId string, totalAmount float64, selle
 }
 
 func HasAny(a, b []string) bool {
-	for _, x := range a {
-		if slices.Contains(b, x) {
+	for _, x := range b {
+		if slices.Contains(a, x) {
 			return true
 		}
 	}
