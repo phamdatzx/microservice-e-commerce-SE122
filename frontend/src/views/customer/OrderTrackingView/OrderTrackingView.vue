@@ -11,12 +11,13 @@ import {
   Star,
   CircleCheck,
   Loading,
+  Plus,
 } from '@element-plus/icons-vue'
 import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
 import axios from 'axios'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox, ElNotification, ElLoading } from 'element-plus'
 import NotFoundView from '@/components/NotFoundView.vue'
 
 const router = useRouter()
@@ -27,22 +28,368 @@ const isNotFound = ref(false)
 
 const order = ref<any>(null)
 
-// Report Dialog State
-const isReportDialogOpen = ref(false)
-const isSubmittingReport = ref(false)
-const selectedReportProduct = ref<any>(null)
-const reportForm = ref({
-  reason: '',
-  description: '',
-})
+// Action Handlers
+const handleCancelOrder = (orderData: any) => {
+  ElMessageBox.confirm('Are you sure you want to cancel this order?', 'Cancel Order', {
+    confirmButtonText: 'Yes, Cancel',
+    cancelButtonText: 'No',
+    type: 'warning',
+  })
+    .then(async () => {
+      try {
+        await axios.put(
+          `${import.meta.env.VITE_BE_API_URL}/order/${orderData.id}`,
+          { status: 'CANCELLED' },
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+            },
+          },
+        )
+        ElNotification({
+          title: 'Success',
+          message: 'Order cancelled successfully',
+          type: 'success',
+        })
+        fetchOrder()
+      } catch (error) {
+        console.error('Failed to cancel order:', error)
+        ElNotification({
+          title: 'Error',
+          message: 'Failed to cancel order',
+          type: 'error',
+        })
+      }
+    })
+    .catch(() => {})
+}
+
+const handlePayOrder = async (orderData: any) => {
+  const loadingInstance = ElLoading.service({
+    lock: true,
+    text: 'Processing Payment...',
+    background: 'rgba(0, 0, 0, 0.7)',
+  })
+  try {
+    const response = await axios.post(
+      `${import.meta.env.VITE_BE_API_URL}/order/${orderData.id}/payment`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+        },
+      },
+    )
+
+    if (response.data && response.data.payment_url) {
+      window.location.href = response.data.payment_url
+    } else {
+      loadingInstance.close()
+      ElNotification({
+        title: 'Error',
+        message: 'Failed to retrieve payment URL',
+        type: 'error',
+      })
+    }
+  } catch (error) {
+    loadingInstance.close()
+    console.error('Failed to initiate payment:', error)
+    ElNotification({
+      title: 'Error',
+      message: 'Failed to initiate payment',
+      type: 'error',
+    })
+  }
+}
+
+const handleOrderReceived = (orderData: any) => {
+  ElMessageBox.confirm(
+    'Are you sure you have received this order? This action cannot be undone.',
+    'Confirm Receipt',
+    {
+      confirmButtonText: 'Yes, Received',
+      cancelButtonText: 'Cancel',
+      type: 'warning',
+    },
+  )
+    .then(async () => {
+      const loadingInstance = ElLoading.service({
+        lock: true,
+        text: 'Updating Order...',
+        background: 'rgba(0, 0, 0, 0.7)',
+      })
+      try {
+        await axios.put(
+          `${import.meta.env.VITE_BE_API_URL}/order/${orderData.id}`,
+          { status: 'COMPLETED' },
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+            },
+          },
+        )
+        loadingInstance.close()
+        ElNotification({
+          title: 'Success',
+          message: 'Order completed successfully',
+          type: 'success',
+        })
+        fetchOrder()
+      } catch (error) {
+        loadingInstance.close()
+        console.error('Failed to update order status:', error)
+        ElNotification({
+          title: 'Error',
+          message: 'Failed to update order status',
+          type: 'error',
+        })
+      }
+    })
+    .catch(() => {})
+}
+
+const handleBuyAgain = async (orderData: any) => {
+  const loadingInstance = ElLoading.service({
+    lock: true,
+    text: 'Adding items to cart...',
+    background: 'rgba(0, 0, 0, 0.7)',
+  })
+
+  try {
+    const variantIds: string[] = []
+    const promises = orderData.items.map(async (item: any) => {
+      try {
+        await axios.post(
+          `${import.meta.env.VITE_BE_API_URL}/order/cart`,
+          {
+            seller_id: orderData.seller.id || orderData.seller._id,
+            product_id: item.product_id,
+            variant_id: item.variant_id,
+            quantity: 1,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+            },
+          },
+        )
+        variantIds.push(item.variant_id)
+      } catch (err) {
+        variantIds.push(item.variant_id)
+      }
+    })
+
+    await Promise.all(promises)
+
+    loadingInstance.close()
+
+    if (variantIds.length > 0) {
+      router.push({
+        path: '/cart',
+        query: { selected_variants: variantIds.join(',') },
+      })
+    } else {
+      ElNotification({
+        title: 'Warning',
+        message: 'Could not add any items to cart (product might be unavailable).',
+        type: 'warning',
+      })
+    }
+  } catch (error) {
+    loadingInstance.close()
+    console.error('Failed to buy again:', error)
+    ElNotification({
+      title: 'Error',
+      message: 'Failed to process Buy Again request',
+      type: 'error',
+    })
+  }
+}
+
+// Rating Logic
+const showRateDialog = ref(false)
+const selectedOrderForRating = ref<any>(null)
+const ratingForms = ref<Record<string, { star: number; content: string; fileList: any[] }>>({})
+
+const handleRateClick = (orderData: any) => {
+  selectedOrderForRating.value = orderData
+  ratingForms.value = {}
+  // Initialize form for each item
+  orderData.items.forEach((item: any) => {
+    ratingForms.value[item.variant_id] = {
+      star: 5,
+      content: '',
+      fileList: [],
+    }
+  })
+  showRateDialog.value = true
+}
+
+const handleRateImageChange = (uploadFile: any, variantId: string) => {
+  const isJPG = uploadFile.raw.type === 'image/jpeg' || uploadFile.raw.type === 'image/jpg'
+  const isPNG = uploadFile.raw.type === 'image/png'
+
+  if (!isJPG && !isPNG) {
+    ElNotification({
+      title: 'Error',
+      message: 'Image must be JPG, JPEG or PNG format!',
+      type: 'error',
+    })
+
+    // Remove from fileList
+    if (ratingForms.value[variantId]) {
+      const list = ratingForms.value[variantId].fileList
+      const index = list.indexOf(uploadFile)
+      if (index > -1) {
+        list.splice(index, 1)
+      } else {
+        const idx = list.findIndex((f) => f.uid === uploadFile.uid)
+        if (idx > -1) list.splice(idx, 1)
+      }
+    }
+    return
+  }
+}
+
+const submitRating = async (item: any) => {
+  const form = ratingForms.value[item.variant_id]
+  if (!form) return
+
+  if (!form.content.trim()) {
+    ElNotification({
+      title: 'Warning',
+      message: 'Please write some review content.',
+      type: 'warning',
+    })
+    return
+  }
+
+  const loadingInstance = ElLoading.service({
+    lock: true,
+    text: 'Submitting Review...',
+    background: 'rgba(0, 0, 0, 0.7)',
+  })
+
+  try {
+    const formData = new FormData()
+    formData.append('product_id', item.product_id)
+    formData.append('variant_id', item.variant_id)
+    formData.append('content', form.content)
+    formData.append('star', form.star.toString())
+
+    form.fileList.forEach((file) => {
+      if (file.raw) {
+        formData.append('image', file.raw)
+      }
+    })
+
+    await axios.post(`${import.meta.env.VITE_BE_API_URL}/product/rating`, formData, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+
+    ElNotification({
+      title: 'Success',
+      message: 'Review submitted successfully!',
+      type: 'success',
+    })
+
+    showRateDialog.value = false
+  } catch (error: any) {
+    console.error('Failed to submit rating:', error)
+    ElNotification({
+      title: 'Error',
+      message: error.response?.data?.message || 'Failed to submit review',
+      type: 'error',
+    })
+  } finally {
+    loadingInstance.close()
+  }
+}
+
+// Report Logic
+const showReportDialog = ref(false)
+const selectedOrderForReport = ref<any>(null)
+const reportForms = ref<Record<string, { reason: string; description: string }>>({})
 
 const reportReasons = [
-  { value: 'fake_product', label: 'Fake Product' },
-  { value: 'prohibited_items', label: 'Prohibited Items' },
-  { value: 'counterfeit', label: 'Counterfeit Goods' },
-  { value: 'scam', label: 'Scam/Fraud' },
-  { value: 'other', label: 'Other' },
+  { label: 'Fake Product', value: 'fake_product' },
+  { label: 'Quality Issue', value: 'quality_issue' },
+  { label: 'Misleading Description', value: 'misleading_description' },
+  { label: 'Counterfeit', value: 'counterfeit' },
+  { label: 'Damaged Product', value: 'damaged_product' },
+  { label: 'Other', value: 'other' },
 ]
+
+const handleReportClick = (orderData: any) => {
+  selectedOrderForReport.value = orderData
+  reportForms.value = {}
+  orderData.items.forEach((item: any) => {
+    reportForms.value[item.variant_id] = {
+      reason: '',
+      description: '',
+    }
+  })
+  showReportDialog.value = true
+}
+
+const submitReport = async (item: any) => {
+  const form = reportForms.value[item.variant_id]
+  if (!form) return
+
+  if (!form.reason) {
+    ElNotification({
+      title: 'Warning',
+      message: 'Please select a reason for reporting.',
+      type: 'warning',
+    })
+    return
+  }
+
+  const loadingInstance = ElLoading.service({
+    lock: true,
+    text: 'Submitting Report...',
+    background: 'rgba(0, 0, 0, 0.7)',
+  })
+
+  try {
+    await axios.post(
+      `${import.meta.env.VITE_BE_API_URL}/product/report`,
+      {
+        product_id: item.product_id,
+        variant_id: item.variant_id,
+        reason: form.reason,
+        description: form.description,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+        },
+      },
+    )
+
+    ElNotification({
+      title: 'Success',
+      message: 'Report submitted successfully',
+      type: 'success',
+    })
+
+    form.reason = ''
+    form.description = ''
+    showReportDialog.value = false
+  } catch (error: any) {
+    console.error('Failed to submit report:', error)
+    ElNotification({
+      title: 'Error',
+      message: error.response?.data?.message || 'Failed to submit report',
+      type: 'error',
+    })
+  } finally {
+    loadingInstance.close()
+  }
+}
 
 const orderInfo = computed(() => ({
   id: order.value?.id ? order.value.id.toUpperCase() : '',
@@ -190,46 +537,7 @@ const viewShop = () => {
 const handleBack = () => {
   router.back()
 }
-
-const openReportDialog = (product: any) => {
-  selectedReportProduct.value = product
-  reportForm.value = {
-    reason: '',
-    description: '',
-  }
-  isReportDialogOpen.value = true
-}
-
-const submitReport = async () => {
-  if (!reportForm.value.reason || !reportForm.value.description) {
-    ElMessage.warning('Please fill in all fields')
-    return
-  }
-
-  isSubmittingReport.value = true
-  try {
-    const payload = {
-      product_id: selectedReportProduct.value.product_id,
-      variant_id: selectedReportProduct.value.variant_id,
-      reason: reportForm.value.reason,
-      description: reportForm.value.description,
-    }
-
-    await axios.post(`${import.meta.env.VITE_BE_API_URL}/product/report`, payload, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-      },
-    })
-
-    ElMessage.success('Report submitted successfully')
-    isReportDialogOpen.value = false
-  } catch (error: any) {
-    console.error('Failed to submit report:', error)
-    ElMessage.error(error.response?.data?.message || 'Failed to submit report')
-  } finally {
-    isSubmittingReport.value = false
-  }
-}
+// Old report handlers removed
 
 onMounted(() => {
   isLoggedIn.value = !!localStorage.getItem('access_token')
@@ -283,23 +591,47 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Action Banner -->
-        <div class="action-banner card">
-          <p class="banner-text">
-            Please check all products in the order carefully before clicking "Order Received".
-          </p>
-          <div class="banner-actions">
-            <el-button type="primary" class="received-btn">Order Received</el-button>
+        <!-- Action Banner with dynamic buttons -->
+        <div class="action-banner card" v-if="order.status !== 'CANCELLED'">
+          <div class="order-actions-container">
+            <template v-if="order.status === 'TO_PAY'">
+              <el-button type="primary" size="large" @click="handlePayOrder(order)"
+                >Pay Order</el-button
+              >
+              <el-button size="large" @click="handleCancelOrder(order)">Cancel Order</el-button>
+              <el-button v-if="isLoggedIn" size="large" @click="openChat">Contact Seller</el-button>
+            </template>
+            <template v-else-if="order.status === 'TO_CONFIRM'">
+              <el-button size="large" @click="handleCancelOrder(order)">Cancel Order</el-button>
+              <el-button v-if="isLoggedIn" size="large" @click="openChat">Contact Seller</el-button>
+            </template>
+            <template v-else-if="order.status === 'TO_PICKUP'">
+              <el-button size="large" @click="handleCancelOrder(order)">Cancel Order</el-button>
+              <el-button v-if="isLoggedIn" size="large" @click="openChat">Contact Seller</el-button>
+            </template>
+            <template v-else-if="order.status === 'SHIPPING'">
+              <el-button type="primary" size="large" @click="handleOrderReceived(order)"
+                >Order Received</el-button
+              >
+              <el-button size="large" @click="openChat">Contact Seller</el-button>
+            </template>
+            <template v-else-if="order.status === 'COMPLETED'">
+              <el-button type="primary" size="large" @click="handleBuyAgain(order)"
+                >Buy Again</el-button
+              >
+              <el-button size="large" @click="handleRateClick(order)">Rate</el-button>
+              <el-button size="large" @click="handleReportClick(order)">Report</el-button>
+              <el-button size="large" @click="openChat">Contact Seller</el-button>
+            </template>
+            <!-- Fallback for other statuses or if logic needs default -->
+            <template v-else>
+              <el-button v-if="isLoggedIn" size="large" @click="openChat">Contact Seller</el-button>
+            </template>
           </div>
         </div>
 
-        <!-- Secondary Actions -->
-        <div class="secondary-actions">
-          <!-- <el-button plain class="sec-btn">Return/Refund Request</el-button> -->
-          <el-button v-if="isLoggedIn" plain class="sec-btn" @click="openChat"
-            >Contact Seller</el-button
-          >
-        </div>
+        <!-- Secondary Actions replaced by above but if we want to keep structure -->
+        <!-- We removed secondary-actions separate div and merged into one main action area -->
 
         <!-- Delivery / Address Info -->
         <div class="info-grid">
@@ -360,14 +692,6 @@ onMounted(() => {
                 </RouterLink>
                 <p class="p-variant">Variant: {{ product.variant }}</p>
                 <p class="p-qty">x{{ product.qty }}</p>
-                <el-button
-                  v-if="order && order.status === 'COMPLETED'"
-                  type="danger"
-                  link
-                  size="small"
-                  @click="openReportDialog(product)"
-                  >Report</el-button
-                >
               </div>
               <div class="p-prices">
                 <span class="current-price">{{ formatNumberWithDots(product.price) }}₫</span>
@@ -397,36 +721,134 @@ onMounted(() => {
       message="The order you are looking for does not exist or has been removed."
     />
 
-    <!-- Report Dialog -->
-    <el-dialog v-model="isReportDialogOpen" title="Report Product" width="500px">
-      <el-form label-position="top">
-        <el-form-item label="Reason">
-          <el-select v-model="reportForm.reason" placeholder="Select a reason" style="width: 100%">
-            <el-option
-              v-for="item in reportReasons"
-              :key="item.value"
-              :label="item.label"
-              :value="item.value"
+    <!-- Rating Dialog -->
+    <el-dialog v-model="showRateDialog" title="Rate Product" width="600px" destroy-on-close>
+      <div v-if="selectedOrderForRating" class="rate-product-list">
+        <div v-for="item in selectedOrderForRating.items" :key="item.variant_id" class="rate-item">
+          <div class="rate-item-header">
+            <img
+              :src="item.image || 'https://placehold.co/100'"
+              alt="Product Image"
+              class="rate-item-image"
             />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="Description">
-          <el-input
-            v-model="reportForm.description"
-            type="textarea"
-            :rows="3"
-            placeholder="Please describe the issue..."
+            <div class="rate-item-info">
+              <div class="rate-item-name">{{ item.product_name }}</div>
+              <div
+                class="rate-item-variant"
+                v-if="item.variant_name && item.variant_name.toLowerCase() !== 'default'"
+              >
+                Variant: {{ item.variant_name }}
+              </div>
+            </div>
+          </div>
+
+          <div class="rate-form" v-if="ratingForms[item.variant_id]">
+            <div class="rate-stars">
+              <span>Product Quality</span>
+              <el-rate
+                v-model="ratingForms[item.variant_id]!.star"
+                size="large"
+                show-text
+                :texts="['Very Bad', 'Bad', 'Average', 'Good', 'Excellent']"
+              />
+            </div>
+
+            <div class="rate-input">
+              <el-input
+                v-model="ratingForms[item.variant_id]!.content"
+                type="textarea"
+                :rows="3"
+                placeholder="Share your experience about this product..."
+              />
+            </div>
+
+            <div class="rate-upload">
+              <el-upload
+                v-model:file-list="ratingForms[item.variant_id]!.fileList"
+                action="#"
+                list-type="picture-card"
+                :auto-upload="false"
+                :on-change="(file: any) => handleRateImageChange(file, item.variant_id)"
+                multiple
+                :limit="5"
+                accept=".jpg,.jpeg,.png"
+              >
+                <el-icon><Plus /></el-icon>
+              </el-upload>
+            </div>
+
+            <div class="rate-actions">
+              <el-button type="primary" @click="submitRating(item)">Submit Review</el-button>
+            </div>
+          </div>
+          <el-divider
+            v-if="item !== selectedOrderForRating.items[selectedOrderForRating.items.length - 1]"
           />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="isReportDialogOpen = false">Cancel</el-button>
-          <el-button type="danger" :loading="isSubmittingReport" @click="submitReport">
-            Submit Report
-          </el-button>
         </div>
-      </template>
+      </div>
+    </el-dialog>
+
+    <!-- Report Dialog -->
+    <el-dialog v-model="showReportDialog" title="Report Product" width="600px" destroy-on-close>
+      <div v-if="selectedOrderForReport" class="report-product-list">
+        <div
+          v-for="item in selectedOrderForReport.items"
+          :key="item.variant_id"
+          class="report-item"
+        >
+          <div class="report-item-header">
+            <img
+              :src="item.image || 'https://placehold.co/100'"
+              alt="Product Image"
+              class="report-item-image"
+            />
+            <div class="report-item-info">
+              <div class="report-item-name">{{ item.product_name }}</div>
+              <div
+                class="report-item-variant"
+                v-if="item.variant_name && item.variant_name.toLowerCase() !== 'default'"
+              >
+                Variant: {{ item.variant_name }}
+              </div>
+            </div>
+          </div>
+
+          <div class="report-form" v-if="reportForms[item.variant_id]">
+            <div class="report-input-group">
+              <label class="report-label">Reason</label>
+              <el-select
+                v-model="reportForms[item.variant_id]!.reason"
+                placeholder="Select a reason"
+                class="report-select"
+              >
+                <el-option
+                  v-for="option in reportReasons"
+                  :key="option.value"
+                  :label="option.label"
+                  :value="option.value"
+                />
+              </el-select>
+            </div>
+
+            <div class="report-input-group">
+              <label class="report-label">Description</label>
+              <el-input
+                v-model="reportForms[item.variant_id]!.description"
+                type="textarea"
+                :rows="3"
+                placeholder="Please describe the issue..."
+              />
+            </div>
+
+            <div class="report-actions">
+              <el-button type="danger" @click="submitReport(item)">Submit Report</el-button>
+            </div>
+          </div>
+          <el-divider
+            v-if="item !== selectedOrderForReport.items[selectedOrderForReport.items.length - 1]"
+          />
+        </div>
+      </div>
     </el-dialog>
   </div>
 </template>
@@ -542,14 +964,20 @@ onMounted(() => {
   background-color: #fffcf5;
   border: 1px solid #ffdecb;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end; /* Align right */
   align-items: center;
   padding: 20px 40px;
 }
 
-.banner-text {
-  color: #888;
-  font-size: 14px;
+.order-actions-container {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  justify-content: flex-end;
+}
+
+.order-actions-container .el-button {
+  min-width: 150px;
 }
 
 .received-btn {
@@ -559,11 +987,9 @@ onMounted(() => {
   font-weight: 500;
 }
 
+/* Secondary actions removed but styles kept for reference if needed */
 .secondary-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-bottom: 20px;
+  display: none; /* Hide if empty div remains */
 }
 
 .sec-btn {
