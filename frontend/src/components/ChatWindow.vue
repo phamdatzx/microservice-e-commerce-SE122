@@ -20,6 +20,7 @@ import {
   Finished,
   Picture,
   Loading,
+  Service,
 } from '@element-plus/icons-vue'
 import PinIcon from './icons/PinIcon.vue'
 import UnpinIcon from './icons/UnpinIcon.vue'
@@ -33,6 +34,9 @@ const props = defineProps({
 })
 
 const route = useRoute()
+
+// Constant for AI Contact
+const AI_CONTACT_ID = 'ai-assistant'
 
 const isChatVisible = ref(props.isEmbedded)
 const searchQuery = ref('')
@@ -50,6 +54,33 @@ const imagePreviewUrl = ref<string | null>(null)
 const isSending = ref(false)
 const isLoadingContacts = ref(false)
 const isLoadingMessages = ref(false)
+const isAiTyping = ref(false)
+
+const aiContactTemplate = {
+  id: AI_CONTACT_ID,
+  name: 'AI Assistant',
+  lastMessage: 'How can I help you today?',
+  time: '',
+  unread: 0,
+  avatarUrl: null,
+  avatarInitials: 'AI',
+  isPinned: true,
+  isRead: true,
+  isMuted: false,
+  messages: [
+    {
+      id: 'welcome-msg',
+      text: 'Hello! I am your AI assistant. How can I help you today?',
+      sender: 'sender',
+      time: '',
+      date: 'Today',
+      image: null,
+    },
+  ],
+  order: null,
+  raw: { lastUpdated: new Date().toISOString() },
+  isAi: true,
+}
 
 const fetchConversations = async () => {
   const token = localStorage.getItem('access_token')
@@ -66,7 +97,7 @@ const fetchConversations = async () => {
     )
 
     if (response.data && response.data.data) {
-      contacts.value = response.data.data.map((conv: any) => {
+      const serverContacts = response.data.data.map((conv: any) => {
         const otherParty = props.isEmbedded ? conv.customer : conv.seller
         return {
           id: conv._id,
@@ -82,12 +113,17 @@ const fetchConversations = async () => {
           messages: [],
           order: conv.order || null,
           raw: conv,
+          isAi: false,
         }
       })
+      contacts.value = [aiContactTemplate, ...serverContacts]
       hydrateLastMessagePrefix()
+    } else {
+      contacts.value = [aiContactTemplate]
     }
   } catch (error) {
     console.error('Error fetching conversations:', error)
+    contacts.value = [aiContactTemplate]
   } finally {
     isLoadingContacts.value = false
   }
@@ -99,6 +135,7 @@ const openChatWithSeller = async (sellerId: string) => {
   isContentHidden.value = false
 
   const existing = contacts.value.find((c) => {
+    if (c.isAi) return false
     const targetId = props.isEmbedded ? c.raw.customerId : c.raw.sellerId
     return String(targetId) === String(sellerId)
   })
@@ -137,8 +174,10 @@ const openChatWithSeller = async (sellerId: string) => {
         messages: [],
         order: conv.order || null,
         raw: conv,
+        isAi: false,
       }
-      contacts.value.unshift(newContact)
+      // Insert after AI contact
+      contacts.value.splice(1, 0, newContact)
       selectContact(newContact)
     }
   } catch (error) {
@@ -161,6 +200,7 @@ const scrollToBottom = async () => {
 }
 
 const formatMessage = (msg: any, contact: any) => {
+  if (contact.isAi) return msg // Already formatted for AI
   const isMe =
     String(msg.senderId) === String(props.isEmbedded ? contact.raw.sellerId : contact.raw.userId)
   return {
@@ -179,7 +219,7 @@ const formatMessage = (msg: any, contact: any) => {
 
 const markAsReadAPI = async (conversationId: string) => {
   const token = localStorage.getItem('access_token')
-  if (!token) return
+  if (!token || conversationId === AI_CONTACT_ID) return
 
   try {
     await axios.patch(
@@ -199,6 +239,7 @@ const updateContactInList = (message: any) => {
   const index = contacts.value.findIndex((c) => String(c.id) === String(message.conversationId))
   if (index !== -1) {
     const contact = contacts.value[index]
+    if (contact.isAi) return null
 
     // Check if the message was sent by the current user
     const currentUserId = props.isEmbedded ? contact.raw.sellerId : contact.raw.userId
@@ -222,7 +263,9 @@ const updateContactInList = (message: any) => {
     contact.raw.lastUpdated = message.createdAt
 
     contacts.value.splice(index, 1)
-    contacts.value.unshift(contact)
+    // Keep AI at top, so insert at index 1 if it exists, or 0
+    const insertIndex = contacts.value.some((c) => c.isAi) ? 1 : 0
+    contacts.value.splice(insertIndex, 0, contact)
     return contact
   }
   return null
@@ -230,7 +273,7 @@ const updateContactInList = (message: any) => {
 
 const fetchMessages = async (conversationId: string) => {
   const token = localStorage.getItem('access_token')
-  if (!token) return
+  if (!token || conversationId === AI_CONTACT_ID) return
 
   isLoadingMessages.value = true
   try {
@@ -262,6 +305,7 @@ const hydrateLastMessagePrefix = async () => {
 
   // Limit concurrency if needed, but for now simple loop
   for (const contact of contacts.value) {
+    if (contact.isAi) continue
     try {
       const response = await axios.get(
         `${import.meta.env.VITE_BE_API_URL}/notification/chat/conversations/${contact.id}/messages`,
@@ -333,7 +377,14 @@ const filteredContacts = computed(() => {
     return matchesSearch && matchesFilter
   })
 
+  // Ensure AI stays at top if pinned or just by default sorting if needed,
+  // but existing sort logic below sorts by lastUpdated.
+  // We want AI at top regardless usually, or at least respect the pinned status.
+  // The current template sets AI as pinned.
+  // Let's modify sort to keep AI at top.
   return [...filtered].sort((a, b) => {
+    if (a.isAi) return -1
+    if (b.isAi) return 1
     const dateA = new Date(a.raw.lastUpdated || 0).getTime()
     const dateB = new Date(b.raw.lastUpdated || 0).getTime()
     return dateB - dateA
@@ -376,6 +427,7 @@ const handleNewMessage = (message: any) => {
     (c) => String(c.id) === String(message.conversationId),
   )
   if (existingContact) {
+    if (existingContact.isAi) return // Should not happen via socket
     const isDuplicate = existingContact.messages.some(
       (m: any) =>
         String(m.id) === String(message._id) ||
@@ -407,6 +459,7 @@ const handleNewMessage = (message: any) => {
 const handleMessageSent = (message: any) => {
   const contact = updateContactInList(message)
   if (contact) {
+    if (contact.isAi) return
     const isDuplicate = contact.messages.some(
       (m: any) =>
         String(m.id) === String(message._id) ||
@@ -424,7 +477,7 @@ const handleMessageSent = (message: any) => {
 }
 
 const handleUserTyping = (data: any) => {
-  if (activeContact.value?.id === data.conversationId) {
+  if (activeContact.value?.id === data.conversationId && !activeContact.value.isAi) {
     otherUserTyping.value = data.isTyping
   }
 }
@@ -462,7 +515,7 @@ const handleSocketError = (error: any) => {
 }
 
 const handleSocketConnect = () => {
-  if (activeContact.value) {
+  if (activeContact.value && !activeContact.value.isAi) {
     socketService.emit(SOCKET_EVENTS.JOIN_CONVERSATION, { conversationId: activeContact.value.id })
   }
 }
@@ -493,18 +546,21 @@ onUnmounted(() => {
 })
 
 watch(activeContact, (newVal, oldVal) => {
-  if (oldVal) {
+  if (oldVal && !oldVal.isAi) {
     socketService.emit(SOCKET_EVENTS.LEAVE_CONVERSATION, { conversationId: oldVal.id })
   }
   if (newVal) {
-    socketService.emit(SOCKET_EVENTS.JOIN_CONVERSATION, { conversationId: newVal.id })
-    // Removed auto-read logic from here
-    otherUserTyping.value = false
+    if (!newVal.isAi) {
+      socketService.emit(SOCKET_EVENTS.JOIN_CONVERSATION, { conversationId: newVal.id })
+      otherUserTyping.value = false
+    } else {
+      otherUserTyping.value = false // Ensure no typing indicator for AI initially
+    }
   }
 })
 
 watch(newMessage, (val) => {
-  if (activeContact.value) {
+  if (activeContact.value && !activeContact.value.isAi) {
     socketService.emit(SOCKET_EVENTS.TYPING, {
       conversationId: activeContact.value.id,
       isTyping: val.length > 0,
@@ -538,12 +594,14 @@ const selectContact = (contact: any) => {
     if (contact.unread > 0) {
       contact.unread = 0
       contact.isRead = true
-      socketService.emit(SOCKET_EVENTS.MESSAGE_READ, { conversationId: contact.id })
-      markAsReadAPI(contact.id)
+      if (!contact.isAi) {
+        socketService.emit(SOCKET_EVENTS.MESSAGE_READ, { conversationId: contact.id })
+        markAsReadAPI(contact.id)
+      }
     }
   }
 
-  if (contact && contact.messages.length === 0) {
+  if (contact && !contact.isAi && contact.messages.length === 0) {
     fetchMessages(contact.id)
   } else if (contact) {
     scrollToBottom()
@@ -554,7 +612,7 @@ const toggleReadStatus = () => {
   if (activeContact.value) {
     activeContact.value.isRead = !activeContact.value.isRead
     activeContact.value.unread = activeContact.value.isRead ? 0 : 1
-    if (activeContact.value.isRead) {
+    if (activeContact.value.isRead && !activeContact.value.isAi) {
       markAsReadAPI(activeContact.value.id)
     }
   }
@@ -564,8 +622,10 @@ const markActiveConversationAsRead = () => {
   if (activeContact.value && !activeContact.value.isRead) {
     activeContact.value.isRead = true
     activeContact.value.unread = 0
-    socketService.emit(SOCKET_EVENTS.MESSAGE_READ, { conversationId: activeContact.value.id })
-    markAsReadAPI(activeContact.value.id)
+    if (!activeContact.value.isAi) {
+      socketService.emit(SOCKET_EVENTS.MESSAGE_READ, { conversationId: activeContact.value.id })
+      markAsReadAPI(activeContact.value.id)
+    }
   }
 }
 
@@ -581,6 +641,83 @@ const toggleMute = () => {
   }
 }
 
+const getAiResponse = async (question: string) => {
+  isAiTyping.value = true
+  try {
+    let type = 'general'
+    let productId = ''
+    let sellerId = ''
+
+    // Simple context detection (not perfect inside ChatWindow which is global,
+    // but works if user stays on page. Route is accessible.)
+    if (route.path.includes('/product/')) {
+      type = 'product'
+      if (route.params.id) {
+        productId = route.params.id as string
+      }
+    } else if (route.path.includes('/seller-page/')) {
+      type = 'seller'
+      if (route.params.sellerId) {
+        sellerId = route.params.sellerId as string
+      }
+    }
+
+    const payload = {
+      type,
+      question,
+      ...(productId && { product_id: productId }),
+      ...(sellerId && { seller_id: sellerId }),
+    }
+
+    const response = await axios.post(
+      `${import.meta.env.VITE_BE_API_URL}/product/public/chatbot/ask`,
+      payload,
+    )
+
+    let answer = 'Sorry, I currently cannot answer that.'
+    if (response.data && response.data.answer) {
+      answer = response.data.answer
+    }
+
+    // Add AI response message
+    activeContact.value.messages.push({
+      id: 'ai-' + Date.now(),
+      text: answer,
+      sender: 'sender', // 'sender' is left side (other person), 'receiver' is me (right side) in your CSS logic
+      time: new Date().toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }),
+      date: 'Today',
+      image: null,
+    })
+    activeContact.value.lastMessage = answer
+    activeContact.value.time = new Date().toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }) // simple time update
+    scrollToBottom()
+  } catch (err) {
+    console.error('AI Error', err)
+    activeContact.value.messages.push({
+      id: 'ai-err-' + Date.now(),
+      text: 'Sorry, something went wrong. Please try again.',
+      sender: 'sender',
+      time: new Date().toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }),
+      date: 'Today',
+      image: null,
+    })
+  } finally {
+    isAiTyping.value = false
+  }
+}
+
 const sendMessage = async () => {
   if (
     isSending.value ||
@@ -591,17 +728,55 @@ const sendMessage = async () => {
   }
 
   isSending.value = true
+  const text = newMessage.value.trim()
+
   try {
-    if (selectedImageFile.value) {
-      await sendImageMessage()
-    } else {
-      const payload = {
-        conversationId: activeContact.value.id,
-        content: newMessage.value.trim(),
+    if (activeContact.value.isAi) {
+      if (selectedImageFile.value) {
+        // AI doesn't support images yet in this implementation
+        ElMessage.warning('AI Assistant currently only supports text messages.')
+        removeSelectedImage()
+        return
       }
 
-      socketService.emit(SOCKET_EVENTS.SEND_MESSAGE, payload)
+      // 1. Add User Message Locally
+      const userMsg = {
+        id: 'local-' + Date.now(),
+        text: text,
+        sender: 'receiver', // Right side
+        time: new Date().toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        }),
+        date: 'Today',
+        image: null,
+      }
+      activeContact.value.messages.push(userMsg)
+      activeContact.value.lastMessage = 'You: ' + text
+      activeContact.value.time = userMsg.time
+
       newMessage.value = ''
+      scrollToBottom()
+
+      // 2. Clear input
+      isSending.value = false // Allow input again immediately
+
+      // 3. Call AI API
+      await getAiResponse(text)
+    } else {
+      // Normal Chat Logic
+      if (selectedImageFile.value) {
+        await sendImageMessage()
+      } else {
+        const payload = {
+          conversationId: activeContact.value.id,
+          content: text,
+        }
+
+        socketService.emit(SOCKET_EVENTS.SEND_MESSAGE, payload)
+        newMessage.value = ''
+      }
     }
   } catch (err) {
     console.error('❌ Error in sendMessage:', err)
@@ -653,6 +828,10 @@ const sendImageMessage = async () => {
 
 const deleteConversation = async () => {
   if (!activeContact.value) return
+  if (activeContact.value.isAi) {
+    ElMessage.info('Cannot delete AI Assistant conversation.')
+    return
+  }
 
   try {
     await ElMessageBox.confirm(
@@ -860,7 +1039,7 @@ const getMsgClass = (msg: any) => {
                 <el-icon class="is-loading"><Loading /></el-icon>
               </div>
               <template v-else>
-                <div class="warning-box">
+                <div class="warning-box" v-if="!activeContact.isAi">
                   <el-icon class="warning-icon"><ChatDotRound /></el-icon>
                   <div class="warning-text">
                     <span v-if="isEmbedded">
@@ -878,7 +1057,10 @@ const getMsgClass = (msg: any) => {
                 <div class="chat-messages">
                   <template v-for="(msg, index) in activeContact.messages" :key="msg.id">
                     <div
-                      v-if="shouldShowDate(Number(index), activeContact.messages)"
+                      v-if="
+                        shouldShowDate(Number(index), activeContact.messages) &&
+                        (!activeContact.isAi || msg.date !== 'Today')
+                      "
                       class="date-separator"
                     >
                       <span>{{ msg.date }}</span>

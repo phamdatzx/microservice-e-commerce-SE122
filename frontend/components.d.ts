@@ -13,6 +13,7 @@ declare module 'vue' {
   export interface GlobalComponents {
     AccountInfo: typeof import('./src/components/profile/AccountInfo.vue')['default']
     ChangePassword: typeof import('./src/components/profile/ChangePassword.vue')['default']
+    ChatBot: typeof import('./src/components/ChatBot.vue')['default']
     ChatWindow: typeof import('./src/components/ChatWindow.vue')['default']
     CommuneSelect: typeof import('./src/components/profile/CommuneSelect.vue')['default']
     CustomerComment: typeof import('./src/components/CustomerComment.vue')['default']
