@@ -29,7 +29,7 @@ type OrderService interface {
 	VerifyVariantPurchase(userID, productID, variantID string) (bool, error)
 	GetSellerStatistics(ctx context.Context, sellerID string, request dto.GetSellerStatisticsRequest) (*dto.GetSellerStatisticsResponse, error)
 	InstantCheckout(userID string, request dto.InstantCheckoutRequest) (*dto.CheckoutResponse, error)
-	ApplyVoucher(voucherId string, totalAmount float64, sellerId string, variants []dto.ProductVariantDto) (float64, *model.OrderVoucher, error)
+	ApplyVoucher(voucherId string, totalAmount float64, sellerId string, variants []dto.ProductVariantDto, userId string) (float64, *model.OrderVoucher, error)
 }
 
 type orderService struct {
@@ -195,7 +195,7 @@ func (s *orderService) Checkout(userID string, request dto.CheckoutRequest) (*dt
 	// 5. Apply Voucher
 	var saveOrderVoucher *model.OrderVoucher
 	if request.VoucherID != "" {
-		newTotalAmount, orderVoucher, err := s.ApplyVoucher(request.VoucherID, totalAmount, sellerID, variants)
+		newTotalAmount, orderVoucher, err := s.ApplyVoucher(request.VoucherID, totalAmount, sellerID, variants, userID)
 		if err != nil {
 			// Rollback: release reserved stock
 			_ = s.productClient.ReleaseStock(tempOrderID)
@@ -813,7 +813,7 @@ func (s *orderService) InstantCheckout(userID string, request dto.InstantCheckou
 	// Apply Voucher
 	var saveOrderVoucher *model.OrderVoucher
 	if request.VoucherID != "" {
-		newTotalAmount, orderVoucher, err := s.ApplyVoucher(request.VoucherID, totalAmount, sellerID,variants)
+		newTotalAmount, orderVoucher, err := s.ApplyVoucher(request.VoucherID, totalAmount, sellerID,variants,userID)
 		if err != nil {
 			// Rollback: release reserved stock
 			_ = s.productClient.ReleaseStock(tempOrderID)
@@ -919,7 +919,7 @@ func (s *orderService) InstantCheckout(userID string, request dto.InstantCheckou
 	}, nil
 }
 
-func (s *orderService) ApplyVoucher(voucherId string, totalAmount float64, sellerId string, variants []dto.ProductVariantDto) (float64, *model.OrderVoucher, error) {
+func (s *orderService) ApplyVoucher(voucherId string, totalAmount float64, sellerId string, variants []dto.ProductVariantDto, userId string) (float64, *model.OrderVoucher, error) {
 
 	voucher, err := s.productClient.GetVoucherByID(voucherId)
 	if err != nil {
@@ -956,6 +956,12 @@ func (s *orderService) ApplyVoucher(voucherId string, totalAmount float64, selle
 				return 0, nil, appError.NewAppError(400, "voucher apply scope is category but no category id")
 			}
 		}
+	}
+
+	//call use voucher api
+	useVoucherResponse, err := s.productClient.UseVoucher(voucherId, userId)
+	if err != nil {
+		return 0, nil, appError.NewAppError(400, useVoucherResponse.Message)
 	}
 
 	// Calculate discount

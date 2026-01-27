@@ -202,3 +202,51 @@ func (c *ProductServiceClient) ReleaseStock(orderID string) error {
 
 	return nil
 }
+
+// UseVoucher calls product-service to use a voucher
+func (c *ProductServiceClient) UseVoucher(userID, voucherID string) (*dto.UseVoucherResponse, error) {
+	// Prepare request
+	requestBody := dto.UseVoucherRequest{
+		UserID:    userID,
+		VoucherID: voucherID,
+	}
+
+	jsonData, err := json.Marshal(requestBody)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	// Make HTTP request
+	url := fmt.Sprintf("%s/api/product/vouchers/use", c.baseURL)
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to call product-service: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Read response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	// Parse response
+	var response dto.UseVoucherResponse
+	if err := json.Unmarshal(body, &response); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	// Check response status
+	if resp.StatusCode != http.StatusOK {
+		return &response, fmt.Errorf("product-service returned status %d: %s", resp.StatusCode, response.Message)
+	}
+
+	return &response, nil
+}

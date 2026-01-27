@@ -14,6 +14,7 @@ func RegisterVoucherRoutes(rg *gin.RouterGroup, c *controller.VoucherController)
 		voucher.GET("", c.List)
 		voucher.PUT("/:id", c.Update)
 		voucher.DELETE("/:id", c.Delete)
+		voucher.POST("/use", c.UseVoucher)
 	}
 
 	// Public routes

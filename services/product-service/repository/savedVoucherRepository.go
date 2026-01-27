@@ -15,6 +15,7 @@ type SavedVoucherRepository interface {
 	FindByUserAndVoucher(userID, voucherID string) (*model.SavedVoucher, error)
 	Delete(userID, voucherID string) error
 	DeleteByVoucherID(voucherID string) error
+	Update(savedVoucher *model.SavedVoucher) error
 }
 
 type savedVoucherRepository struct {
@@ -82,6 +83,17 @@ func (r *savedVoucherRepository) DeleteByVoucherID(voucherID string) error {
 		ctx,
 		bson.M{"voucher_id": voucherID},
 		bson.M{"$set": bson.M{"is_deleted": true}},
+	)
+	return err
+}
+
+func (r *savedVoucherRepository) Update(savedVoucher *model.SavedVoucher) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_, err := r.collection.UpdateOne(
+		ctx,
+		bson.M{"user_id": savedVoucher.UserID, "voucher_id": savedVoucher.VoucherID},
+		bson.M{"$set": bson.M{"used_count": savedVoucher.UsedCount}},
 	)
 	return err
 }

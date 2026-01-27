@@ -44,9 +44,12 @@ func main() {
 	// Wiring dependencies - SavedVoucher (initialize repo first)
 	savedVoucherRepo := repository.NewSavedVoucherRepository(config.DB)
 
+	// Wiring dependencies - VoucherUsage
+	voucherUsageRepo := repository.NewVoucherUsageRepository(config.DB)
+
 	// Wiring dependencies - Voucher
 	voucherRepo := repository.NewVoucherRepository(config.DB)
-	voucherService := service.NewVoucherService(voucherRepo, savedVoucherRepo)
+	voucherService := service.NewVoucherService(voucherRepo, savedVoucherRepo, voucherUsageRepo)
 	voucherController := controller.NewVoucherController(voucherService)
 
 	// Wiring dependencies - SavedVoucher service
