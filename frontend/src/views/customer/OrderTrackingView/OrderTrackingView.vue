@@ -618,8 +618,12 @@ onMounted(() => {
               <el-button type="primary" size="large" @click="handleBuyAgain(order)"
                 >Buy Again</el-button
               >
-              <el-button size="large" @click="handleRateClick(order)">Rate</el-button>
-              <el-button size="large" @click="handleReportClick(order)">Report</el-button>
+              <el-button v-if="!order.is_rated" size="large" @click="handleRateClick(order)"
+                >Rate</el-button
+              >
+              <el-button v-if="!order.is_reported" size="large" @click="handleReportClick(order)"
+                >Report</el-button
+              >
               <el-button size="large" @click="openChat">Contact Seller</el-button>
             </template>
             <!-- Fallback for other statuses or if logic needs default -->
