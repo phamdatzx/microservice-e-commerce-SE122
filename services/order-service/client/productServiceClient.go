@@ -250,3 +250,74 @@ func (c *ProductServiceClient) UseVoucher(userID, voucherID string) (*dto.UseVou
 
 	return &response, nil
 }
+
+// ProductStatusInfo represents status information for a single product
+type ProductStatusInfo struct {
+	ProductID  string `json:"product_id"`
+	IsReported bool   `json:"is_reported"`
+	IsRated    bool   `json:"is_rated"`
+}
+
+// CheckProductStatusRequest represents the request to check product status
+type CheckProductStatusRequest struct {
+	UserID     string   `json:"user_id"`
+	ProductIDs []string `json:"product_ids"`
+}
+
+// CheckProductStatusResponse represents the response for checking product status
+type CheckProductStatusResponse struct {
+	Products []ProductStatusInfo `json:"products"`
+}
+
+// CheckProductsStatus calls product-service to check if products are rated/reported by user
+func (c *ProductServiceClient) CheckProductsStatus(userID string, productIDs []string) (map[string]ProductStatusInfo, error) {
+	if len(productIDs) == 0 {
+		return make(map[string]ProductStatusInfo), nil
+	}
+
+	// Prepare request
+	requestBody := CheckProductStatusRequest{
+		UserID:     userID,
+		ProductIDs: productIDs,
+	}
+
+	jsonData, err := json.Marshal(requestBody)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	// Make HTTP request
+	url := fmt.Sprintf("%s/api/product/public/check-status", c.baseURL)
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to call product-service: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Check response status
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("product-service returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	// Parse response
+	var response CheckProductStatusResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	// Convert to map for easy lookup
+	statusMap := make(map[string]ProductStatusInfo)
+	for _, product := range response.Products {
+		statusMap[product.ProductID] = product
+	}
+
+	return statusMap, nil
+}

@@ -123,3 +123,21 @@ func (p *SearchProductsQueryParams) GetSkip() int {
 	return (p.Page - 1) * p.Limit
 }
 
+// CheckProductStatusRequest represents the request to check product status
+type CheckProductStatusRequest struct {
+	UserID     string   `json:"user_id" binding:"required"`
+	ProductIDs []string `json:"product_ids" binding:"required,min=1"`
+}
+
+// ProductStatusInfo represents status information for a single product
+type ProductStatusInfo struct {
+	ProductID  string `json:"product_id"`
+	IsReported bool   `json:"is_reported"`
+	IsRated    bool   `json:"is_rated"`
+}
+
+// CheckProductStatusResponse represents the response for checking product status
+type CheckProductStatusResponse struct {
+	Products []ProductStatusInfo `json:"products"`
+}
+

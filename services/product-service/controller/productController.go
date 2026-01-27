@@ -333,3 +333,20 @@ func (c *ProductController) GetDisabledProductsBySeller(ctx *gin.Context) {
 		"limit":    limit,
 	})
 }
+
+func (c *ProductController) CheckProductsStatus(ctx *gin.Context) {
+	var request dto.CheckProductStatusRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.Error(error.NewAppErrorWithErr(http.StatusBadRequest, "Invalid request body", err))
+		return
+	}
+
+	// Call service method
+	response, err := c.service.CheckProductsStatus(request.UserID, request.ProductIDs)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, response)
+}

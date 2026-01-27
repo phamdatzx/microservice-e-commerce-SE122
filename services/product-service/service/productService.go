@@ -29,19 +29,24 @@ type ProductService interface {
 	GetRecentlyViewedProducts(userID string, limit int) ([]model.Product, error)
 	SetProductDisabled(productID string, isDisabled bool, reason string) error
 	GetDisabledProductsBySeller(sellerID string, page, limit int) ([]model.Product, int64, error)
+	CheckProductsStatus(userID string, productIDs []string) (*dto.CheckProductStatusResponse, error)
 }
 
 type productService struct {
 	repo              repository.ProductRepository
 	userClient        *client.UserServiceClient
 	searchHistoryRepo repository.SearchHistoryRepository
+	ratingRepo        repository.RatingRepository
+	reportRepo        repository.ReportRepository
 }
 
-func NewProductService(repo repository.ProductRepository, userClient *client.UserServiceClient, searchHistoryRepo repository.SearchHistoryRepository) ProductService {
+func NewProductService(repo repository.ProductRepository, userClient *client.UserServiceClient, searchHistoryRepo repository.SearchHistoryRepository, ratingRepo repository.RatingRepository, reportRepo repository.ReportRepository) ProductService {
 	return &productService{
 		repo:              repo,
 		userClient:        userClient,
 		searchHistoryRepo: searchHistoryRepo,
+		ratingRepo:        ratingRepo,
+		reportRepo:        reportRepo,
 	}
 }
 
@@ -479,4 +484,38 @@ func (s *productService) GetDisabledProductsBySeller(sellerID string, page, limi
 		"is_disabled": true,
 	}
 	return s.repo.FindBySeller(sellerID, filter, skip, limit, "updated_at", -1)
+}
+
+func (s *productService) CheckProductsStatus(userID string, productIDs []string) (*dto.CheckProductStatusResponse, error) {
+	var products []dto.ProductStatusInfo
+
+	for _, productID := range productIDs {
+		statusInfo := dto.ProductStatusInfo{
+			ProductID:  productID,
+			IsReported: false,
+			IsRated:    false,
+		}
+
+		// Check if user has reported this product
+		_, err := s.reportRepo.FindByProductIDAndUserID(productID, userID)
+		if err == nil {
+			// Report found
+			statusInfo.IsReported = true
+		}
+		// If error is "not found", that's fine - just means no report exists
+
+		// Check if user has rated this product
+		_, err = s.ratingRepo.FindByProductIDAndUserID(productID, userID)
+		if err == nil {
+			// Rating found
+			statusInfo.IsRated = true
+		}
+		// If error is "not found", that's fine - just means no rating exists
+
+		products = append(products, statusInfo)
+	}
+
+	return &dto.CheckProductStatusResponse{
+		Products: products,
+	}, nil
 }

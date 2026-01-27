@@ -18,6 +18,7 @@ func RegisterProductRoutes(rg *gin.RouterGroup, c controller.ProductController) 
 		product.GET("/public/products/seller/:sellerId", c.GetProductsBySeller)
 		product.POST("/public/variants/batch", c.GetVariantsByIds)
 		product.GET("/public/search", c.SearchProducts)
+		product.POST("/public/check-status", c.CheckProductsStatus)
 
 		// Private routes - require authentication
 		product.GET("/recently-viewed-products", c.GetRecentlyViewedProducts)
