@@ -37,6 +37,8 @@ type OrderDto struct {
 	ShippingAddress OrderAddressDto    `json:"shipping_address"`
 	DeliveryCode    string             `json:"delivery_code"`
 	ItemCount       int                `json:"item_count"` // Computed field
+	IsRated         bool               `json:"is_rated"`
+	IsReported      bool               `json:"is_reported"`
 }
 
 // UserDto represents user information in orders
