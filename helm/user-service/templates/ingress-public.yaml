@@ -4,7 +4,7 @@ metadata:
   name: {{.Values.appName}}-ingress-public
   annotations:
     kubernetes.io/ingress.class: traefik
-    traefik.ingress.kubernetes.io/router.entrypoints: web
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
     # CORS middleware
     traefik.ingress.kubernetes.io/router.middlewares: "default-cors-headers@kubernetescrd"
 spec:

@@ -22,3 +22,18 @@ output "public_subnet_cidr_blocks" {
   value       = aws_subnet.public[*].cidr_block
   description = "CIDR blocks of public subnets"
 }
+
+output "internet_gateway_id" {
+  value       = aws_internet_gateway.main.id
+  description = "ID of the Internet Gateway"
+}
+
+output "nat_gateway_id" {
+  value       = aws_nat_gateway.main.id
+  description = "ID of the NAT Gateway"
+}
+
+output "nat_gateway_ip" {
+  value       = aws_eip.nat.public_ip
+  description = "Public IP of the NAT Gateway"
+}

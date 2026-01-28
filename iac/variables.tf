@@ -28,6 +28,3 @@ variable "availability_zones" {
   type        = list(string)
   description = "Availability zones for subnets"
 }
-
-
-//for nlb module

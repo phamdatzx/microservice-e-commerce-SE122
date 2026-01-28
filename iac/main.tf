@@ -16,6 +16,7 @@ module "eks" {
   subnet_ids = module.vpc.private_subnet_ids
 }
 
+#Temporarily commented out - will enable after EKS is created
 module "ingress-controller" {
   source = "./modules/ingress-controller"
 
