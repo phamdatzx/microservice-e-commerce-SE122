@@ -95,6 +95,13 @@ watch(
                     {{ propsData.switchLinkText }}
                   </RouterLink>
                 </div>
+
+                <div v-if="route.path === '/login'" class="switch-container">
+                  <span class="switch-label">NEW SELLER ?</span>
+                  <RouterLink to="/register/seller" class="switch-link">
+                    SIGN UP AS SELLER
+                  </RouterLink>
+                </div>
               </div>
             </form>
           </div>

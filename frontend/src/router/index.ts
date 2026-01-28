@@ -177,6 +177,19 @@ const router = createRouter({
           meta: registerFormProps,
         },
         {
+          path: '/register/seller',
+          name: 'seller-register',
+          component: () => import('@/views/authentication/forms/SellerRegisterForm.vue'),
+          meta: {
+            title: 'Seller Registration',
+            subtitle: 'JOIN TO SELL',
+            mainBtnText: 'REGISTER SHOP',
+            switchText: 'ALREADY A SELLER?',
+            switchLinkUrl: '/login',
+            switchLinkText: 'LOG IN',
+          },
+        },
+        {
           path: '/forgot-password',
           name: 'forgot-password',
           component: ForgotPasswordForm,

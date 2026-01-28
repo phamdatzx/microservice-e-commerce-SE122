@@ -258,7 +258,7 @@ defineExpose({
                 color="#ffffff"
                 round
                 class="seller-btn"
-                @click="$router.push('/register?role=seller')"
+                @click="$router.push('/register/seller')"
               >
                 <el-icon style="margin-right: 6px; font-size: 16px"><Shop /></el-icon>
                 Become a Seller
