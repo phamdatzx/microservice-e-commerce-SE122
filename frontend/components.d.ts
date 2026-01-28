@@ -69,9 +69,7 @@ declare module 'vue' {
     ElTimelineItem: typeof import('element-plus/es')['ElTimelineItem']
     ElTooltip: typeof import('element-plus/es')['ElTooltip']
     ElUpload: typeof import('element-plus/es')['ElUpload']
-
     Header: typeof import('./src/components/Header.vue')['default']
-
     IconAddress: typeof import('./src/components/icons/IconAddress.vue')['default']
     IconHistory: typeof import('./src/components/icons/IconHistory.vue')['default']
     IconLock: typeof import('./src/components/icons/IconLock.vue')['default']
@@ -80,11 +78,9 @@ declare module 'vue' {
     IconUser: typeof import('./src/components/icons/IconUser.vue')['default']
     IconVoucher: typeof import('./src/components/icons/IconVoucher.vue')['default']
     LocationIcon: typeof import('./src/components/icons/LocationIcon.vue')['default']
-
     MyAddress: typeof import('./src/components/profile/MyAddress.vue')['default']
     NotFoundView: typeof import('./src/components/NotFoundView.vue')['default']
     NotificationDropdown: typeof import('./src/components/NotificationDropdown.vue')['default']
-
     ProductItem: typeof import('./src/components/ProductItem.vue')['default']
     ProductList: typeof import('./src/components/ProductList.vue')['default']
     ProductSellerInfo: typeof import('./src/components/ProductSellerInfo.vue')['default']
@@ -94,9 +90,7 @@ declare module 'vue' {
     RedFlagIcon: typeof import('./src/components/icons/RedFlagIcon.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
-
     StarIcon: typeof import('./src/components/icons/StarIcon.vue')['default']
-
     UserAvatarDropdown: typeof import('./src/components/UserAvatarDropdown.vue')['default']
     UserComment: typeof import('./src/components/UserComment.vue')['default']
   }

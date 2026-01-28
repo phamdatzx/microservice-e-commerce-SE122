@@ -56,8 +56,9 @@ const fetchCategories = () => {
 }
 
 const filteredData = computed(() => {
-  if (!searchQuery.value) return categoryData.value
-  return categoryData.value.filter((category) =>
+  const data = categoryData.value || []
+  if (!searchQuery.value) return data
+  return data.filter((category) =>
     category.name.toLowerCase().includes(searchQuery.value.toLowerCase()),
   )
 })
