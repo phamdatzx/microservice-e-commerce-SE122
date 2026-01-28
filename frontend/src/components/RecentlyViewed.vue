@@ -11,7 +11,11 @@ const isLoading = ref(false)
 
 const loadRecentlyViewed = async () => {
   const token = localStorage.getItem('access_token')
-  const headers = token ? { Authorization: `Bearer ${token}` } : {}
+  if (!token) {
+    isLoading.value = false
+    return
+  }
+  const headers = { Authorization: `Bearer ${token}` }
   isLoading.value = true
   try {
     const response = await axios.get(

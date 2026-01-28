@@ -88,6 +88,7 @@ const isLoading = ref(true)
 const isAddingToCart = ref(false)
 const productList = ref<any[]>([]) // For related products
 const recentlyViewedRef = ref<any>(null)
+const isLoggedIn = ref(false)
 
 const mainOptions: Options = {
   type: 'fade',
@@ -300,10 +301,41 @@ watch(
   },
 )
 
+const fetchSuggestedProducts = async () => {
+  const token = localStorage.getItem('access_token')
+  const headers = token ? { Authorization: `Bearer ${token}` } : {}
+  try {
+    const response = await axios.get(
+      `${import.meta.env.VITE_BE_API_URL}/product/suggested-products`,
+      { headers },
+    )
+    if (response.data) {
+      productList.value = response.data.map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        imageUrl: item.images && item.images.length > 0 ? item.images[0].url : '',
+        minPrice: item.price.min,
+        maxPrice: item.price.max,
+        rating: item.rating,
+        soldCount: item.sold_count,
+        location: 'Vietnam',
+      }))
+    }
+  } catch (error) {
+    console.error('Error fetching suggested products:', error)
+  }
+}
+
 onMounted(() => {
+  const token = localStorage.getItem('access_token')
+  isLoggedIn.value = !!token
   fetchProduct()
   fetchRatings()
   syncSplides()
+
+  if (isLoggedIn.value) {
+    fetchSuggestedProducts()
+  }
 })
 
 const syncSplides = () => {
@@ -778,8 +810,9 @@ const handleBuyNow = () => {
     <div
       class="box-shadow border-radius"
       style="background-color: #fff; padding: 20px; margin-bottom: 20px"
+      v-if="isLoggedIn"
     >
-      <h3 style="font-weight: bold">RELATED PRODUCTS</h3>
+      <h3 style="font-weight: bold; margin-bottom: 24px">SUGGESTED PRODUCTS</h3>
 
       <el-row :gutter="20" v-if="productList.length">
         <el-col
@@ -806,7 +839,7 @@ const handleBuyNow = () => {
       </div>
     </div>
 
-    <RecentlyViewed ref="recentlyViewedRef" />
+    <RecentlyViewed ref="recentlyViewedRef" v-if="isLoggedIn" />
   </div>
   <div
     v-else-if="isLoading"
