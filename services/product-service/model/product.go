@@ -185,6 +185,27 @@ func (p *Product) BeforeCreate() {
 	}
 }
 
+//caculate price
+func (p *Product) CalculatePrice() {
+	if len(p.Variants) > 0 {
+		minPrice := p.Variants[0].Price
+		maxPrice := p.Variants[0].Price
+
+		for _, variant := range p.Variants {
+			if variant.Price < minPrice {
+				minPrice = variant.Price
+			}
+			if variant.Price > maxPrice {
+				maxPrice = variant.Price
+			}
+		}
+
+		// Set price range
+		p.Price.Min = minPrice
+		p.Price.Max = maxPrice
+	}
+}
+
 // BeforeUpdate updates the UpdatedAt timestamp
 func (p *Product) BeforeUpdate() {
 	p.UpdatedAt = time.Now()
