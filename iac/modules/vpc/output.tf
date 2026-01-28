@@ -8,17 +8,17 @@ output "vpc_cidr_block" {
   description = "CIDR block of the VPC"
 }
 
-output "private_subnet_id" {
-  value       = aws_subnet.private.id
-  description = "ID of private subnet"
+output "private_subnet_ids" {
+  value       = aws_subnet.private[*].id
+  description = "IDs of private subnets"
 }
 
-output "public_subnet_id" {
-  value       = aws_subnet.public.id
-  description = "ID of public subnet"
+output "public_subnet_ids" {
+  value       = aws_subnet.public[*].id
+  description = "IDs of public subnets"
 }
 
-output "public_subnet_cidr_block" {
-  value       = aws_subnet.public.cidr_block
-  description = "CIDR block of public subnet"
+output "public_subnet_cidr_blocks" {
+  value       = aws_subnet.public[*].cidr_block
+  description = "CIDR blocks of public subnets"
 }

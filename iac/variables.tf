@@ -1,3 +1,4 @@
+//for vpc module
 variable "project" {
   type = string
 }
@@ -27,3 +28,6 @@ variable "availability_zones" {
   type        = list(string)
   description = "Availability zones for subnets"
 }
+
+
+//for nlb module
