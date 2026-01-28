@@ -62,6 +62,7 @@ interface Product {
   stock: number
   option_groups: OptionGroup[]
   variants: Variant[]
+  seller_category_ids: string[]
 }
 
 interface SellerInfo {
@@ -415,6 +416,7 @@ const handleBuyNow = () => {
     imageUrl:
       selectedVariant.value.image || (product.value.images && product.value.images[0]?.url) || '',
     productOption: Object.values(selectedOptions).join(', '),
+    sellerCategoryIds: product.value.seller_category_ids,
   }
 
   localStorage.setItem('instant_checkout_item', JSON.stringify([instantItem]))

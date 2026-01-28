@@ -47,18 +47,39 @@ const selectedVoucher = computed(() => {
   return vouchers.value.find((v) => v.id === selectedVoucherId.value)
 })
 
+const getEligibleSubtotal = (voucherWrapper: any) => {
+  const v = voucherWrapper.voucher
+  if (v.apply_scope === 'ALL') {
+    return subtotal.value
+  } else if (v.apply_scope === 'CATEGORY') {
+    const matchingItems = checkoutItems.value.filter((item) => {
+      if (!item.sellerCategoryIds) return false
+      return item.sellerCategoryIds.some((id: string) => v.apply_seller_category_ids.includes(id))
+    })
+    return matchingItems.reduce((sum, item) => sum + item.price * (item.quantity || 1), 0)
+  }
+  return 0
+}
+
+const isVoucherApplicable = (voucherWrapper: any) => {
+  const eligible = getEligibleSubtotal(voucherWrapper)
+  return eligible >= voucherWrapper.voucher.min_order_value && eligible > 0
+}
+
 const discountAmount = computed(() => {
   if (!selectedVoucher.value) return 0
   const v = selectedVoucher.value.voucher
+  const eligibleSubtotal = getEligibleSubtotal(selectedVoucher.value)
 
   // Check min spend
-  if (subtotal.value < v.min_order_value) return 0
+  if (eligibleSubtotal < v.min_order_value) return 0
 
   let discount = 0
   if (v.discount_type === 'FIXED') {
     discount = v.discount_value
   } else {
-    discount = subtotal.value * (v.discount_value / 100)
+    // Percentage discount applies to eligible subtotal
+    discount = eligibleSubtotal * (v.discount_value / 100)
     if (v.max_discount_value && discount > v.max_discount_value) {
       discount = v.max_discount_value
     }
@@ -663,15 +684,21 @@ const goToProductDetail = (item: any) => {
           class="voucher-item-dialog"
           :class="{
             selected: selectedVoucherId === v.id,
-            disabled: subtotal < v.voucher.min_order_value,
+            disabled: !isVoucherApplicable(v),
           }"
-          @click="subtotal >= v.voucher.min_order_value && selectVoucher(v.id)"
+          @click="isVoucherApplicable(v) && selectVoucher(v.id)"
         >
           <div class="v-left">
             <div class="v-code">{{ v.voucher.code }}</div>
             <div class="v-name">{{ v.voucher.name }}</div>
             <div class="v-desc">
               Min. Spend {{ formatNumberWithDots(v.voucher.min_order_value) }}đ
+            </div>
+            <div
+              v-if="v.voucher.apply_scope === 'CATEGORY'"
+              style="font-size: 11px; color: #f56c6c"
+            >
+              (Specific Categories Only)
             </div>
           </div>
           <div class="v-right">
@@ -685,7 +712,7 @@ const goToProductDetail = (item: any) => {
               :model-value="selectedVoucherId"
               :label="v.id"
               @change="selectVoucher(v.id)"
-              :disabled="subtotal < v.voucher.min_order_value"
+              :disabled="!isVoucherApplicable(v)"
               >{{ '' }}</el-radio
             >
           </div>

@@ -56,6 +56,7 @@ export interface Product {
   variantId: string
   stock: number
   isSoldOut?: boolean
+  sellerCategoryIds?: string[]
 }
 
 export interface CartSeller {
@@ -179,6 +180,7 @@ const fetchCart = async () => {
         sellerName: item.seller.name,
         sellerId: sellerId,
         variantId: item.variant_id,
+        sellerCategoryIds: item.product.seller_category_ids,
       })
 
       return acc
