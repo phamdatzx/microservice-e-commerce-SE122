@@ -818,6 +818,7 @@ const handleBuyNow = () => {
         <el-col
           :span="4.8"
           class="el-col-4-8"
+          style="margin-bottom: 20px"
           v-for="(item, index) in productList.slice(0, 10)"
           :key="index"
         >
