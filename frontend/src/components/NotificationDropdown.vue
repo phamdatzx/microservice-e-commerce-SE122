@@ -334,6 +334,10 @@ defineExpose({
   background-color: #f0fdf4;
 }
 
+.notification-btn:hover .icon-wrapper {
+  color: #22c55e;
+}
+
 .notification-dropdown {
   position: absolute;
   top: calc(100% + 10px);
