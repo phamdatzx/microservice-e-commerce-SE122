@@ -69,10 +69,9 @@ declare module 'vue' {
     ElTimelineItem: typeof import('element-plus/es')['ElTimelineItem']
     ElTooltip: typeof import('element-plus/es')['ElTooltip']
     ElUpload: typeof import('element-plus/es')['ElUpload']
-    FacebookIcon: typeof import('./src/components/icons/FacebookIcon.vue')['default']
+
     Header: typeof import('./src/components/Header.vue')['default']
-    HeartFilledIcon: typeof import('./src/components/icons/HeartFilledIcon.vue')['default']
-    HeartIcon: typeof import('./src/components/icons/HeartIcon.vue')['default']
+
     IconAddress: typeof import('./src/components/icons/IconAddress.vue')['default']
     IconHistory: typeof import('./src/components/icons/IconHistory.vue')['default']
     IconLock: typeof import('./src/components/icons/IconLock.vue')['default']
@@ -81,12 +80,11 @@ declare module 'vue' {
     IconUser: typeof import('./src/components/icons/IconUser.vue')['default']
     IconVoucher: typeof import('./src/components/icons/IconVoucher.vue')['default']
     LocationIcon: typeof import('./src/components/icons/LocationIcon.vue')['default']
-    MessengerIcon: typeof import('./src/components/icons/MessengerIcon.vue')['default']
+
     MyAddress: typeof import('./src/components/profile/MyAddress.vue')['default']
     NotFoundView: typeof import('./src/components/NotFoundView.vue')['default']
     NotificationDropdown: typeof import('./src/components/NotificationDropdown.vue')['default']
-    PinIcon: typeof import('./src/components/icons/PinIcon.vue')['default']
-    PinterestIcon: typeof import('./src/components/icons/PinterestIcon.vue')['default']
+
     ProductItem: typeof import('./src/components/ProductItem.vue')['default']
     ProductList: typeof import('./src/components/ProductList.vue')['default']
     ProductSellerInfo: typeof import('./src/components/ProductSellerInfo.vue')['default']
@@ -96,10 +94,9 @@ declare module 'vue' {
     RedFlagIcon: typeof import('./src/components/icons/RedFlagIcon.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
-    ShippingIcon: typeof import('./src/components/icons/ShippingIcon.vue')['default']
+
     StarIcon: typeof import('./src/components/icons/StarIcon.vue')['default']
-    TwitterXIcon: typeof import('./src/components/icons/TwitterXIcon.vue')['default']
-    UnpinIcon: typeof import('./src/components/icons/UnpinIcon.vue')['default']
+
     UserAvatarDropdown: typeof import('./src/components/UserAvatarDropdown.vue')['default']
     UserComment: typeof import('./src/components/UserComment.vue')['default']
   }

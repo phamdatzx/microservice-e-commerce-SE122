@@ -10,20 +10,13 @@ import {
   ArrowDown,
   ArrowLeft,
   ArrowRight,
-  MoreFilled,
   Star,
   BellFilled,
   MuteNotification,
-  Bell,
-  Delete,
-  Notification,
-  Finished,
   Picture,
   Loading,
   Service,
 } from '@element-plus/icons-vue'
-import PinIcon from './icons/PinIcon.vue'
-import UnpinIcon from './icons/UnpinIcon.vue'
 import { socketService, SOCKET_EVENTS } from '@/utils/socket'
 
 const props = defineProps({
@@ -608,16 +601,6 @@ const selectContact = (contact: any) => {
   }
 }
 
-const toggleReadStatus = () => {
-  if (activeContact.value) {
-    activeContact.value.isRead = !activeContact.value.isRead
-    activeContact.value.unread = activeContact.value.isRead ? 0 : 1
-    if (activeContact.value.isRead && !activeContact.value.isAi) {
-      markAsReadAPI(activeContact.value.id)
-    }
-  }
-}
-
 const markActiveConversationAsRead = () => {
   if (activeContact.value && !activeContact.value.isRead) {
     activeContact.value.isRead = true
@@ -626,18 +609,6 @@ const markActiveConversationAsRead = () => {
       socketService.emit(SOCKET_EVENTS.MESSAGE_READ, { conversationId: activeContact.value.id })
       markAsReadAPI(activeContact.value.id)
     }
-  }
-}
-
-const togglePin = () => {
-  if (activeContact.value) {
-    activeContact.value.isPinned = !activeContact.value.isPinned
-  }
-}
-
-const toggleMute = () => {
-  if (activeContact.value) {
-    activeContact.value.isMuted = !activeContact.value.isMuted
   }
 }
 
@@ -826,41 +797,6 @@ const sendImageMessage = async () => {
   }
 }
 
-const deleteConversation = async () => {
-  if (!activeContact.value) return
-  if (activeContact.value.isAi) {
-    ElMessage.info('Cannot delete AI Assistant conversation.')
-    return
-  }
-
-  try {
-    await ElMessageBox.confirm(
-      `Are you sure you want to delete your conversation with ${activeContact.value.name}?`,
-      'Delete Conversation',
-      {
-        confirmButtonText: 'Delete',
-        cancelButtonText: 'Cancel',
-        type: 'warning',
-        confirmButtonClass: 'delete-confirm-btn',
-        lockScroll: false,
-      },
-    )
-
-    const index = contacts.value.findIndex((c) => c.id === activeContact.value?.id)
-    if (index !== -1) {
-      contacts.value.splice(index, 1)
-
-      if (contacts.value.length > 0) {
-        activeContact.value = contacts.value[0]
-      } else {
-        activeContact.value = null
-      }
-    }
-  } catch {
-    // User cancelled
-  }
-}
-
 const handleImageUpload = () => {
   imageInputRef.value?.click()
 }
@@ -1003,36 +939,6 @@ const getMsgClass = (msg: any) => {
           <div v-if="activeContact" class="chat-content">
             <div class="active-contact-header">
               <span class="active-name">{{ activeContact.name }}</span>
-              <el-dropdown trigger="click">
-                <el-icon class="contact-menu-icon"><MoreFilled /></el-icon>
-                <template #dropdown>
-                  <el-dropdown-menu class="contact-dropdown-menu">
-                    <el-dropdown-item @click="toggleReadStatus">
-                      <el-icon v-if="activeContact.isRead"><Notification /></el-icon>
-                      <el-icon v-else><Finished /></el-icon>
-                      <span>{{ activeContact.isRead ? 'Mark as unread' : 'Mark as read' }}</span>
-                    </el-dropdown-item>
-                    <el-dropdown-item @click="togglePin">
-                      <el-icon v-show="activeContact.isPinned"><UnpinIcon /></el-icon>
-                      <el-icon v-show="!activeContact.isPinned"><PinIcon /></el-icon>
-                      <span>{{
-                        activeContact.isPinned ? 'Unpin conversation' : 'Pin conversation'
-                      }}</span>
-                    </el-dropdown-item>
-                    <el-dropdown-item @click="toggleMute">
-                      <el-icon v-show="activeContact.isMuted"><Bell /></el-icon>
-                      <el-icon v-show="!activeContact.isMuted"><MuteNotification /></el-icon>
-                      <span>{{
-                        activeContact.isMuted ? 'Unmute notifications' : 'Mute notifications'
-                      }}</span>
-                    </el-dropdown-item>
-                    <el-dropdown-item divided @click="deleteConversation">
-                      <el-icon><Delete /></el-icon>
-                      <span>Delete conversation</span>
-                    </el-dropdown-item>
-                  </el-dropdown-menu>
-                </template>
-              </el-dropdown>
             </div>
             <div class="messages-container" ref="messagesContainerRef">
               <div v-if="isLoadingMessages" class="loading-container">
