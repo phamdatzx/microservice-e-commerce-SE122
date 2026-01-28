@@ -16,6 +16,8 @@ type CategoryRepository interface {
 	FindByName(name string) ([]model.Category, error)
 	Update(category *model.Category) error
 	Delete(id string) error
+	IncrementProductCount(id string) error
+	DecrementProductCount(id string) error
 }
 
 type categoryRepository struct {
@@ -100,5 +102,27 @@ func (r *categoryRepository) Delete(id string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	_, err := r.collection.DeleteOne(ctx, bson.M{"_id": id})
+	return err
+}
+
+func (r *categoryRepository) IncrementProductCount(id string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_, err := r.collection.UpdateOne(
+		ctx,
+		bson.M{"_id": id},
+		bson.M{"$inc": bson.M{"product_count": 1}},
+	)
+	return err
+}
+
+func (r *categoryRepository) DecrementProductCount(id string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_, err := r.collection.UpdateOne(
+		ctx,
+		bson.M{"_id": id},
+		bson.M{"$inc": bson.M{"product_count": -1}},
+	)
 	return err
 }

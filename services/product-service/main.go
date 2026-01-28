@@ -30,18 +30,20 @@ func main() {
 	searchHistoryRepo := repository.NewSearchHistoryRepository(config.DB)
 	ratingRepo := repository.NewRatingRepository(config.DB)
 	reportRepo := repository.NewReportRepository(config.DB)
-	productService := service.NewProductService(productRepo, userClient, searchHistoryRepo, ratingRepo, reportRepo)
-	productController := controller.NewProductController(productService)
-
-	// Wiring dependencies - Category
+	
+	// Wiring dependencies - Category (needed by ProductService)
 	categoryRepo := repository.NewCategoryRepository(config.DB)
 	categoryService := service.NewCategoryService(categoryRepo)
 	categoryController := controller.NewCategoryController(categoryService)
 
-	// Wiring dependencies - SellerCategory
+	// Wiring dependencies - SellerCategory (needed by ProductService)
 	sellerCategoryRepo := repository.NewSellerCategoryRepository(config.DB)
 	sellerCategoryService := service.NewSellerCategoryService(sellerCategoryRepo)
 	sellerCategoryController := controller.NewSellerCategoryController(sellerCategoryService)
+	
+	// Initialize ProductService with category repositories
+	productService := service.NewProductService(productRepo, userClient, searchHistoryRepo, ratingRepo, reportRepo, categoryRepo, sellerCategoryRepo)
+	productController := controller.NewProductController(productService)
 
 	// Wiring dependencies - SavedVoucher (initialize repo first)
 	savedVoucherRepo := repository.NewSavedVoucherRepository(config.DB)

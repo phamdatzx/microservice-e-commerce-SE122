@@ -38,15 +38,19 @@ type productService struct {
 	searchHistoryRepo repository.SearchHistoryRepository
 	ratingRepo        repository.RatingRepository
 	reportRepo        repository.ReportRepository
+	categoryRepo      repository.CategoryRepository
+	sellerCategoryRepo repository.SellerCategoryRepository
 }
 
-func NewProductService(repo repository.ProductRepository, userClient *client.UserServiceClient, searchHistoryRepo repository.SearchHistoryRepository, ratingRepo repository.RatingRepository, reportRepo repository.ReportRepository) ProductService {
+func NewProductService(repo repository.ProductRepository, userClient *client.UserServiceClient, searchHistoryRepo repository.SearchHistoryRepository, ratingRepo repository.RatingRepository, reportRepo repository.ReportRepository, categoryRepo repository.CategoryRepository, sellerCategoryRepo repository.SellerCategoryRepository) ProductService {
 	return &productService{
 		repo:              repo,
 		userClient:        userClient,
 		searchHistoryRepo: searchHistoryRepo,
 		ratingRepo:        ratingRepo,
 		reportRepo:        reportRepo,
+		categoryRepo:      categoryRepo,
+		sellerCategoryRepo: sellerCategoryRepo,
 	}
 }
 
@@ -60,6 +64,26 @@ func (s *productService) CreateProduct(product *model.Product) error {
 	if err := s.userClient.UpdateProductCount(product.SellerID, "increment"); err != nil {
 		// Log error but don't fail the product creation
 		fmt.Printf("Failed to update product count for seller %s: %v\n", product.SellerID, err)
+	}
+
+	// Increment product count for each category
+	if len(product.CategoryIDs) > 0 {
+		for _, categoryID := range product.CategoryIDs {
+			if err := s.categoryRepo.IncrementProductCount(categoryID); err != nil {
+				// Log error but don't fail the product creation
+				fmt.Printf("Failed to increment product count for category %s: %v\n", categoryID, err)
+			}
+		}
+	}
+
+	// Increment product count for each seller category
+	if len(product.SellerCategoryIDs) > 0 {
+		for _, sellerCategoryID := range product.SellerCategoryIDs {
+			if err := s.sellerCategoryRepo.IncrementProductCount(sellerCategoryID); err != nil {
+				// Log error but don't fail the product creation
+				fmt.Printf("Failed to increment product count for seller category %s: %v\n", sellerCategoryID, err)
+			}
+		}
 	}
 
 	return nil
@@ -108,11 +132,81 @@ func (s *productService) GetAllProducts() ([]model.Product, error) {
 }
 
 func (s *productService) UpdateProduct(product *model.Product) error {
-	return s.repo.Update(product)
+	// Get the old product to compare categories
+	oldProduct, err := s.repo.FindByID(product.ID)
+	if err != nil {
+		return err
+	}
+
+	// Update the product
+	err = s.repo.Update(product)
+	if err != nil {
+		return err
+	}
+
+	// Handle category changes
+	oldCategoryIDs := make(map[string]bool)
+	for _, id := range oldProduct.CategoryIDs {
+		oldCategoryIDs[id] = true
+	}
+
+	newCategoryIDs := make(map[string]bool)
+	for _, id := range product.CategoryIDs {
+		newCategoryIDs[id] = true
+	}
+
+	// Increment count for newly added categories
+	for _, categoryID := range product.CategoryIDs {
+		if !oldCategoryIDs[categoryID] {
+			if err := s.categoryRepo.IncrementProductCount(categoryID); err != nil {
+				fmt.Printf("Failed to increment product count for category %s: %v\n", categoryID, err)
+			}
+		}
+	}
+
+	// Decrement count for removed categories
+	for _, categoryID := range oldProduct.CategoryIDs {
+		if !newCategoryIDs[categoryID] {
+			if err := s.categoryRepo.DecrementProductCount(categoryID); err != nil {
+				fmt.Printf("Failed to decrement product count for category %s: %v\n", categoryID, err)
+			}
+		}
+	}
+
+	// Handle seller category changes
+	oldSellerCategoryIDs := make(map[string]bool)
+	for _, id := range oldProduct.SellerCategoryIDs {
+		oldSellerCategoryIDs[id] = true
+	}
+
+	newSellerCategoryIDs := make(map[string]bool)
+	for _, id := range product.SellerCategoryIDs {
+		newSellerCategoryIDs[id] = true
+	}
+
+	// Increment count for newly added seller categories
+	for _, sellerCategoryID := range product.SellerCategoryIDs {
+		if !oldSellerCategoryIDs[sellerCategoryID] {
+			if err := s.sellerCategoryRepo.IncrementProductCount(sellerCategoryID); err != nil {
+				fmt.Printf("Failed to increment product count for seller category %s: %v\n", sellerCategoryID, err)
+			}
+		}
+	}
+
+	// Decrement count for removed seller categories
+	for _, sellerCategoryID := range oldProduct.SellerCategoryIDs {
+		if !newSellerCategoryIDs[sellerCategoryID] {
+			if err := s.sellerCategoryRepo.DecrementProductCount(sellerCategoryID); err != nil {
+				fmt.Printf("Failed to decrement product count for seller category %s: %v\n", sellerCategoryID, err)
+			}
+		}
+	}
+
+	return nil
 }
 
 func (s *productService) DeleteProduct(id string) error {
-	// Get product to retrieve seller ID
+	// Get product to retrieve seller ID and categories
 	product, err := s.repo.FindByID(id)
 	if err != nil {
 		return err
@@ -127,6 +221,26 @@ func (s *productService) DeleteProduct(id string) error {
 	if err := s.userClient.UpdateProductCount(product.SellerID, "decrement"); err != nil {
 		// Log error but don't fail the product deletion
 		fmt.Printf("Failed to update product count for seller %s: %v\n", product.SellerID, err)
+	}
+
+	// Decrement product count for each category
+	if len(product.CategoryIDs) > 0 {
+		for _, categoryID := range product.CategoryIDs {
+			if err := s.categoryRepo.DecrementProductCount(categoryID); err != nil {
+				// Log error but don't fail the product deletion
+				fmt.Printf("Failed to decrement product count for category %s: %v\n", categoryID, err)
+			}
+		}
+	}
+
+	// Decrement product count for each seller category
+	if len(product.SellerCategoryIDs) > 0 {
+		for _, sellerCategoryID := range product.SellerCategoryIDs {
+			if err := s.sellerCategoryRepo.DecrementProductCount(sellerCategoryID); err != nil {
+				// Log error but don't fail the product deletion
+				fmt.Printf("Failed to decrement product count for seller category %s: %v\n", sellerCategoryID, err)
+			}
+		}
 	}
 
 	return nil

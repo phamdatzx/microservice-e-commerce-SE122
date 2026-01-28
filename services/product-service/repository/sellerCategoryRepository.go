@@ -16,6 +16,8 @@ type SellerCategoryRepository interface {
 	FindAll() ([]model.SellerCategory, error)
 	Update(sellerCategory *model.SellerCategory) error
 	Delete(id string) error
+	IncrementProductCount(id string) error
+	DecrementProductCount(id string) error
 }
 
 type sellerCategoryRepository struct {
@@ -91,5 +93,27 @@ func (r *sellerCategoryRepository) Delete(id string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	_, err := r.collection.DeleteOne(ctx, bson.M{"_id": id})
+	return err
+}
+
+func (r *sellerCategoryRepository) IncrementProductCount(id string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_, err := r.collection.UpdateOne(
+		ctx,
+		bson.M{"_id": id},
+		bson.M{"$inc": bson.M{"product_count": 1}},
+	)
+	return err
+}
+
+func (r *sellerCategoryRepository) DecrementProductCount(id string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_, err := r.collection.UpdateOne(
+		ctx,
+		bson.M{"_id": id},
+		bson.M{"$inc": bson.M{"product_count": -1}},
+	)
 	return err
 }
