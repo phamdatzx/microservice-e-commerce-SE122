@@ -231,7 +231,7 @@ defineExpose({
           <div class="header-actions">
             <NotificationDropdown v-if="isLoggedIn" />
 
-            <div class="action-item cart-section" @click="$router.push('/cart')">
+            <div v-if="isLoggedIn" class="action-item cart-section" @click="$router.push('/cart')">
               <div class="icon-wrapper">
                 <svg
                   width="22"
