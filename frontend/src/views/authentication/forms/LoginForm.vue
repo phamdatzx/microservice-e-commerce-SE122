@@ -29,6 +29,7 @@ const handleFormSent = () => {
       if (loginRes.data.status === 200) {
         localStorage.setItem('access_token', loginRes.data.data.access_token)
         localStorage.setItem('user_id', loginRes.data.data.user_id)
+        localStorage.setItem('role', loginRes.data.data.role)
         emits('success', loginRes.data.data)
       } else {
         ElNotification({
