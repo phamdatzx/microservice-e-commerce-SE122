@@ -567,23 +567,6 @@ const handleBuyNow = () => {
               }}</span>
             </div>
           </div>
-
-          <el-divider style="margin: 20px 0" />
-
-          <div>
-            <el-button circle>
-              <el-icon size="large"><MessengerIcon /></el-icon>
-            </el-button>
-            <el-button circle>
-              <el-icon size="large"><FacebookIcon /></el-icon>
-            </el-button>
-            <el-button circle>
-              <el-icon size="large"><PinterestIcon /></el-icon>
-            </el-button>
-            <el-button circle>
-              <el-icon size="large"><TwitterXIcon /></el-icon>
-            </el-button>
-          </div>
         </el-col>
 
         <el-col :span="6">
