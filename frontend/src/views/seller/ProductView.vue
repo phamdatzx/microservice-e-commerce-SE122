@@ -524,7 +524,6 @@ const handleEditProduct = () => {
   }
 
   const productId = ruleForm.id
-  console.log('Update Payload:', JSON.stringify(payload, null, 2))
   axios
     .put(import.meta.env.VITE_BE_API_URL + '/product/' + productId, payload, {
       headers: {

@@ -233,7 +233,6 @@ const calculateShippingFee = async () => {
       shippingFee.value = response.data.data.total
     } else {
       console.error('Failed to calculate shipping fee:', response.data.message)
-      // Optional: ElMessage.warning('Could not calculate shipping fee')
     }
   } catch (error) {
     console.error('Error calculating shipping fee:', error)
@@ -719,8 +718,6 @@ const goToProductDetail = (item: any) => {
         </div>
       </div>
     </el-dialog>
-
-    <!-- Shipping Service Dialog REMOVED -->
   </div>
 </template>
 

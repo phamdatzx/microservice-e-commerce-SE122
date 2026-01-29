@@ -65,7 +65,6 @@ let searchTimeout: any = null
 watch(searchQuery, () => {
   if (searchTimeout) clearTimeout(searchTimeout)
   searchTimeout = setTimeout(() => {
-    // currentPage.value = 1
     fetchCategories()
   }, 300)
 })
@@ -73,23 +72,6 @@ watch(searchQuery, () => {
 const filteredData = computed(() => {
   return categoryData.value
 })
-
-/*
-const paginatedData = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  return filteredData.value.slice(start, end)
-})
-
-const handleSizeChange = (val: number) => {
-  pageSize.value = val
-  currentPage.value = 1
-}
-
-const handleCurrentChange = (val: number) => {
-  currentPage.value = val
-}
-*/
 
 const fileInput = ref<HTMLInputElement | null>(null)
 const imagePreview = ref<string>('')
@@ -368,20 +350,6 @@ const clearRuleForm = () => {
         </template>
       </el-table-column>
     </el-table>
-
-    <!--
-    <div class="pagination-container">
-      <el-pagination
-        v-model:current-page="currentPage"
-        v-model:page-size="pageSize"
-        :page-sizes="[10, 20, 50, 100]"
-        layout="total, sizes, prev, pager, next, jumper"
-        :total="filteredData.length"
-        @size-change="handleSizeChange"
-        @current-change="handleCurrentChange"
-      />
-    </div>
-    -->
 
     <!-- Dialog -->
     <el-dialog
