@@ -912,17 +912,6 @@ const getMsgClass = (msg: any) => {
                   <div class="last-msg-unread">
                     <span class="last-msg one-line-ellipsis">{{ contact.lastMessage }}</span>
                     <div class="status-indicators">
-                      <el-icon v-if="contact.isPinned" size="large" class="pin-icon">
-                        <PinIcon />
-                      </el-icon>
-                      <el-icon
-                        size="large"
-                        v-if="contact.isMuted"
-                        class="mute-icon"
-                        style="color: var(--main-color)"
-                      >
-                        <MuteNotification
-                      /></el-icon>
                       <span v-if="contact.unread > 0" class="unread-count">{{
                         contact.unread > 9 ? '9+' : contact.unread
                       }}</span>

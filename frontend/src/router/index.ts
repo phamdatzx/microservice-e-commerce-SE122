@@ -210,7 +210,6 @@ const router = createRouter({
     },
     {
       path: '/seller',
-      name: 'seller',
       component: SellerHomeView,
       children: [
         { path: '', redirect: '/seller/statistic' },
@@ -230,7 +229,6 @@ const router = createRouter({
     },
     {
       path: '/admin',
-      name: 'admin',
       component: AdminHomeView,
       children: [
         { path: '', redirect: '/admin/category' },
