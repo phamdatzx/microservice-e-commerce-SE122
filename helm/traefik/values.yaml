@@ -1,58 +1,58 @@
-# Số lượng replicas
-deployment:
-  replicas: 1
+  # Số lượng replicas
+  deployment:
+    replicas: 1
 
-# Service expose Traefik
-service:
-  type: LoadBalancer
-  ports:
-    web:
-      port: 80
-    websecure:
-      port: 443
+  # Service expose Traefik
+  service:
+    type: LoadBalancer
+    ports:
+      web:
+        port: 80
+      websecure:
+        port: 443
 
-# Providers
-providers:
-  kubernetesCRD:
-    enabled: true
-  kubernetesIngress:
-    enabled: true
+  # Providers
+  providers:
+    kubernetesCRD:
+      enabled: true
+    kubernetesIngress:
+      enabled: true
 
-# Bật Dashboard
-dashboard:
-  enabled: true
-  domain: "traefik.local"   # domain bạn muốn dùng
-
-# EntryPoints
-entryPoints:
-  web:
-    address: ":80"
-  websecure:
-    address: ":443"
-
-# Logs
-logs:
-  general:
-    level: INFO
-  access:
-    enabled: true
-
-# Tham số bổ sung
-additionalArguments:
-  - "--api.dashboard=true"
-
-# CRDs — rất quan trọng! Bật để Helm tự cài
-crds:
-  enabled: true
-
-# Optional: RBAC nên để bật
-rbac:
-  enabled: true
-
-# Expose Dashboard qua IngressRoute tự động
-ingressRoute:
+  # Bật Dashboard
   dashboard:
     enabled: true
-    # domain của dashboard (phải match với /etc/hosts)
-    matchRule: Host(`traefik.local`)
-    entryPoints: ["web"]
+    domain: "traefik.local"   # domain bạn muốn dùng
+
+  # EntryPoints
+  entryPoints:
+    web:
+      address: ":80"
+    websecure:
+      address: ":443"
+
+  # Logs
+  logs:
+    general:
+      level: INFO
+    access:
+      enabled: true
+
+  # Tham số bổ sung
+  additionalArguments:
+    - "--api.dashboard=true"
+
+  # CRDs — rất quan trọng! Bật để Helm tự cài
+  crds:
+    enabled: true
+
+  # Optional: RBAC nên để bật
+  rbac:
+    enabled: true
+
+  # Expose Dashboard qua IngressRoute tự động
+  ingressRoute:
+    dashboard:
+      enabled: true
+      # domain của dashboard (phải match với /etc/hosts)
+      matchRule: Host(`traefik.local`)
+      entryPoints: ["web"]

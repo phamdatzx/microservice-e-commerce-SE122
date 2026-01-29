@@ -1,0 +1,9 @@
+appName: order-service
+replicas: 1
+image: megumikatou/order-service
+tag: latest
+containerPort: 8082
+
+service:
+  type: ClusterIP
+  port: 8082

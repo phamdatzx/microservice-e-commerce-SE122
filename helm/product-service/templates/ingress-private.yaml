@@ -4,7 +4,7 @@ metadata:
   name: {{.Values.appName}}-ingress-private
   annotations:
     kubernetes.io/ingress.class: traefik
-    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.entrypoints: web
     # Middlewares: CORS first, then authentication
     traefik.ingress.kubernetes.io/router.middlewares: "default-cors-headers@kubernetescrd,default-forward-auth@kubernetescrd"
 spec:
@@ -12,7 +12,7 @@ spec:
   rules:
     - http:
         paths:
-          - path: /api/user
+          - path: /api/product
             pathType: Prefix
             backend:
               service:
