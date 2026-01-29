@@ -1,14 +1,5 @@
 <script setup lang="ts">
-import {
-  ArrowRight,
-  Goods,
-  Menu,
-  ChatDotRound,
-  User,
-  Ticket,
-  Van,
-  TrendCharts,
-} from '@element-plus/icons-vue'
+import { Goods, Menu, ChatDotRound, User, Ticket, Van, TrendCharts } from '@element-plus/icons-vue'
 import { onMounted, ref, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
@@ -109,20 +100,6 @@ onUnmounted(() => {
               <div class="logo-text">
                 <span class="logo-name">SWOO</span>
                 <span class="logo-tagline">TECH MART</span>
-              </div>
-            </div>
-
-            <div class="breadcrumb">
-              <div class="container">
-                <a href="#" class="breadcrumb-link">Home</a>
-                <span class="breadcrumb-separator">
-                  <el-icon><ArrowRight /></el-icon>
-                </span>
-                <a href="#" class="breadcrumb-link">pages</a>
-                <span class="breadcrumb-separator">
-                  <el-icon><ArrowRight /></el-icon>
-                </span>
-                <span class="breadcrumb-current">login</span>
               </div>
             </div>
 
@@ -271,38 +248,6 @@ a {
   font-size: 12px;
   color: #666;
   letter-spacing: 1px;
-}
-
-/* Breadcrumb */
-.breadcrumb {
-  background: white;
-  margin-left: 24px;
-}
-
-.breadcrumb .container {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 18px;
-}
-
-.breadcrumb-link {
-  color: #666;
-  text-decoration: none;
-}
-
-.breadcrumb-link:hover {
-  color: #22c55e;
-}
-
-.breadcrumb-separator {
-  color: #999;
-  margin: 0 4px;
-}
-
-.breadcrumb-current {
-  color: #333;
-  font-weight: 600;
 }
 
 .menu-item-with-badge {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowRight, Menu, User, Warning } from '@element-plus/icons-vue'
+import { Menu, User, Warning } from '@element-plus/icons-vue'
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import UserAvatarDropdown from '@/components/UserAvatarDropdown.vue'
@@ -44,16 +44,6 @@ const handleClose = (key: string, keyPath: string[]) => {}
               <div class="logo-text">
                 <span class="logo-name">SWOO</span>
                 <span class="logo-tagline">ADMIN PANEL</span>
-              </div>
-            </div>
-
-            <div class="breadcrumb">
-              <div class="container">
-                <a href="#" class="breadcrumb-link">Admin</a>
-                <span class="breadcrumb-separator">
-                  <el-icon><ArrowRight /></el-icon>
-                </span>
-                <span class="breadcrumb-current">Dashboard</span>
               </div>
             </div>
 
@@ -178,37 +168,5 @@ a {
   font-size: 12px;
   color: #666;
   letter-spacing: 1px;
-}
-
-/* Breadcrumb */
-.breadcrumb {
-  background: white;
-  margin-left: 24px;
-}
-
-.breadcrumb .container {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 18px;
-}
-
-.breadcrumb-link {
-  color: #666;
-  text-decoration: none;
-}
-
-.breadcrumb-link:hover {
-  color: #3b82f6;
-}
-
-.breadcrumb-separator {
-  color: #999;
-  margin: 0 4px;
-}
-
-.breadcrumb-current {
-  color: #333;
-  font-weight: 600;
 }
 </style>
