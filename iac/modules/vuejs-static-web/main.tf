@@ -118,12 +118,7 @@ resource "aws_cloudfront_distribution" "vuejs_web" {
     minimum_protocol_version       = var.custom_domain == "" ? null : "TLSv1.2_2021"
   }
 
-  dynamic "aliases" {
-    for_each = var.custom_domain != "" ? [var.custom_domain] : []
-    content {
-      aliases = [var.custom_domain]
-    }
-  }
+  aliases = var.custom_domain != "" ? [var.custom_domain] : []
 
   tags = {
     Name    = "${var.project}-vuejs-web-cdn"

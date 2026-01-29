@@ -23,3 +23,11 @@ module "ingress-controller" {
   cluster_name    = module.eks.cluster_name
   subnet_ids = module.vpc.public_subnet_ids
 }
+
+# Vue.js Static Web - CloudFront + S3
+module "vuejs-static-web" {
+  source = "./modules/vuejs-static-web"
+
+  project     = var.project
+  bucket_name = "${var.project}-frontend-web"
+}

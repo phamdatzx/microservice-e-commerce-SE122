@@ -11,7 +11,7 @@ variable "bucket_name" {
 variable "cloudfront_price_class" {
   description = "CloudFront distribution price class"
   type        = string
-  default     = "PriceClass_100"  # Use only North America and Europe
+  default     = "PriceClass_200" 
 }
 
 variable "custom_domain" {
