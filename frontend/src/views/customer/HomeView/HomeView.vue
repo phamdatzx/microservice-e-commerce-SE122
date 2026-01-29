@@ -61,16 +61,16 @@ const fetchCategories = async () => {
 
 const carouselItems = [
   {
-    imageUrl: '/src/assets/carousel-imgs/banner1.jpg',
+    imageUrl: new URL('@/assets/carousel-imgs/banner1.jpg', import.meta.url).href,
   },
   {
-    imageUrl: '/src/assets/carousel-imgs/banner2.jpg',
+    imageUrl: new URL('@/assets/carousel-imgs/banner2.jpg', import.meta.url).href,
   },
   {
-    imageUrl: '/src/assets/carousel-imgs/banner3.jpg',
+    imageUrl: new URL('@/assets/carousel-imgs/banner3.jpg', import.meta.url).href,
   },
   {
-    imageUrl: '/src/assets/carousel-imgs/banner4.jpg',
+    imageUrl: new URL('@/assets/carousel-imgs/banner4.jpg', import.meta.url).href,
   },
 ]
 
