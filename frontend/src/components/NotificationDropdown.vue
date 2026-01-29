@@ -330,8 +330,12 @@ defineExpose({
 
 .notification-btn:hover,
 .notification-btn.active {
-  color: #22c55e;
+  color: var(--main-color);
   background-color: #f0fdf4;
+}
+
+.notification-btn:hover .icon-wrapper {
+  color: var(--main-color);
 }
 
 .notification-dropdown {

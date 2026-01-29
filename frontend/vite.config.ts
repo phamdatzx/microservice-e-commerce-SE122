@@ -34,4 +34,31 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('element-plus')) {
+              return 'element-plus'
+            }
+            if (id.includes('@element-plus')) {
+              return 'element-plus-icons'
+            }
+            if (id.includes('echarts') || id.includes('vue-echarts')) {
+              return 'echarts'
+            }
+            if (id.includes('vue')) {
+              return 'vue-vendor'
+            }
+            if (id.includes('lodash')) {
+              return 'lodash'
+            }
+            return 'vendor'
+          }
+        },
+      },
+    },
+    chunkSizeWarningLimit: 1000,
+  },
 })

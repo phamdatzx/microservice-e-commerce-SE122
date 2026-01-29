@@ -1,17 +1,10 @@
 <script setup lang="ts">
 import { Splide, SplideSlide, type Options } from '@splidejs/vue-splide'
-import { onMounted, ref, computed, reactive, watch, inject } from 'vue'
+import { onMounted, ref, computed, reactive, watch, inject, defineAsyncComponent } from 'vue'
 import { quantityFormatNumber } from '@/utils/quantityFormatNumber'
 import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
 import RedFlagIcon from '@/components/icons/RedFlagIcon.vue'
-import MessengerIcon from '@/components/icons/MessengerIcon.vue'
-import FacebookIcon from '@/components/icons/FacebookIcon.vue'
-import PinterestIcon from '@/components/icons/PinterestIcon.vue'
-import TwitterXIcon from '@/components/icons/TwitterXIcon.vue'
 import { Check, Goods, ShoppingCart, Loading } from '@element-plus/icons-vue'
-import HeartIcon from '@/components/icons/HeartIcon.vue'
-import HeartFilledIcon from '@/components/icons/HeartFilledIcon.vue'
-import ShippingIcon from '@/components/icons/ShippingIcon.vue'
 import UserComment from '../../components/UserComment.vue'
 import ProductItem from '@/components/ProductItem.vue'
 import RecentlyViewed from '@/components/RecentlyViewed.vue'
@@ -19,7 +12,7 @@ import ProductSellerInfo from '@/components/ProductSellerInfo.vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import { ElNotification } from 'element-plus'
-import NotFoundView from '@/components/NotFoundView.vue'
+const NotFoundView = defineAsyncComponent(() => import('@/components/NotFoundView.vue'))
 
 interface ProductImage {
   id: string
@@ -62,6 +55,7 @@ interface Product {
   stock: number
   option_groups: OptionGroup[]
   variants: Variant[]
+  seller_category_ids: string[]
 }
 
 interface SellerInfo {
@@ -87,6 +81,7 @@ const isLoading = ref(true)
 const isAddingToCart = ref(false)
 const productList = ref<any[]>([]) // For related products
 const recentlyViewedRef = ref<any>(null)
+const isLoggedIn = ref(false)
 
 const mainOptions: Options = {
   type: 'fade',
@@ -299,10 +294,41 @@ watch(
   },
 )
 
+const fetchSuggestedProducts = async () => {
+  const token = localStorage.getItem('access_token')
+  const headers = token ? { Authorization: `Bearer ${token}` } : {}
+  try {
+    const response = await axios.get(
+      `${import.meta.env.VITE_BE_API_URL}/product/suggested-products`,
+      { headers },
+    )
+    if (response.data) {
+      productList.value = response.data.map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        imageUrl: item.images && item.images.length > 0 ? item.images[0].url : '',
+        minPrice: item.price.min,
+        maxPrice: item.price.max,
+        rating: item.rating,
+        soldCount: item.sold_count,
+        location: 'Vietnam',
+      }))
+    }
+  } catch (error) {
+    console.error('Error fetching suggested products:', error)
+  }
+}
+
 onMounted(() => {
+  const token = localStorage.getItem('access_token')
+  isLoggedIn.value = !!token
   fetchProduct()
   fetchRatings()
   syncSplides()
+
+  if (isLoggedIn.value) {
+    fetchSuggestedProducts()
+  }
 })
 
 const syncSplides = () => {
@@ -415,6 +441,7 @@ const handleBuyNow = () => {
     imageUrl:
       selectedVariant.value.image || (product.value.images && product.value.images[0]?.url) || '',
     productOption: Object.values(selectedOptions).join(', '),
+    sellerCategoryIds: product.value.seller_category_ids,
   }
 
   localStorage.setItem('instant_checkout_item', JSON.stringify([instantItem]))
@@ -532,23 +559,6 @@ const handleBuyNow = () => {
                 product.status
               }}</span>
             </div>
-          </div>
-
-          <el-divider style="margin: 20px 0" />
-
-          <div>
-            <el-button circle>
-              <el-icon size="large"><MessengerIcon /></el-icon>
-            </el-button>
-            <el-button circle>
-              <el-icon size="large"><FacebookIcon /></el-icon>
-            </el-button>
-            <el-button circle>
-              <el-icon size="large"><PinterestIcon /></el-icon>
-            </el-button>
-            <el-button circle>
-              <el-icon size="large"><TwitterXIcon /></el-icon>
-            </el-button>
           </div>
         </el-col>
 
@@ -776,13 +786,15 @@ const handleBuyNow = () => {
     <div
       class="box-shadow border-radius"
       style="background-color: #fff; padding: 20px; margin-bottom: 20px"
+      v-if="isLoggedIn"
     >
-      <h3 style="font-weight: bold">RELATED PRODUCTS</h3>
+      <h3 style="font-weight: bold; margin-bottom: 24px">SUGGESTED PRODUCTS</h3>
 
       <el-row :gutter="20" v-if="productList.length">
         <el-col
           :span="4.8"
           class="el-col-4-8"
+          style="margin-bottom: 20px"
           v-for="(item, index) in productList.slice(0, 10)"
           :key="index"
         >
@@ -804,7 +816,7 @@ const handleBuyNow = () => {
       </div>
     </div>
 
-    <RecentlyViewed ref="recentlyViewedRef" />
+    <RecentlyViewed ref="recentlyViewedRef" v-if="isLoggedIn" />
   </div>
   <div
     v-else-if="isLoading"

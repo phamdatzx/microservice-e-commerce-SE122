@@ -177,6 +177,19 @@ const router = createRouter({
           meta: registerFormProps,
         },
         {
+          path: '/register/seller',
+          name: 'seller-register',
+          component: () => import('@/views/authentication/forms/SellerRegisterForm.vue'),
+          meta: {
+            title: 'Seller Registration',
+            subtitle: 'JOIN TO SELL',
+            mainBtnText: 'REGISTER SHOP',
+            switchText: 'ALREADY A SELLER?',
+            switchLinkUrl: '/login',
+            switchLinkText: 'LOG IN',
+          },
+        },
+        {
           path: '/forgot-password',
           name: 'forgot-password',
           component: ForgotPasswordForm,
@@ -237,6 +250,74 @@ const router = createRouter({
       props: { hasHeader: false },
     },
   ],
+})
+
+// Global Navigation Guard for Role-Based Access Control
+router.beforeEach((to, from, next) => {
+  const token = localStorage.getItem('access_token')
+  const role = localStorage.getItem('role')
+
+  const isSellerRoute = to.path.startsWith('/seller')
+  const isAdminRoute = to.path.startsWith('/admin')
+  const isAuthRoute =
+    to.path === '/login' ||
+    to.path === '/register' ||
+    to.path === '/register/seller' ||
+    to.path === '/forgot-password' ||
+    to.path === '/reset-password'
+
+  const isCustomerRoute = !isSellerRoute && !isAdminRoute && !isAuthRoute
+
+  // Not logged in
+  if (!token) {
+    if (isSellerRoute || isAdminRoute) {
+      return next('/login')
+    }
+    return next()
+  }
+
+  // Logged in as Customer
+  if (role === 'customer') {
+    if (isSellerRoute || isAdminRoute) {
+      return next('/')
+    }
+    if (isAuthRoute && to.path !== '/') {
+      if (['/login', '/register', '/register/seller'].includes(to.path)) {
+        return next('/')
+      }
+    }
+    return next()
+  }
+
+  // Logged in as Seller
+  if (role === 'seller') {
+    if (isSellerRoute) {
+      return next()
+    }
+    if (isAdminRoute || isCustomerRoute) {
+      return next('/seller')
+    }
+    if (['/login', '/register', '/register/seller'].includes(to.path)) {
+      return next('/seller')
+    }
+    return next()
+  }
+
+  // Logged in as Admin
+  if (role === 'admin') {
+    if (isAdminRoute) {
+      return next()
+    }
+    if (isSellerRoute || isCustomerRoute) {
+      return next('/admin')
+    }
+    if (['/login', '/register', '/register/seller'].includes(to.path)) {
+      return next('/admin')
+    }
+    return next()
+  }
+
+  next()
 })
 
 export default router

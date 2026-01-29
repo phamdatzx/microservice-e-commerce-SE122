@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, computed } from 'vue'
+import { ref, onMounted, watch, computed, defineAsyncComponent } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Loading, ArrowRight } from '@element-plus/icons-vue'
 import axios from 'axios'
-import AccountInfo from '@/components/profile/AccountInfo.vue'
-import ChangePassword from '@/components/profile/ChangePassword.vue'
-import MyAddress from '@/components/profile/MyAddress.vue'
+const AccountInfo = defineAsyncComponent(() => import('@/components/profile/AccountInfo.vue'))
+const ChangePassword = defineAsyncComponent(() => import('@/components/profile/ChangePassword.vue'))
+const MyAddress = defineAsyncComponent(() => import('@/components/profile/MyAddress.vue'))
 
 const props = defineProps<{
   role: 'admin' | 'seller' | 'customer'
@@ -63,7 +63,13 @@ watch(
   },
 )
 
-const menuItems = computed(() => {
+interface MenuItem {
+  id: string
+  label: string
+  path?: string
+}
+
+const menuItems = computed<MenuItem[]>(() => {
   if (props.role === 'admin') {
     return [
       { id: 'account-info', label: 'Account info' },

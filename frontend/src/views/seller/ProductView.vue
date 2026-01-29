@@ -496,6 +496,7 @@ const handleEditProduct = () => {
     status: ruleForm.status,
     is_active: ruleForm.is_active,
     address_id: ruleForm.address_id,
+    stock: ruleForm.variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0),
     seller_id: currentUserId,
     option_groups: ruleForm.option_groups.map((g) => ({
       key: g.key,

@@ -9,7 +9,7 @@ import IconVoucher from './icons/IconVoucher.vue'
 import IconLock from './icons/IconLock.vue'
 import IconLogout from './icons/IconLogout.vue'
 import { socketService, SOCKET_EVENTS } from '@/utils/socket'
-import { Bell, Loading, Clock } from '@element-plus/icons-vue'
+import { Bell, Loading, Clock, Shop } from '@element-plus/icons-vue'
 import NotificationDropdown from './NotificationDropdown.vue'
 import { eventBus } from '@/utils/eventBus'
 
@@ -231,7 +231,7 @@ defineExpose({
           <div class="header-actions">
             <NotificationDropdown v-if="isLoggedIn" />
 
-            <div class="action-item cart-section" @click="$router.push('/cart')">
+            <div v-if="isLoggedIn" class="action-item cart-section" @click="$router.push('/cart')">
               <div class="icon-wrapper">
                 <svg
                   width="22"
@@ -251,6 +251,18 @@ defineExpose({
                   cartCount > 99 ? '99+' : cartCount
                 }}</span>
               </div>
+            </div>
+
+            <div v-if="!isLoggedIn">
+              <el-button
+                color="#ffffff"
+                round
+                class="seller-btn"
+                @click="$router.push('/register/seller')"
+              >
+                <el-icon style="margin-right: 6px; font-size: 16px"><Shop /></el-icon>
+                Become a Seller
+              </el-button>
             </div>
 
             <div v-if="!isLoggedIn" class="action-item user-section">
@@ -469,6 +481,11 @@ defineExpose({
 
 .action-item:hover {
   background-color: #f4f4f5;
+  color: var(--main-color);
+}
+
+.action-item:hover .icon-wrapper svg {
+  stroke: var(--main-color);
 }
 
 .user-container {
@@ -698,5 +715,17 @@ defineExpose({
 
 .search-btn:hover {
   background: #22c55e;
+}
+
+.seller-btn {
+  color: #181818 !important;
+  border: 1px solid #181818 !important;
+  transition: all 0.2s ease;
+}
+
+.seller-btn:hover {
+  background-color: white !important;
+  color: #22c55e !important;
+  border-color: #22c55e !important;
 }
 </style>
