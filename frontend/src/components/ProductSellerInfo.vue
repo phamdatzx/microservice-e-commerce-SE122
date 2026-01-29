@@ -1,8 +1,9 @@
+```
 <script setup lang="ts">
 import { ChatDotRound, Shop, Goods, User, Star, Plus, Check } from '@element-plus/icons-vue'
 import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
 import { useRouter } from 'vue-router'
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 
 interface SellerInfo {
   id: string
@@ -51,6 +52,10 @@ const openChat = () => {
   })
   window.dispatchEvent(event)
 }
+
+const defaultAvatar = computed(() => {
+  return `https://ui-avatars.com/api/?name=${props.sellerInfo.name || 'Store'}&background=random`
+})
 </script>
 
 <template>
@@ -65,7 +70,7 @@ const openChat = () => {
       <div class="seller-info-left" :class="{ 'header-info-left': layout === 'header' }">
         <div class="seller-avatar-wrapper">
           <img
-            :src="sellerInfo.image || '/src/assets/avatar.jpg'"
+            :src="sellerInfo.image || defaultAvatar"
             class="seller-avatar"
             :class="{ 'header-avatar': layout === 'header' }"
           />

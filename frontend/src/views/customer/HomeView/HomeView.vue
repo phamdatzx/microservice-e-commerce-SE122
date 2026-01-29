@@ -13,6 +13,7 @@ import { eventBus } from '@/utils/eventBus'
 
 const fetchedCategories = ref<any[]>([])
 const bestSellers = ref<any[]>([])
+const suggestedProducts = ref<any[]>([])
 
 const loadingCategories = ref(false)
 const loadingBestSellers = ref(false)
@@ -61,16 +62,16 @@ const fetchCategories = async () => {
 
 const carouselItems = [
   {
-    imageUrl: '/src/assets/carousel-imgs/banner1.jpg',
+    imageUrl: new URL('@/assets/carousel-imgs/banner1.jpg', import.meta.url).href,
   },
   {
-    imageUrl: '/src/assets/carousel-imgs/banner2.jpg',
+    imageUrl: new URL('@/assets/carousel-imgs/banner2.jpg', import.meta.url).href,
   },
   {
-    imageUrl: '/src/assets/carousel-imgs/banner3.jpg',
+    imageUrl: new URL('@/assets/carousel-imgs/banner3.jpg', import.meta.url).href,
   },
   {
-    imageUrl: '/src/assets/carousel-imgs/banner4.jpg',
+    imageUrl: new URL('@/assets/carousel-imgs/banner4.jpg', import.meta.url).href,
   },
 ]
 
@@ -97,11 +98,44 @@ const fetchFollowedSellers = async () => {
   }
 }
 
+const fetchSuggestedProducts = async () => {
+  const token = localStorage.getItem('access_token')
+  if (!token) return
+
+  try {
+    const response = await axios.get(
+      `${import.meta.env.VITE_BE_API_URL}/product/suggested-products`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    )
+    if (response.data) {
+      suggestedProducts.value = response.data.map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        imageUrl: item.images && item.images.length > 0 ? item.images[0].url : '',
+        minPrice: item.price.min,
+        maxPrice: item.price.max,
+        rating: item.rating,
+        soldCount: item.sold_count,
+        location: 'Vietnam',
+      }))
+    }
+  } catch (error) {
+    console.error('Error fetching suggested products:', error)
+  }
+}
+
 onMounted(() => {
   isLoggedIn.value = !!localStorage.getItem('access_token')
   fetchCategories()
   fetchFollowedSellers()
   fetchBestSellers()
+  if (isLoggedIn.value) {
+    fetchSuggestedProducts()
+  }
 
   eventBus.on('user_logged_out', () => {
     isLoggedIn.value = false
@@ -235,6 +269,38 @@ onMounted(() => {
           :span="4.8"
           class="el-col-4-8"
           v-for="(item, index) in bestSellers"
+          :key="index"
+          style="margin-bottom: 20px"
+        >
+          <ProductItem
+            :image-url="item.imageUrl"
+            :name="item.name"
+            :min-price="item.minPrice"
+            :max-price="item.maxPrice"
+            :rating="item.rating"
+            :location="item.location"
+            :sold-count="item.soldCount"
+            :id="item.id"
+          />
+        </el-col>
+      </el-row>
+    </div>
+
+    <!-- Suggested Products Section -->
+    <div
+      v-if="suggestedProducts.length > 0"
+      class="box-shadow border-radius"
+      style="background-color: #fff; padding: 20px; margin-bottom: 20px"
+    >
+      <div style="display: flex; margin-bottom: 24px">
+        <h3 style="font-weight: bold">SUGGESTED PRODUCTS</h3>
+      </div>
+
+      <el-row :gutter="20">
+        <el-col
+          :span="4.8"
+          class="el-col-4-8"
+          v-for="(item, index) in suggestedProducts"
           :key="index"
           style="margin-bottom: 20px"
         >

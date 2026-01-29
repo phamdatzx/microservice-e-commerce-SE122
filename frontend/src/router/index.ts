@@ -210,9 +210,9 @@ const router = createRouter({
     },
     {
       path: '/seller',
-      name: 'seller',
       component: SellerHomeView,
       children: [
+        { path: '', redirect: '/seller/statistic' },
         { path: 'category', name: 'category', component: CategoryView },
         { path: 'product', name: 'product', component: ProductView },
         { path: 'chat', name: 'chat', component: ChatView },
@@ -229,9 +229,9 @@ const router = createRouter({
     },
     {
       path: '/admin',
-      name: 'admin',
       component: AdminHomeView,
       children: [
+        { path: '', redirect: '/admin/category' },
         { path: 'category', name: 'admin-category', component: CategoryManagerView },
         { path: 'users', name: 'admin-users', component: UserView },
         { path: 'report', name: 'admin-report', component: ReportView },
@@ -257,7 +257,7 @@ router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('access_token')
   const role = localStorage.getItem('role')
 
-  const isSellerRoute = to.path.startsWith('/seller')
+  const isSellerRoute = to.path === '/seller' || to.path.startsWith('/seller/')
   const isAdminRoute = to.path.startsWith('/admin')
   const isAuthRoute =
     to.path === '/login' ||
