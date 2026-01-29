@@ -496,6 +496,7 @@ const handleEditProduct = () => {
     status: ruleForm.status,
     is_active: ruleForm.is_active,
     address_id: ruleForm.address_id,
+    stock: ruleForm.variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0),
     seller_id: currentUserId,
     option_groups: ruleForm.option_groups.map((g) => ({
       key: g.key,
@@ -523,6 +524,7 @@ const handleEditProduct = () => {
   }
 
   const productId = ruleForm.id
+  console.log('Update Payload:', JSON.stringify(payload, null, 2))
   axios
     .put(import.meta.env.VITE_BE_API_URL + '/product/' + productId, payload, {
       headers: {
