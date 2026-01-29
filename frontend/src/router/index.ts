@@ -257,7 +257,7 @@ router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('access_token')
   const role = localStorage.getItem('role')
 
-  const isSellerRoute = to.path.startsWith('/seller')
+  const isSellerRoute = to.path === '/seller' || to.path.startsWith('/seller/')
   const isAdminRoute = to.path.startsWith('/admin')
   const isAuthRoute =
     to.path === '/login' ||
