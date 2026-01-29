@@ -28,6 +28,7 @@ spec:
       - "http://localhost:5173"
       - "http://phamdatzx.id.vn"
       - "https://phamdatzx.id.vn"
+      - "http://djj0amhpbxjv0.cloudfront.net"
       # Add your frontend domains here
       # - "https://yourdomain.com"
       # - "https://www.yourdomain.com"

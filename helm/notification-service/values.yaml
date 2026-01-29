@@ -2,8 +2,8 @@ appName: notification-service
 replicas: 1
 image: megumikatou/notification-service
 tag: latest
-containerPort: 8083
+containerPort: 8085
 
 service:
   type: ClusterIP
-  port: 8083
+  port: 8085
