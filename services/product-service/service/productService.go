@@ -139,6 +139,11 @@ func (s *productService) UpdateProduct(product *model.Product) error {
 		return err
 	}
 
+	product.SoldCount = oldProduct.SoldCount
+	product.RateCount = oldProduct.RateCount
+	product.Rating = oldProduct.Rating
+	product.CalculatePrice()
+
 	// Update the product
 	err = s.repo.Update(product)
 	if err != nil {
