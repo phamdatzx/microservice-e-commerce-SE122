@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Splide, SplideSlide, type Options } from '@splidejs/vue-splide'
-import { onMounted, ref, computed, reactive, watch, inject } from 'vue'
+import { onMounted, ref, computed, reactive, watch, inject, defineAsyncComponent } from 'vue'
 import { quantityFormatNumber } from '@/utils/quantityFormatNumber'
 import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
 import RedFlagIcon from '@/components/icons/RedFlagIcon.vue'
@@ -12,7 +12,7 @@ import ProductSellerInfo from '@/components/ProductSellerInfo.vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import { ElNotification } from 'element-plus'
-import NotFoundView from '@/components/NotFoundView.vue'
+const NotFoundView = defineAsyncComponent(() => import('@/components/NotFoundView.vue'))
 
 interface ProductImage {
   id: string

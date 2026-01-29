@@ -13,12 +13,12 @@ import {
   Loading,
   Plus,
 } from '@element-plus/icons-vue'
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, defineAsyncComponent } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
 import axios from 'axios'
 import { ElMessage, ElMessageBox, ElNotification, ElLoading } from 'element-plus'
-import NotFoundView from '@/components/NotFoundView.vue'
+const NotFoundView = defineAsyncComponent(() => import('@/components/NotFoundView.vue'))
 
 const router = useRouter()
 const route = useRoute()

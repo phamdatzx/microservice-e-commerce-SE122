@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch, nextTick } from 'vue'
+import { ref, onMounted, computed, watch, nextTick, defineAsyncComponent } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
 import SellerHeader from './components/SellerHeader.vue'
 import SellerVouchers from './components/SellerVouchers.vue'
 import ProductList from '@/components/ProductList.vue'
-import NotFoundView from '@/components/NotFoundView.vue'
+const NotFoundView = defineAsyncComponent(() => import('@/components/NotFoundView.vue'))
 
 const route = useRoute()
 const sellerId = computed(() => route.params.sellerId as string)
