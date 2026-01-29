@@ -350,3 +350,21 @@ func (c *ProductController) CheckProductsStatus(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, response)
 }
+
+func (c *ProductController) GetSuggestedProducts(ctx *gin.Context) {
+	userID := ctx.GetHeader("X-User-Id")
+	if userID == "" {
+		ctx.Error(error.NewAppError(401, "User ID not found in header"))
+		ctx.Abort()
+		return
+	}
+
+	products, err := c.service.GetSuggestedProducts(userID)
+	if err != nil {
+		ctx.Error(err)
+		ctx.Abort()
+		return
+	}
+
+	ctx.JSON(http.StatusOK, products)
+}

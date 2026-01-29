@@ -30,6 +30,7 @@ type ProductService interface {
 	SetProductDisabled(productID string, isDisabled bool, reason string) error
 	GetDisabledProductsBySeller(sellerID string, page, limit int) ([]model.Product, int64, error)
 	CheckProductsStatus(userID string, productIDs []string) (*dto.CheckProductStatusResponse, error)
+	GetSuggestedProducts(userID string) ([]model.Product, error)
 }
 
 type productService struct {
@@ -137,6 +138,11 @@ func (s *productService) UpdateProduct(product *model.Product) error {
 	if err != nil {
 		return err
 	}
+
+	product.SoldCount = oldProduct.SoldCount
+	product.RateCount = oldProduct.RateCount
+	product.Rating = oldProduct.Rating
+	product.CalculatePrice()
 
 	// Update the product
 	err = s.repo.Update(product)
@@ -632,4 +638,56 @@ func (s *productService) CheckProductsStatus(userID string, productIDs []string)
 	return &dto.CheckProductStatusResponse{
 		Products: products,
 	}, nil
+}
+
+func (s *productService) GetSuggestedProducts(userID string) ([]model.Product, error) {
+	// Get the 5 most recent search history entries for the user
+	searchHistories, err := s.searchHistoryRepo.FindByUserID(userID, 5)
+	if err != nil {
+		return nil, err
+	}
+
+	// If no search history, return empty array
+	if len(searchHistories) == 0 {
+		return []model.Product{}, nil
+	}
+
+	// Use a map to track unique products by ID to avoid duplicates
+	productMap := make(map[string]model.Product)
+	var productOrder []string // To maintain order of products
+
+	// For each search query, get up to 5 products
+	for _, history := range searchHistories {
+		// Create search params with the query
+		params := dto.SearchProductsQueryParams{
+			SearchQuery: history.Query,
+			Page:        1,
+			Limit:       5,
+		}
+		params.SetDefaults()
+
+		// Search for products using the existing SearchProducts method
+		response, err := s.SearchProducts(params, userID)
+		if err != nil {
+			// Log error but continue with other queries
+			fmt.Printf("Failed to search products for query '%s': %v\n", history.Query, err)
+			continue
+		}
+
+		// Add products to the map (deduplication)
+		for _, product := range response.Products {
+			if _, exists := productMap[product.ID]; !exists {
+				productMap[product.ID] = product
+				productOrder = append(productOrder, product.ID)
+			}
+		}
+	}
+
+	// Convert map to slice while maintaining order
+	var suggestedProducts []model.Product
+	for _, productID := range productOrder {
+		suggestedProducts = append(suggestedProducts, productMap[productID])
+	}
+
+	return suggestedProducts, nil
 }
