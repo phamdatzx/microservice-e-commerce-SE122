@@ -213,6 +213,7 @@ const router = createRouter({
       name: 'seller',
       component: SellerHomeView,
       children: [
+        { path: '', redirect: '/seller/statistic' },
         { path: 'category', name: 'category', component: CategoryView },
         { path: 'product', name: 'product', component: ProductView },
         { path: 'chat', name: 'chat', component: ChatView },
@@ -232,6 +233,7 @@ const router = createRouter({
       name: 'admin',
       component: AdminHomeView,
       children: [
+        { path: '', redirect: '/admin/category' },
         { path: 'category', name: 'admin-category', component: CategoryManagerView },
         { path: 'users', name: 'admin-users', component: UserView },
         { path: 'report', name: 'admin-report', component: ReportView },

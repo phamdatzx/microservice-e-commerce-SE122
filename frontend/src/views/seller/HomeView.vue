@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Goods, Menu, ChatDotRound, User, Ticket, Van, TrendCharts } from '@element-plus/icons-vue'
-import { onMounted, ref, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { onMounted, ref, onUnmounted, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
 import UserAvatarDropdown from '@/components/UserAvatarDropdown.vue'
 import NotificationDropdown from '@/components/NotificationDropdown.vue'
@@ -77,6 +77,20 @@ onUnmounted(() => {
   cleanupSocketListeners()
   window.removeEventListener('trigger-chat-badge-update', handleBadgeUpdate)
 })
+
+const route = useRoute()
+
+const activeIndex = computed(() => {
+  const path = route.path
+  if (path.includes('/seller/statistic')) return '8'
+  if (path.includes('/seller/category')) return '2'
+  if (path.includes('/seller/voucher')) return '6'
+  if (path.includes('/seller/order')) return '7'
+  if (path.includes('/seller/product')) return '3'
+  if (path.includes('/seller/chat')) return '4'
+  if (path.includes('/seller/profile')) return '5'
+  return '8' // Default to statistic
+})
 </script>
 
 <template>
@@ -112,7 +126,12 @@ onUnmounted(() => {
       </el-header>
       <el-container style="height: calc(100vh - 64px)">
         <el-aside width="200px" style="margin-top: 3px">
-          <el-menu default-active="0" @open="handleOpen" @close="handleClose" style="height: 100%">
+          <el-menu
+            :default-active="activeIndex"
+            @open="handleOpen"
+            @close="handleClose"
+            style="height: 100%"
+          >
             <RouterLink to="/seller/statistic">
               <el-menu-item index="8">
                 <el-icon><TrendCharts /></el-icon>
