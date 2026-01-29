@@ -24,61 +24,8 @@ spec:
             - containerPort: {{.Values.containerPort}}
               name: http
               protocol: TCP
-          env:
-            - name: JWT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: {{.Values.appName}}-secret
-                  key: JWT_SECRET
-            - name: DB_HOST
-              valueFrom:
-                secretKeyRef:
-                  name: {{.Values.appName}}-secret
-                  key: DB_HOST
-            - name: DB_PORT
-              valueFrom:
-                secretKeyRef:
-                  name: {{.Values.appName}}-secret
-                  key: DB_PORT
-            - name: DB_USER
-              valueFrom:
-                secretKeyRef:
-                  name: {{.Values.appName}}-secret
-                  key: DB_USER
-            - name: DB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{.Values.appName}}-secret
-                  key: DB_PASSWORD
-            - name: DB_NAME
-              valueFrom:
-                secretKeyRef:
-                  name: {{.Values.appName}}-secret
-                  key: DB_NAME
-            - name: EMAIL_HOST
-              valueFrom:
-                secretKeyRef:
-                  name: {{.Values.appName}}-secret
-                  key: EMAIL_HOST
-            - name: EMAIL_PORT
-              valueFrom:
-                secretKeyRef:
-                  name: {{.Values.appName}}-secret
-                  key: EMAIL_PORT
-            - name: EMAIL_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: {{.Values.appName}}-secret
-                  key: EMAIL_USERNAME
-            - name: EMAIL_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{.Values.appName}}-secret
-                  key: EMAIL_PASSWORD
-            - name: CLIENT_URL
-              valueFrom:
-                secretKeyRef:
-                  name: {{.Values.appName}}-secret
-                  key: CLIENT_URL
+          envFrom:
+            - secretRef:
+                name: {{.Values.appName}}-secret
 
 
