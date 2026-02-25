@@ -5,7 +5,18 @@ on:
     branches: main
   pull_request:
     branches: main
-  
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag to build'
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      version:
+        description: 'Version tag to build'
+        required: true
+        type: string
 env:
   AWS_REGION: ap-southeast-1
   ECR_REGISTRY: 202717922170.dkr.ecr.ap-southeast-1.amazonaws.com
