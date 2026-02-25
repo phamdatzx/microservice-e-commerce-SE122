@@ -31,14 +31,9 @@ jobs:
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v2
       
-    - name: Build Docker image
+    - name: Build, Tag and Push Docker images
       run: |
-        docker build -t nodejs-random-color:latest .
-        
-    - name: Tag and push image to ECR
-      run: |
-        docker tag nodejs-random-color:${{ inputs.version }} ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
-        docker push ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
+        ./scripts/build.sh ${{ inputs.version }} user-service,product-service ${{ env.ECR_REGISTRY }}
         
     - name: Output image URI
       run: |

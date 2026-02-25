@@ -2,9 +2,14 @@
 
 set -e
 
-read -p "Enter the version: " VERSION
-read -p "Enter the service names (comma separated): " SERVICE_NAMES
-read -p "Enter the container registry: " CONTAINER_REGISTRY
+VERSION="$1"
+SERVICE_NAMES="$2"
+CONTAINER_REGISTRY="$3"
+
+if [ $# -lt 3 ]; then
+  echo "Usage: $0 <version> <service1,service2> <container_registry>"
+  exit 1
+fi
 
 # Split service names into an array
 IFS=',' read -ra SERVICES <<< "$SERVICE_NAMES"
