@@ -37,15 +37,24 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
           mask-aws-account-id: false
-          
+  
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
-        
+
+      - name: Set version
+        id: set-version
+        run: |
+          if [ -z "${{ inputs.version }}" ]; then
+            echo "VERSION=${{ github.sha }}" >> $GITHUB_ENV
+          else
+            echo "VERSION=${{ inputs.version }}" >> $GITHUB_ENV
+          fi
+   
       - name: Build, Tag and Push Docker images
         run: |
-          ./scripts/build.sh ${{ inputs.version }} user-service,product-service ${{ env.ECR_REGISTRY }}
-          
+          ./scripts/build.sh $VERSION user-service,product-service ${{ env.ECR_REGISTRY }}
+              
       - name: Output image URI
         run: |
           echo "IMAGE_URI=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest" >> $GITHUB_OUTPUT
