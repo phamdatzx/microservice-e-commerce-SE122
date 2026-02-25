@@ -79,3 +79,6 @@ helm/*/values-secret.yaml
 **/*.tfstate*
 **/*.tfstate.backup
 **/.terraform.lock.hcl
+
+# Golang services build file
+services/*/server
