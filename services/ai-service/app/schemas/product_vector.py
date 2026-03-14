@@ -4,14 +4,11 @@ from pydantic import BaseModel
 
 
 class ProductPayload(BaseModel):
+    id: str
     name: str
-    price_min: int
-    price_max: int
-    rating: float
-    sold_count: int
+    category_id: str
+    category_name: str
     seller_id: str
-    category_ids: List[str]
-    category_names: List[str]
 
 
 class ProductIndexRequest(BaseModel):

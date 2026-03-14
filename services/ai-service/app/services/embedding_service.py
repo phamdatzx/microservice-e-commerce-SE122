@@ -20,13 +20,8 @@ def _build_product_text(payload: ProductPayload) -> str:
     """
     parts: List[str] = [
         payload.name,
-        f"price from {payload.price_min} to {payload.price_max}",
-        f"rating {payload.rating}",
-        f"sold {payload.sold_count}",
+        payload.category_name,
     ]
-
-    if payload.category_names:
-        parts.append("categories: " + ", ".join(payload.category_names))
 
     return " | ".join(parts)
 

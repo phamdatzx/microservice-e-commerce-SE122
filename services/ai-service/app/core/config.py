@@ -14,9 +14,17 @@ class Settings:
     QDRANT_URL: str = os.getenv("QDRANT_URL", "http://localhost:6333")
     QDRANT_API_KEY: str | None = os.getenv("QDRANT_API_KEY")
     QDRANT_COLLECTION_NAME: str = os.getenv("QDRANT_COLLECTION_NAME", "products")
+    QDRANT_USER_COLLECTION_NAME: str = os.getenv(
+        "QDRANT_USER_COLLECTION_NAME",
+        "user_vectors",
+    )
 
     # Embedding model configuration
-    EMBEDDING_MODEL_NAME: str = os.getenv("EMBEDDING_MODEL_NAME", "BAAI/bge-m3")
+    # Default to a lighter, fast model; override via EMBEDDING_MODEL_NAME if needed.
+    EMBEDDING_MODEL_NAME: str = os.getenv(
+        "EMBEDDING_MODEL_NAME",
+        "intfloat/multilingual-e5-small",
+    )
 
 
 @lru_cache
