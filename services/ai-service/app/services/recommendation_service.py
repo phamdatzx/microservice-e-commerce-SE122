@@ -33,12 +33,13 @@ def recommend_products_for_user(user_id: str, limit: int) -> list[qmodels.Scored
 
     user_vector = _get_user_vector(user_id)
 
-    search_result = client.search(
+    res = client.query_points(
         collection_name=settings.QDRANT_COLLECTION_NAME,
-        query_vector=user_vector,
+        query=user_vector,
         limit=limit,
         with_payload=True,
     )
 
-    return search_result
-
+    # For modern qdrant-client, query_points returns an object with .points
+    # which is a list of ScoredPoint.
+    return res.points if hasattr(res, "points") else res

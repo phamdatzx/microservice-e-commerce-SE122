@@ -33,11 +33,12 @@ async def recommend_products(body: RecommendationRequest) -> RecommendationRespo
     items = [
         RecommendedProduct(
             id=str(p.id),
-            score=p.score,
+            score=float(p.score),
             payload=p.payload,
         )
         for p in scored_points
     ]
 
+    # If there are simply no matches, return 200 with empty items (as requested)
     return RecommendationResponse(user_id=body.user_id, items=items)
 
