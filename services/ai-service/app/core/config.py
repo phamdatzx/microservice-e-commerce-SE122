@@ -19,6 +19,17 @@ class Settings:
         "user_vectors",
     )
 
+    # RabbitMQ configuration (for background workers)
+    RABBITMQ_URL: str = os.getenv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/")
+    PRODUCT_CREATED_QUEUE: str = os.getenv(
+        "PRODUCT_CREATED_QUEUE",
+        "product.created",
+    )
+    USER_VECTOR_QUEUE: str = os.getenv(
+        "USER_VECTOR_QUEUE",
+        "user.vector.update",
+    )
+
     # Embedding model configuration
     # Default to a lighter, fast model; override via EMBEDDING_MODEL_NAME if needed.
     EMBEDDING_MODEL_NAME: str = os.getenv(
