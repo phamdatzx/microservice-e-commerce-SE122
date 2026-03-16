@@ -5,6 +5,7 @@ import (
 	"product-service/client"
 	"product-service/config"
 	"product-service/controller"
+	"product-service/model"
 	"product-service/repository"
 	"product-service/router"
 	"product-service/service"
@@ -20,6 +21,12 @@ func main() {
 
 	// Initialize S3
 	config.InitS3()
+
+	// Initialize RabbitMQ
+	config.InitRabbitMQ()
+
+	// Ensure RabbitMQ connection is closed on shutdown
+	defer config.CloseRabbitMQ()
 
 	// MongoDB doesn't require AutoMigrate like GORM
 	// Collections will be created automatically when first document is inserted
@@ -42,6 +49,7 @@ func main() {
 	sellerCategoryController := controller.NewSellerCategoryController(sellerCategoryService)
 	
 	// Initialize ProductService with category repositories
+	_ = model.Product{} // keep model import if not used elsewhere
 	productService := service.NewProductService(productRepo, userClient, searchHistoryRepo, ratingRepo, reportRepo, categoryRepo, sellerCategoryRepo)
 	productController := controller.NewProductController(productService)
 

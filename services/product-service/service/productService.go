@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"mime/multipart"
 	"product-service/client"
+	"product-service/config"
 	"product-service/dto"
 	appError "product-service/error"
 	"product-service/model"
@@ -60,6 +61,21 @@ func (s *productService) CreateProduct(product *model.Product) error {
 	if err != nil {
 		return err
 	}
+
+	// Publish product.created event (best-effort, non-blocking for main flow)
+	var categoryName string
+	if len(product.CategoryIDs) > 0 {
+		// Use the first category ID to get category name
+		categoryID := product.CategoryIDs[0]
+		category, err := s.categoryRepo.FindByID(categoryID)
+		if err != nil {
+			fmt.Printf("Failed to fetch category %s for product.created message: %v\n", categoryID, err)
+		} else {
+			categoryName = category.Name
+		}
+	}
+
+	go config.PublishProductCreated(product, categoryName)
 
 	// Increment product count for seller
 	if err := s.userClient.UpdateProductCount(product.SellerID, "increment"); err != nil {
