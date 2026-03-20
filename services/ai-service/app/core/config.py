@@ -54,6 +54,10 @@ class Settings:
     # Embedding model configuration
     EMBEDDING_MODEL_NAME: str = _require_env("EMBEDDING_MODEL_NAME")
 
+    # Intent model configuration
+    INTENT_MODEL_REPO_ID: str = _require_env("INTENT_MODEL_REPO_ID")
+    INTENT_DATASET_URL: str = _require_env("INTENT_DATASET_URL")
+
 
 @lru_cache
 def get_settings() -> Settings:

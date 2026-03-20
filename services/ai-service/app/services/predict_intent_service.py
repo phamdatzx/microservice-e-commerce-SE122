@@ -4,11 +4,15 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from sklearn.preprocessing import LabelEncoder
 import logging
 
+from app.core.config import get_settings
+
 logger = logging.getLogger(__name__)
 
+settings = get_settings()
+
 # Hugging Face Repository IDs and URLs
-MODEL_REPO_ID = "duc004505/e-commerce-ai-model"
-DATASET_URL = "https://huggingface.co/datasets/duc004505/phobert_intent_dataset_5000/resolve/main/phobert_intent_dataset_5000.csv"
+MODEL_REPO_ID = settings.INTENT_MODEL_REPO_ID
+DATASET_URL = settings.INTENT_DATASET_URL
 
 # ==============================
 # 1. Load dataset để lấy label
