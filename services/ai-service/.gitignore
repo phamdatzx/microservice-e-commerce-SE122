@@ -45,3 +45,7 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+# Other
+product_backfill.py
+predict_intent/*
