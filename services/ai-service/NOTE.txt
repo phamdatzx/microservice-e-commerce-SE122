@@ -1,0 +1,18 @@
+calculate user vector message
+
+{
+  "user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "items": [
+    { "product_id": "PRODUCT_UUID_1", "weight": 1.0 },
+    { "product_id": "PRODUCT_UUID_2", "weight": 0.5 }
+  ]
+}
+
+create product message
+{
+  "id": "550e8400-e29b-41d4-a716-446655440001",
+  "name": "iPhone 15 Pro Max 2",
+  "category_id": "550e8400-e29b-41d4-a716-446655440000",
+  "category_name": "phone",
+  "seller_id": "550e8400-e29b-41d4-a716-446655440000"
+}
