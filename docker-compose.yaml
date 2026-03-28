@@ -82,6 +82,8 @@ services:
   product-service:
     build: ./services/product-service
     container_name: product-service
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     env_file:
       - ./services/product-service/.env
     ports:
@@ -120,6 +122,8 @@ services:
   order-service:
     build: ./services/order-service
     container_name: order-service
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     env_file:
       - ./services/order-service/.env
     ports:
