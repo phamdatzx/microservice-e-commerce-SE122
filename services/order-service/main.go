@@ -21,7 +21,10 @@ func main() {
 	// Kết nối DB
 	config.ConnectDatabase()
 
-	// Auto migrate
+	// Initialize RabbitMQ (best-effort; service continues if unavailable)
+	config.InitRabbitMQ()
+	defer config.CloseRabbitMQ()
+
 	//config.DB.AutoMigrate(&model.User{})
 
 	//wiring dependencies

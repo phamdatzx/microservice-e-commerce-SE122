@@ -130,6 +130,9 @@ func (s *productService) GetProductByID(id string, userID string) (*model.Produc
 				fmt.Printf("Failed to save view history for user %s: %v\n", userID, err)
 			}
 		}()
+
+		// Publish view interaction to ai-service via RabbitMQ (best-effort)
+		go config.PublishUserInteraction(userID, id, "view", 1)
 	}
 
 	return product, nil

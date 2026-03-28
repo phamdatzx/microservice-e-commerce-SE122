@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"order-service/client"
 	"order-service/client/payment"
+	"order-service/config"
 	"order-service/dto"
 	appError "order-service/error"
 	"order-service/model"
@@ -260,6 +261,15 @@ func (s *orderService) Checkout(userID string, request dto.CheckoutRequest) (*dt
 		return nil, err
 	}
 
+	// Publish purchase interaction events for each item (best-effort, non-blocking)
+	// COD orders: publish here; online-paid orders: publish in HandleCheckoutSessionCompleted
+	if request.PaymentMethod == "COD" {
+		for _, item := range orderItems {
+			pid := item.ProductID
+			go config.PublishUserInteraction(userID, pid, "purchase", 10)
+		}
+	}
+
 	// Update stock reservation with actual order ID
 	// We need to release the temp reservation and create a new one with the actual order ID
 	_ = s.productClient.ReleaseStock(tempOrderID)
@@ -404,6 +414,12 @@ func (s *orderService) HandleCheckoutSessionCompleted(ctx context.Context, order
 	err = s.repo.UpdateOrder(order)
 	if err != nil {
 		return err
+	}
+
+	// Publish purchase interaction events for online-paid orders (best-effort, non-blocking)
+	for _, item := range order.Items {
+		pid := item.ProductID
+		go config.PublishUserInteraction(order.User.ID, pid, "purchase", 10)
 	}
 
 	// Send notification to seller about the paid order
@@ -923,6 +939,15 @@ func (s *orderService) InstantCheckout(userID string, request dto.InstantCheckou
 		// Rollback: release reserved stock
 		_ = s.productClient.ReleaseStock(tempOrderID)
 		return nil, err
+	}
+
+	// Publish purchase interaction events for each item (best-effort, non-blocking)
+	// COD orders: publish here; online-paid orders: publish in HandleCheckoutSessionCompleted
+	if request.PaymentMethod == "COD" {
+		for _, item := range orderItems {
+			pid := item.ProductID
+			go config.PublishUserInteraction(userID, pid, "purchase", 10)
+		}
 	}
 
 	// Update stock reservation with actual order ID
