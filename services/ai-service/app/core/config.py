@@ -110,6 +110,15 @@ class Settings:
     INTERACTION_ACTION_SCORES: dict[str, float] = _parse_interaction_action_scores_json()
     INTERACTION_DEFAULT_SCORE: float = _parse_float_env("INTERACTION_DEFAULT_SCORE", 1.0)
 
+    # Collaborative filtering settings
+    CF_TOP_K: int = _parse_positive_int_env("CF_TOP_K", 20)
+    CF_MIN_USER_INTERACTIONS: int = _parse_positive_int_env("CF_MIN_USER_INTERACTIONS", 2)
+    CF_MIN_ITEM_INTERACTIONS: int = _parse_positive_int_env("CF_MIN_ITEM_INTERACTIONS", 2)
+    CF_MAX_PRODUCTS: int = _parse_positive_int_env("CF_MAX_PRODUCTS", 5000)
+    ITEM_SIMILARITY_COLLECTION_NAME: str = os.getenv(
+        "ITEM_SIMILARITY_COLLECTION_NAME", "item_similarity"
+    )
+
 
 @lru_cache
 def get_settings() -> Settings:
