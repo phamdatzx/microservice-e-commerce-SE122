@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"order-service/client"
+	"order-service/config"
 	"order-service/dto"
 	appError "order-service/error"
 	"order-service/model"
@@ -134,6 +135,9 @@ func (s *cartService) AddCartItem(userID string, request dto.AddCartItemRequest)
 	if err != nil {
 		return nil, err
 	}
+
+	// Publish add_to_cart interaction to ai-service via RabbitMQ (best-effort)
+	go config.PublishUserInteraction(userID, request.ProductID, "add_to_cart", 10)
 
 	return dto.ToCartItemResponse(newItem), nil
 }
