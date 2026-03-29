@@ -41,8 +41,21 @@ def ensure_interaction_indexes() -> None:
     if _indexes_ensured:
         return
     col = get_interactions_collection()
+
+    # Compound index: fast lookup of a user's recent interactions (primary query pattern)
     col.create_index([("user_id", ASCENDING), ("timestamp", DESCENDING)])
+
+    # Compound index: deduplication / existence check per user+product
     col.create_index([("user_id", ASCENDING), ("product_id", ASCENDING)])
+
+    # Standalone timestamp index: efficient range queries across all users & global sorts
+    col.create_index([("timestamp", DESCENDING)])
+
+    # Optional TTL index: auto-expire documents older than N seconds (uncomment to enable).
+    # Example below expires documents after 90 days (90 * 24 * 3600 = 7_776_000 seconds).
+    # NOTE: MongoDB only allows ONE TTL index per collection; remove the line above first.
+    # col.create_index("timestamp", expireAfterSeconds=7_776_000)
+
     _indexes_ensured = True
     logger.info("Ensured indexes on %s", col.name)
 
