@@ -12,6 +12,7 @@ import (
 type ProductRepository interface {
 	Create(product *model.Product) error
 	FindByID(id string) (*model.Product, error)
+	FindByIDs(ids []string) ([]model.Product, error)
 	FindAll() ([]model.Product, error)
 	Update(product *model.Product) error
 	Delete(id string) error
@@ -49,6 +50,28 @@ func (r *productRepository) FindByID(id string) (*model.Product, error) {
 	defer cancel()
 	err := r.collection.FindOne(ctx, bson.M{"_id": id}).Decode(&product)
 	return &product, err
+}
+
+func (r *productRepository) FindByIDs(ids []string) ([]model.Product, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	filter := bson.M{
+		"_id":        bson.M{"$in": ids},
+		"is_disabled": bson.M{"$ne": true},
+	}
+
+	cursor, err := r.collection.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var products []model.Product
+	if err = cursor.All(ctx, &products); err != nil {
+		return nil, err
+	}
+	return products, nil
 }
 
 func (r *productRepository) FindAll() ([]model.Product, error) {
