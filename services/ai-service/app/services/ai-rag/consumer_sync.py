@@ -10,8 +10,9 @@ from qdrant_client.models import VectorParams, Distance
 
 from config import (
     RABBITMQ_URL, RABBITMQ_QUEUE, RABBITMQ_DLQ,
-    QDRANT_HOST, QDRANT_PORT, QDRANT_COLLECTION,
-    EMBEDDING_PROVIDER, OPENAI_API_KEY, BATCH_SIZE, FLUSH_INTERVAL
+    QDRANT_HOST, QDRANT_PORT, 
+    QDRANT_PRODUCT_COLLECTION, QDRANT_RATING_COLLECTION,
+    EMBEDDING_PROVIDER, EMBEDDING_MODEL, OPENAI_API_KEY, BATCH_SIZE, FLUSH_INTERVAL
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -22,7 +23,7 @@ class EmbeddingModel:
     def __init__(self):
         if EMBEDDING_PROVIDER == "sentence_transformers":
             from sentence_transformers import SentenceTransformer
-            self.model = SentenceTransformer("all-MiniLM-L6-v2")
+            self.model = SentenceTransformer(EMBEDDING_MODEL)
             self.dim = self.model.get_sentence_embedding_dimension()
             self._encode = self._st_encode
         elif EMBEDDING_PROVIDER == "openai":
@@ -47,20 +48,22 @@ class EmbeddingModel:
 # Qdrant client
 qdrant = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
 
-def ensure_collection(dim):
-    try:
+def ensure_collections(dim):
+    collections = [QDRANT_PRODUCT_COLLECTION, QDRANT_RATING_COLLECTION]
+    for collection in collections:
         try:
-            col = qdrant.get_collection(collection_name=QDRANT_COLLECTION)
-            logger.info("Qdrant collection %s exists", QDRANT_COLLECTION)
-        except Exception:
-            qdrant.recreate_collection(
-                collection_name=QDRANT_COLLECTION,
-                vectors_config=VectorParams(size=dim, distance=Distance.COSINE)
-            )
-            logger.info("Created Qdrant collection %s dim=%s", QDRANT_COLLECTION, dim)
-    except Exception as e:
-        logger.exception("Error ensuring collection: %s", e)
-        raise
+            try:
+                col = qdrant.get_collection(collection_name=collection)
+                logger.info("Qdrant collection %s exists", collection)
+            except Exception:
+                qdrant.recreate_collection(
+                    collection_name=collection,
+                    vectors_config=VectorParams(size=dim, distance=Distance.COSINE)
+                )
+                logger.info("Created Qdrant collection %s dim=%s", collection, dim)
+        except Exception as e:
+            logger.exception("Error ensuring collection %s: %s", collection, e)
+            raise
 
 def build_point(msg_type, obj, vector):
     if msg_type == "product":
@@ -69,29 +72,14 @@ def build_point(msg_type, obj, vector):
             "title": obj.get("name"),
             "category_ids": obj.get("category_ids", []),
             "seller_id": obj.get("seller_id"),
-            "price_min": obj.get("price", {}).get("min"),
-            "price_max": obj.get("price", {}).get("max"),
+            "price_min": obj.get("price_min"),  # Sửa lại tên field từ dict
+            "price_max": obj.get("price_max"),
             "rating": obj.get("rating"),
             "rate_count": obj.get("rate_count"),
             "sold_count": obj.get("sold_count"),
             "stock": obj.get("stock"),
             "is_active": obj.get("is_active"),
-            "embedding_version": "v1",
             "updated_at": obj.get("updated_at"),
-        }
-        return {"id": obj["id"], "vector": vector, "payload": payload}
-
-    elif msg_type == "seller":
-        addr = obj.get("address", {})
-        payload = {
-            "seller_id": obj["id"],
-            "name": obj.get("name"),
-            "location": f"{addr.get('ward')}, {addr.get('district')}, {addr.get('province')}",
-            "country": addr.get("country"),
-            "rating_average": obj.get("sale_info", {}).get("rating_average"),
-            "rating_count": obj.get("sale_info", {}).get("rating_count"),
-            "follow_count": obj.get("sale_info", {}).get("follow_count"),
-            "product_count": obj.get("sale_info", {}).get("product_count"),
             "embedding_version": "v1",
         }
         return {"id": obj["id"], "vector": vector, "payload": payload}
@@ -104,18 +92,18 @@ def build_point(msg_type, obj, vector):
             "user_id": obj.get("user", {}).get("id"),
             "user_name": obj.get("user", {}).get("name"),
             "star": obj.get("star"),
+            "content": obj.get("content"),
             "created_at": obj.get("created_at"),
             "embedding_version": "v1",
         }
         return {"id": obj["id"], "vector": vector, "payload": payload}
 
-    else:
-        raise ValueError(f"Unsupported msg_type {msg_type}")
+    return None
 
 class SyncEmbeddingConsumer:
     def __init__(self):
         self.model = EmbeddingModel()
-        ensure_collection(self.model.dim)
+        ensure_collections(self.model.dim)
         self.buffer = []
         self.lock = threading.Lock()
         self._stop = threading.Event()
@@ -136,9 +124,9 @@ class SyncEmbeddingConsumer:
             payload = json.loads(body.decode())
             msg_type = payload.get("type")
             obj = payload.get("payload", {})
-            if not msg_type or not obj:
-                logger.warning("Invalid message, send to DLQ: %s", payload)
-                self.send_to_dlq(body)
+            
+            # Chỉ xử lý product và rating, bỏ qua event ko hợp lệ / out_of_scope
+            if not msg_type or not obj or msg_type not in ["product", "rating"]:
                 ch.basic_ack(delivery_tag=method.delivery_tag)
                 return
 
@@ -164,17 +152,21 @@ class SyncEmbeddingConsumer:
         for b in batch:
             msg_type = b["type"]
             obj = b["payload"]
+            
+            # Format đoạn text chuẩn đưa vào Vector theo chiến lược
             if msg_type == "product":
-                text = f"{obj.get('name','')} {obj.get('description','')}"
-            elif msg_type == "seller":
-                text = f"{obj.get('name','')} {obj.get('address',{}).get('province','')}"
+                text = f"Tên sản phẩm: {obj.get('name','')} - Mô tả và thông số kỹ thuật: {obj.get('description','')}"
             elif msg_type == "rating":
-                text = obj.get("content","")
+                text = f"Đánh giá sản phẩm: {obj.get('content','')}"
             else:
                 continue
+                
             texts.append(text)
             objs.append(obj)
             types.append(msg_type)
+
+        if not texts:
+            return
 
         try:
             vectors = self.model.encode(texts)
@@ -184,18 +176,34 @@ class SyncEmbeddingConsumer:
                 self.send_to_dlq(json.dumps(b).encode())
             return
 
-        points = [build_point(t, o, v) for t, o, v in zip(types, objs, vectors)]
-        try:
-            qdrant.upsert(collection_name=QDRANT_COLLECTION, points=points)
-            logger.info("Upserted %d points to Qdrant", len(points))
-        except Exception:
-            logger.exception("Qdrant upsert failed, retrying once")
+        points_by_collection = {
+            QDRANT_PRODUCT_COLLECTION: [],
+            QDRANT_RATING_COLLECTION: []
+        }
+
+        for t, o, v in zip(types, objs, vectors):
+            point = build_point(t, o, v)
+            if not point: continue
+            
+            if t == "product":
+                points_by_collection[QDRANT_PRODUCT_COLLECTION].append(point)
+            elif t == "rating":
+                points_by_collection[QDRANT_RATING_COLLECTION].append(point)
+
+        for coll, points in points_by_collection.items():
+            if not points: continue
             try:
-                qdrant.upsert(collection_name=QDRANT_COLLECTION, points=points)
+                qdrant.upsert(collection_name=coll, points=points)
+                logger.info("Upserted %d points to Qdrant collection %s", len(points), coll)
             except Exception:
-                logger.exception("Retry failed, sending points to DLQ")
-                for p in points:
-                    self.send_to_dlq(json.dumps({"id": p["id"], "type": "error", "payload": p.get("payload", {})}).encode())
+                logger.exception("Qdrant upsert failed for %s, retrying once", coll)
+                try:
+                    qdrant.upsert(collection_name=coll, points=points)
+                except Exception:
+                    logger.exception("Retry failed, sending points to DLQ")
+                    for p in points:
+                        # Re-send payload
+                        self.send_to_dlq(json.dumps({"id": p["id"], "type": "error", "payload": p.get("payload", {})}).encode())
 
     def send_to_dlq(self, body: bytes):
         try:
