@@ -1,0 +1,6 @@
+appName: ai-service
+image: megumikatou/ai-service
+tag: latest
+
+# Cron schedule (UTC): midnight every day
+schedule: "0 0 * * *"
