@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.services.router import route_intent
+from app.services.intent_router import route_intent
 
 router = APIRouter()
 

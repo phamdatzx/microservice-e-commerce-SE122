@@ -249,7 +249,7 @@ All settings have defaults and can be overridden via environment variables or `.
 
 ```bash
 # One-shot batch job (schedule via cron for periodic updates)
-python -m app.cf_worker
+python -m app.workers.cf_worker
 ```
 
 Example output:
