@@ -2,14 +2,14 @@ name: user-service CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, feat/ci-cd]
     paths:
       - 'services/user-service/**'
       - 'shared/**'
       - 'Dockerfile'
 
   pull_request:
-    branches: [main]
+    branches: [main, feat/ci-cd ]
     paths:
       - 'services/user-service/**'
 
