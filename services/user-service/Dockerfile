@@ -27,7 +27,7 @@ RUN go build -o server .
 FROM alpine:latest
 
 # Cài chứng chỉ CA (để HTTPS hoạt động)
-RUN apk add --no-cache ca-certificates
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 WORKDIR /root/
 
