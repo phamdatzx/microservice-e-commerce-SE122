@@ -119,6 +119,20 @@ class Settings:
         "ITEM_SIMILARITY_COLLECTION_NAME", "item_similarity"
     )
 
+    # OpenAI / LLM configuration
+    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+    OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4o")
+    OPENAI_TEMPERATURE: float = _parse_float_env("OPENAI_TEMPERATURE", 0.0)
+
+    # RAG — Qdrant collection for product document embeddings
+    QDRANT_PRODUCT_DOC_COLLECTION: str = os.getenv(
+        "QDRANT_PRODUCT_DOC_COLLECTION", "product_docs"
+    )
+
+    # RAG — Retrieval settings
+    RAG_TOP_K: int = _parse_positive_int_env("RAG_TOP_K", 5)
+    RAG_SCORE_THRESHOLD: float = _parse_float_env("RAG_SCORE_THRESHOLD", 0.5)
+
 
 @lru_cache
 def get_settings() -> Settings:
