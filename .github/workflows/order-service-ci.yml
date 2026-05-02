@@ -1,17 +1,17 @@
-name: user-service CI
+name: order-service CI
 
 on:
   push:
     branches: [main]
     paths:
-      - 'services/user-service/**'
+      - 'services/order-service/**'
       - 'shared/**'
       - 'Dockerfile'
 
   pull_request:
     branches: [main]
     paths:
-      - 'services/user-service/**'
+      - 'services/order-service/**'
 
 jobs:
   build:
@@ -43,10 +43,10 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          context: ./services/user-service
+          context: ./services/order-service
           push: true
           tags: |
-            ghcr.io/${{ steps.version.outputs.OWNER }}/user-service:latest
-            ghcr.io/${{ steps.version.outputs.OWNER }}/user-service:${{ steps.version.outputs.VERSION }}
+            ghcr.io/${{ steps.version.outputs.OWNER }}/order-service:latest
+            ghcr.io/${{ steps.version.outputs.OWNER }}/order-service:${{ steps.version.outputs.VERSION }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
