@@ -21,3 +21,5 @@ psycopg2
 langchain-community
 langchain-core
 langchain-openai
+
+underthesea
