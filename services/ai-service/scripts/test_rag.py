@@ -8,7 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from app.services.rag_service import retrieve_products
 
 if __name__ == "__main__":
-    query = "toôi muốn mua máy giặt"
+    query = "toi muon mua may giat"
     k = 5
 
     print(f"Query: {query}")

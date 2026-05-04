@@ -40,8 +40,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.tools import tool
 from langchain_classic.agents import AgentExecutor, create_tool_calling_agent
 
-from app.core.config import get_settings
-from app.services.rag_service import retrieve_products
+from app.services.rag_service import retrieve_products_filtered
 from app.tools.backend_tools import ALL_TOOLS as BACKEND_TOOLS
 
 logger = logging.getLogger(__name__)
@@ -57,8 +56,10 @@ NHIỆM VỤ:
 • Trả lời bằng tiếng Việt, thân thiện, ngắn gọn và chính xác.
 
 CÁCH LÀM VIỆC:
-1. Khi khách hỏi về sản phẩm → dùng tool `search_products` để tìm kiếm
-   trong cơ sở dữ liệu sản phẩm trước, rồi trả lời dựa trên kết quả.
+1. Khi khách hỏi về sản phẩm → dùng tool `search_products` để tìm kiếm.
+   - `query` chỉ chứa từ khóa sản phẩm (ví dụ: "iPhone", "máy giặt").
+   - Nếu khách nói giá cụ thể → truyền vào `price_max` hoặc `price_min`.
+   - Nếu khách muốn sản phẩm đánh giá cao → truyền `min_rating`.
 2. Khi cần thông tin chi tiết về một sản phẩm cụ thể (đã biết ID)
    → dùng `get_product_by_id`.
 3. Khi cần đánh giá / review → dùng `get_product_reviews`.
@@ -74,25 +75,43 @@ QUY TẮC:
 """
 
 
-# ─── RAG as a tool ───────────────────────────────────────────────────────
+# ─── RAG as a tool (with filtering) ─────────────────────────────────────
 
 @tool
-def search_products(query: str) -> str:
-    """Search for products in the e-commerce catalog using semantic search.
+def search_products(
+    query: str,
+    price_max: int | None = None,
+    price_min: int | None = None,
+    min_rating: float | None = None,
+    in_stock: bool = True,
+) -> str:
+    """Search for products in the e-commerce catalog using semantic search
+    with optional payload filters.
 
-    Use this tool when the user asks about products, wants to find items,
-    compare products, or asks general product-related questions.
-    The query should be a natural-language description of what the user
-    is looking for.
+    IMPORTANT: `query` should contain ONLY product keywords
+    (e.g. "iPhone", "máy giặt", "laptop gaming").
+    Do NOT put price or other numeric constraints in the query string —
+    use the dedicated filter parameters instead.
 
     Args:
-        query: Natural-language search query (e.g. "máy giặt giá rẻ").
+        query: Product keywords only (e.g. "iPhone", "máy giặt").
+        price_max: Maximum price in VND. E.g. user says "dưới 10 triệu" → price_max=10000000.
+        price_min: Minimum price in VND. E.g. user says "trên 5 triệu" → price_min=5000000.
+        min_rating: Minimum star rating (1-5). E.g. user says "đánh giá tốt" → min_rating=4.0.
+        in_stock: Only return in-stock products. Default True.
     """
     settings = get_settings()
-    docs = retrieve_products(query, k=settings.RAG_TOP_K)
+    docs = retrieve_products_filtered(
+        query,
+        k=settings.RAG_TOP_K,
+        price_max=price_max,
+        price_min=price_min,
+        in_stock=in_stock,
+        min_rating=min_rating,
+    )
 
     if not docs:
-        return "Không tìm thấy sản phẩm nào phù hợp."
+        return "Không tìm thấy sản phẩm nào phù hợp với tiêu chí tìm kiếm."
 
     results = []
     for i, doc in enumerate(docs, 1):

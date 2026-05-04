@@ -1,6 +1,6 @@
 """
 Embed all active products from MongoDB into a Qdrant collection using
-OpenAI text-embedding-ada-002 (vector size = 1536).
+OpenAI text-embedding-3-small (vector size = 1536).
 
 Usage:
     python -m scripts.embed_products          # from repo root
@@ -9,9 +9,9 @@ Usage:
 What it does:
     1. Connects to MongoDB and reads the `products` collection.
     2. Resolves category names from the `categories` collection.
-    3. Builds a rich text block per product (name, price, description,
-       category, stock).
-    4. Embeds the text with OpenAI `text-embedding-ada-002`.
+    3. Builds a clean semantic text block per product (name, description,
+       category names only — no noisy numeric fields).
+    4. Embeds the text with OpenAI `text-embedding-3-small`.
     5. Creates / recreates the Qdrant collection `product_docs`
        (size=1536, COSINE) and upserts all points with full metadata
        in the payload.
@@ -61,7 +61,7 @@ QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY") or None
 QDRANT_COLLECTION = os.environ.get("QDRANT_PRODUCT_DOC_COLLECTION", "product_docs")
 
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
-EMBEDDING_MODEL = "text-embedding-ada-002"  # 1536-dim
+EMBEDDING_MODEL = "text-embedding-3-small"  # 1536-dim by default
 VECTOR_SIZE = 1536
 
 BATCH_SIZE = 64  # OpenAI embedding API supports up to ~2048 inputs
@@ -99,47 +99,32 @@ def _load_products(db) -> list[dict[str, Any]]:
 
 def build_product_text(product: dict[str, Any], category_map: dict[str, str]) -> str:
     """
-    Build a single rich text block for embedding.
+    Build a clean semantic text block for embedding.
 
-    Includes: name, price range, description, categories, stock.
+    Only includes semantically meaningful fields:
+    - product name
+    - description
+    - category names
+
+    Noisy/numeric fields (price, stock, status, rating) are stored in the
+    Qdrant payload for filtering but NOT embedded — they hurt semantic
+    retrieval quality.
     """
     name = product.get("name", "")
     description = product.get("description", "")
-
-    # Price range
-    price_info = product.get("price", {})
-    price_min = price_info.get("min")
-    price_max = price_info.get("max")
-    if price_min is not None and price_max is not None:
-        if price_min == price_max:
-            price_str = f"{price_min:,}đ"
-        else:
-            price_str = f"{price_min:,}đ – {price_max:,}đ"
-    elif price_min is not None:
-        price_str = f"{price_min:,}đ"
-    else:
-        price_str = "N/A"
 
     # Categories
     cat_ids = product.get("category_ids", [])
     cat_names = [category_map.get(cid, "") for cid in cat_ids]
     cat_names = [c for c in cat_names if c]  # filter empty
-    category_str = ", ".join(cat_names) if cat_names else "N/A"
+    category_str = ", ".join(cat_names) if cat_names else ""
 
-    # Stock
-    stock = product.get("stock", 0)
+    lines = [name]
+    if description:
+        lines.append(description)
+    if category_str:
+        lines.append(f"Category: {category_str}")
 
-    # Status
-    status = product.get("status", "unknown")
-
-    lines = [
-        f"Tên sản phẩm: {name}",
-        f"Giá: {price_str}",
-        f"Danh mục: {category_str}",
-        f"Tồn kho: {stock}",
-        f"Trạng thái: {status}",
-        f"Mô tả: {description}",
-    ]
     return "\n".join(lines)
 
 
@@ -148,7 +133,7 @@ def build_product_text(product: dict[str, Any], category_map: dict[str, str]) ->
 # ---------------------------------------------------------------------------
 
 def embed_texts(texts: list[str]) -> list[list[float]]:
-    """Embed a list of texts using OpenAI text-embedding-ada-002."""
+    """Embed a list of texts using OpenAI text-embedding-3-small."""
     client = OpenAI(api_key=OPENAI_API_KEY)
     all_embeddings: list[list[float]] = []
 
