@@ -40,6 +40,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.tools import tool
 from langchain_classic.agents import AgentExecutor, create_tool_calling_agent
 
+from app.core.config import get_settings
 from app.services.rag_service import retrieve_products_filtered
 from app.tools.backend_tools import ALL_TOOLS as BACKEND_TOOLS
 
