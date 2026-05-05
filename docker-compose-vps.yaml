@@ -33,7 +33,7 @@ services:
     restart: unless-stopped
   
   user-service:
-    build: ./services/user-service
+    image: ghcr.io/${GHCR_OWNER}/user-service:${USER_SERVICE_TAG:-latest}
     container_name: user-service
     env_file:
       - ./services/user-service/.env
