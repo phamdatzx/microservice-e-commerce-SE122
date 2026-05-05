@@ -43,9 +43,9 @@ jobs:
 
       - name: Create .env file
         run: |
-          echo "VITE_API_URL=${{ secrets.VITE_BE_API_URL }}" >> .env
-          echo "VITE_GHN_TOKEN=${{ secrets.VITE_GHN_TOKEN }}" >> .env
-          echo "VITE_GHN_URL=${{ secrets.VITE_GHN_URL }}" >> .env
+          echo "VITE_API_URL=${{ secrets.VITE_BE_API_URL }}" >> frontend/.env
+          echo "VITE_GHN_TOKEN=${{ secrets.VITE_GHN_TOKEN }}" >> frontend/.env
+          echo "VITE_GHN_URL=${{ secrets.VITE_GHN_URL }}" >> frontend/.env
 
       - name: Build and push
         uses: docker/build-push-action@v5
