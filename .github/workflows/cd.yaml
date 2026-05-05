@@ -27,6 +27,7 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
+            export GHCR_OWNER=${{ secrets.GHCR_OWNER }}
             cd /app
             docker compose -f docker-compose-vps.yaml pull
             docker compose -f docker-compose-vps.yaml up -d
