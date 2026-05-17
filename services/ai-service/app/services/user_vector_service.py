@@ -20,7 +20,7 @@ def _get_product_vector_map(product_ids: List[str]) -> dict[str, List[float]]:
         return {}
 
     result = client.retrieve(
-        collection_name=settings.QDRANT_COLLECTION_NAME,
+        collection_name=settings.QDRANT_PRODUCT_DOC_COLLECTION,
         ids=product_ids,
         with_vectors=True,
         with_payload=False,
@@ -110,7 +110,7 @@ def compute_user_vector_from_interaction_docs(
             kept_items.append(it)
         else:
             logger.warning(
-                "Skipping product_id %s (no vector in Qdrant products collection)",
+                "Skipping product_id %s (no vector in Qdrant product_docs collection)",
                 it.product_id,
             )
 

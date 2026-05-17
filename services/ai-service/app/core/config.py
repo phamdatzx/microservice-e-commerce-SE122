@@ -79,7 +79,6 @@ class Settings:
     # Qdrant configuration
     QDRANT_URL: str = _require_env("QDRANT_URL")
     QDRANT_API_KEY: str | None = os.getenv("QDRANT_API_KEY") or None
-    QDRANT_COLLECTION_NAME: str = _require_env("QDRANT_COLLECTION_NAME")
     QDRANT_USER_COLLECTION_NAME: str = _require_env("QDRANT_USER_COLLECTION_NAME")
 
     # RabbitMQ configuration (for background workers)

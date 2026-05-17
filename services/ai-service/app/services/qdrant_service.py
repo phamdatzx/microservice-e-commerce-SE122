@@ -35,10 +35,10 @@ def upsert_product_vector(product: ProductVector) -> None:
     if vector_size == 0:
         raise ValueError("Vector must not be empty")
 
-    _ensure_collection(client, settings.QDRANT_COLLECTION_NAME, vector_size)
+    _ensure_collection(client, settings.QDRANT_PRODUCT_DOC_COLLECTION, vector_size)
 
     client.upsert(
-        collection_name=settings.QDRANT_COLLECTION_NAME,
+        collection_name=settings.QDRANT_PRODUCT_DOC_COLLECTION,
         points=[
             qmodels.PointStruct(
                 id=product.id,

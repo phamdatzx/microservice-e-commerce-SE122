@@ -34,7 +34,7 @@ def recommend_products_for_user(user_id: str, limit: int) -> list[qmodels.Scored
     user_vector = _get_user_vector(user_id)
 
     res = client.query_points(
-        collection_name=settings.QDRANT_COLLECTION_NAME,
+        collection_name=settings.QDRANT_PRODUCT_DOC_COLLECTION,
         query=user_vector,
         limit=limit,
         with_payload=True,

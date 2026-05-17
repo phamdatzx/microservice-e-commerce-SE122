@@ -111,7 +111,6 @@ def build_product_text(product: dict[str, Any], category_map: dict[str, str]) ->
     retrieval quality.
     """
     name = product.get("name", "")
-    description = product.get("description", "")
 
     # Categories
     cat_ids = product.get("category_ids", [])
@@ -120,8 +119,6 @@ def build_product_text(product: dict[str, Any], category_map: dict[str, str]) ->
     category_str = ", ".join(cat_names) if cat_names else ""
 
     lines = [name]
-    if description:
-        lines.append(description)
     if category_str:
         lines.append(f"Category: {category_str}")
 
