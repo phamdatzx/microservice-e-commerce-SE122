@@ -1,9 +1,10 @@
 from fastapi import APIRouter
-from app.services.intent_router import route_intent
+from app.agent.agent import chat
 
 router = APIRouter()
 
+
 @router.post("/chat")
-def chat(query: str):
-    result = route_intent(query)
+def chat_endpoint(query: str):
+    result = chat(query)
     return {"response": result}

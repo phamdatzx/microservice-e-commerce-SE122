@@ -90,13 +90,6 @@ class Settings:
     # Embedding model configuration
     EMBEDDING_MODEL_NAME: str = _require_env("EMBEDDING_MODEL_NAME")
 
-    # Intent model configuration
-    INTENT_MODEL_REPO_ID: str = _require_env("INTENT_MODEL_REPO_ID")
-    INTENT_DATASET_URL: str = _require_env("INTENT_DATASET_URL")
-
-    # NER model configuration
-    NER_MODEL_REPO_ID: str = _require_env("NER_MODEL_REPO_ID")
-
     # MongoDB (user interaction history + workers that persist to Mongo)
     MONGO_URI: str | None = os.getenv("MONGO_URI") or None
     MONGO_DB_NAME: str | None = os.getenv("MONGO_DB_NAME") or None
