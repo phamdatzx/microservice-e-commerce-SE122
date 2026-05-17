@@ -68,6 +68,42 @@ def _product_post(path: str, body: dict) -> dict | list:
     return resp.json()
 
 
+def _order_get(path: str, user_id: str, user_role: str = "customer", params: dict | None = None) -> dict | list:
+    """GET request to the order-service, injecting the gateway auth headers."""
+    settings = get_settings()
+    url = f"{settings.ORDER_SERVICE_URL}/api/order{path}"
+    headers = {"X-User-Id": user_id, "X-User-Role": user_role}
+
+    logger.debug("order-service GET %s params=%s", url, params)
+    resp = httpx.get(url, params=params, headers=headers, timeout=10.0)
+
+    if not resp.is_success:
+        raise RuntimeError(
+            f"order-service error {resp.status_code} for GET {path}: {resp.text[:300]}"
+        )
+    return resp.json()
+
+
+def _order_post(path: str, body: dict, user_id: str | None = None, user_role: str | None = None) -> dict | list:
+    """POST request to the order-service."""
+    settings = get_settings()
+    url = f"{settings.ORDER_SERVICE_URL}/api/order{path}"
+    headers: dict = {}
+    if user_id:
+        headers["X-User-Id"] = user_id
+    if user_role:
+        headers["X-User-Role"] = user_role
+
+    logger.debug("order-service POST %s body=%s", url, body)
+    resp = httpx.post(url, json=body, headers=headers, timeout=10.0)
+
+    if not resp.is_success:
+        raise RuntimeError(
+            f"order-service error {resp.status_code} for POST {path}: {resp.text[:300]}"
+        )
+    return resp.json()
+
+
 # ---------------------------------------------------------------------------
 # Tool: 1. Get product by ID
 # ---------------------------------------------------------------------------
@@ -359,37 +395,153 @@ def get_variants_by_ids(variant_ids: list[str]) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Tool: 8. Get my orders  (mocked — needs order-service)
+# Tool: 8. Get my orders
 # ---------------------------------------------------------------------------
 
 @tool
-def get_my_orders(status: Optional[str] = None) -> str:
-    """Get the current user's order history, optionally filtered by status.
+def get_my_orders(
+    user_id: str,
+    status: Optional[str] = None,
+    page: int = 1,
+    limit: int = 10,
+    sort_by: Optional[str] = None,
+    sort_order: str = "desc",
+) -> str:
+    """Fetch the current user's order history from the order-service.
 
-    Use this tool when the user asks about their orders, shipment status,
-    or purchase history.
+    Use this tool when:
+    - The user asks about their orders, shipments, or purchase history.
+    - The user wants to check the status of a specific order.
+    - The user asks "Has my order been shipped?" or "What did I buy recently?"
+
+    Returns a JSON object with:
+    - ``orders`` — list of order objects, each containing:
+        - ``id`` — order UUID.
+        - ``status`` — one of: ``pending``, ``confirmed``, ``shipping``,
+          ``delivered``, ``cancelled``, ``returned``.
+        - ``total`` — total amount paid (float, VND).
+        - ``item_count`` — number of items in the order.
+        - ``items`` — list of items, each with ``product_name``,
+          ``variant_name``, ``price``, ``quantity``.
+        - ``payment_method`` — ``COD`` or ``STRIPE``.
+        - ``payment_status`` — ``PENDING``, ``PAID``, or ``FAILED``.
+        - ``delivery_code`` — shipping tracking code (if dispatched).
+        - ``voucher`` — applied voucher info (if any).
+        - ``created_at`` / ``updated_at`` — ISO 8601 timestamps.
+    - ``total_count``, ``page``, ``limit``, ``total_pages`` — pagination info.
 
     Args:
-        status: Optional order status filter. Accepted values:
-                ``"SHIPPING"``, ``"COMPLETE"``, ``"PAYMENT_WAITING"``,
-                ``"CANCELLED"``.
-                Omit to return orders of all statuses.
+        user_id:    UUID of the user whose orders to fetch. Required.
+        status:     Optional filter — ``"pending"``, ``"confirmed"``,
+                    ``"shipping"``, ``"delivered"``, ``"cancelled"``,
+                    ``"returned"``.
+        page:       Page number (default 1).
+        limit:      Items per page (default 10, max 100).
+        sort_by:    ``"total"`` | ``"created_at"``.
+        sort_order: ``"asc"`` or ``"desc"`` (default ``"desc"`` = newest first).
     """
-    # TODO: replace with real order-service call once docs are available.
-    # settings = get_settings()
-    # url = f"{settings.ORDER_SERVICE_URL}/api/order/..."
-    logger.warning("[MOCK] get_my_orders — order-service not yet wired up")
-    mock = [
-        {
-            "order_id": "order-001",
-            "product_name": "Mock Product A",
-            "quantity": 2,
-            "total_price": 400000,
-            "status": status or "SHIPPING",
-            "created_at": "2026-04-28T10:00:00Z",
-        }
-    ]
-    return json.dumps(mock, ensure_ascii=False)
+    params: dict = {"page": page, "limit": limit, "sort_order": sort_order}
+    if status:
+        params["status"] = status
+    if sort_by:
+        params["sort_by"] = sort_by
+
+    try:
+        data = _order_get("", user_id=user_id, params=params)
+        return json.dumps(data, ensure_ascii=False)
+    except RuntimeError as exc:
+        return f"Error fetching orders: {exc}"
+
+
+# ---------------------------------------------------------------------------
+# Tool: 9. Get my cart
+# ---------------------------------------------------------------------------
+
+@tool
+def get_my_cart(user_id: str) -> str:
+    """Fetch the current user's shopping cart.
+
+    Use this tool when:
+    - The user asks "What's in my cart?"
+    - The user wants to know the total cost of their cart.
+    - The user asks whether a specific product is already in their cart.
+
+    Returns a JSON object with:
+    - ``cart_items`` — list of cart items, each containing:
+        - ``product.name`` — product name.
+        - ``variant.options`` — selected options (e.g. ``{"color": "red", "size": "M"}``).
+        - ``variant.price`` — unit price (integer, VND).
+        - ``quantity`` — quantity added.
+        - ``seller.name`` — shop name.
+    To compute total cost, multiply ``variant.price × quantity`` for each item
+    and sum them.
+
+    Args:
+        user_id: UUID of the authenticated user. Required.
+    """
+    try:
+        data = _order_get("/cart", user_id=user_id, user_role="customer")
+        return json.dumps(data, ensure_ascii=False)
+    except RuntimeError as exc:
+        return f"Error fetching cart: {exc}"
+
+
+# ---------------------------------------------------------------------------
+# Tool: 10. Get cart item count
+# ---------------------------------------------------------------------------
+
+@tool
+def get_cart_count(user_id: str) -> str:
+    """Get the number of items currently in the user's shopping cart.
+
+    Use this tool when:
+    - The user asks "How many items are in my cart?"
+    - The user asks "Is my cart empty?"
+    - You only need a count, not the full cart contents (faster than get_my_cart).
+
+    Returns a JSON object ``{"count": N}`` where N is the integer number of
+    distinct cart items (not total quantity).
+
+    Args:
+        user_id: UUID of the authenticated user. Required.
+    """
+    try:
+        data = _order_get("/cart/count", user_id=user_id, user_role="customer")
+        return json.dumps(data, ensure_ascii=False)
+    except RuntimeError as exc:
+        return f"Error fetching cart count: {exc}"
+
+
+# ---------------------------------------------------------------------------
+# Tool: 11. Verify purchase
+# ---------------------------------------------------------------------------
+
+@tool
+def verify_purchase(user_id: str, product_id: str, variant_id: str) -> str:
+    """Check whether a user has successfully purchased a specific product variant.
+
+    Use this tool when:
+    - The user asks "Can I write a review for this product?" — a purchase
+      must be verified before they are allowed to rate it.
+    - You need to confirm purchase eligibility before enabling an action.
+
+    Returns a JSON object ``{"has_purchased": true | false}``.
+    - ``true`` — the user bought this variant and is eligible to review it.
+    - ``false`` — no completed order found for this variant.
+
+    Args:
+        user_id:    UUID of the user to check.
+        product_id: UUID of the product.
+        variant_id: UUID of the specific product variant.
+    """
+    try:
+        data = _order_post(
+            "/verify-purchase",
+            body={"user_id": user_id, "product_id": product_id, "variant_id": variant_id},
+        )
+        return json.dumps(data, ensure_ascii=False)
+    except RuntimeError as exc:
+        return f"Error verifying purchase: {exc}"
 
 
 # ---------------------------------------------------------------------------
@@ -405,4 +557,7 @@ ALL_TOOLS = [
     get_categories,
     get_variants_by_ids,
     get_my_orders,
+    get_my_cart,
+    get_cart_count,
+    verify_purchase,
 ]
