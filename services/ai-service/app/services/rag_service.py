@@ -41,11 +41,11 @@ def _get_qdrant_client() -> QdrantClient:
 
 @lru_cache
 def _get_embeddings() -> OpenAIEmbeddings:
-    """Return an OpenAI embedding instance using **text-embedding-3-small**
-    (must match the model used in ``scripts/embed_products.py``)."""
+    """Return an OpenAI embedding instance.
+    Model is configured via ``OPENAI_EMBEDDING_MODEL`` (default: text-embedding-3-small)."""
     settings = get_settings()
     return OpenAIEmbeddings(
-        model="text-embedding-3-small",
+        model=settings.OPENAI_EMBEDDING_MODEL,
         openai_api_key=settings.OPENAI_API_KEY,
     )
 

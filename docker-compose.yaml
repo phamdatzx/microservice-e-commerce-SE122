@@ -34,6 +34,33 @@ services:
       - "traefik.http.routers.dashboard.service=api@internal"
     restart: unless-stopped
 
+  qdrant:
+    image: qdrant/qdrant:v1.13.2
+    container_name: qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - app-network
+    restart: unless-stopped
+
   user-service:
     build: ./services/user-service
     container_name: user-service
@@ -206,3 +233,7 @@ services:
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  qdrant_data:
+  rabbitmq_data:

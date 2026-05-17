@@ -87,9 +87,6 @@ class Settings:
     PRODUCT_CREATED_QUEUE: str = _require_env("PRODUCT_CREATED_QUEUE")
     USER_VECTOR_QUEUE: str = _require_env("USER_VECTOR_QUEUE")
 
-    # Embedding model configuration
-    EMBEDDING_MODEL_NAME: str = _require_env("EMBEDDING_MODEL_NAME")
-
     # MongoDB (user interaction history + workers that persist to Mongo)
     MONGO_URI: str | None = os.getenv("MONGO_URI") or None
     MONGO_DB_NAME: str | None = os.getenv("MONGO_DB_NAME") or None
@@ -115,10 +112,11 @@ class Settings:
         "ITEM_SIMILARITY_COLLECTION_NAME", "item_similarity"
     )
 
-    # OpenAI / LLM configuration
+    # OpenAI / LLM + Embedding configuration
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
     OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4o")
     OPENAI_TEMPERATURE: float = _parse_float_env("OPENAI_TEMPERATURE", 0.0)
+    OPENAI_EMBEDDING_MODEL: str = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
 
     # RAG — Qdrant collection for product document embeddings
     QDRANT_PRODUCT_DOC_COLLECTION: str = os.getenv(
