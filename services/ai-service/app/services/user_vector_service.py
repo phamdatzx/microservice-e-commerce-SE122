@@ -93,7 +93,10 @@ def compute_user_vector_from_interaction_docs(
         pid = str(doc.get("product_id", ""))
         if not pid:
             continue
-        agg[pid] += float(doc.get("score", 0.0))
+        raw_score = doc.get("score", 0.0)
+        # MongoDB may return BSON Decimal128 (e.g. from Go service writes);
+        # call .to_decimal() first if needed, then cast to float.
+        agg[pid] += float(raw_score.to_decimal() if hasattr(raw_score, "to_decimal") else raw_score)
 
     items = [
         UserProductWeight(product_id=pid, weight=w)

@@ -75,6 +75,7 @@ def _handle_interaction_message(data: dict[str, Any]) -> None:
 
     score = _resolve_interaction_score(msg.action, msg.score)
 
+    # Step 1: Always persist the interaction — this must succeed.
     insert_interaction(
         user_id=msg.user_id,
         product_id=msg.product_id,
@@ -82,21 +83,39 @@ def _handle_interaction_message(data: dict[str, Any]) -> None:
         score=score,
         timestamp=msg.timestamp,
     )
-
-    limit = settings.USER_INTERACTION_HISTORY_LIMIT
-    recent = get_recent_interactions_for_user(msg.user_id, limit)
-    if not recent:
-        raise RuntimeError("Interaction inserted but no rows returned for user (unexpected)")
-
-    vector = compute_user_vector_from_interaction_docs(recent)
-    upsert_user_vector(msg.user_id, vector)
-
     logger.info(
-        "Stored interaction and updated user vector for %s (used %s recent interactions, limit=%s)",
+        "Stored interaction: user=%s product=%s action=%s score=%s",
         msg.user_id,
-        len(recent),
-        limit,
+        msg.product_id,
+        msg.action,
+        score,
     )
+
+    # Step 2: Recompute user vector — failures here are non-fatal.
+    # (e.g. product not yet in Qdrant product_docs collection)
+    limit = settings.USER_INTERACTION_HISTORY_LIMIT
+    try:
+        recent = get_recent_interactions_for_user(msg.user_id, limit)
+        if not recent:
+            logger.warning("No recent interactions found for user %s after insert (unexpected)", msg.user_id)
+            return
+
+        vector = compute_user_vector_from_interaction_docs(recent)
+        upsert_user_vector(msg.user_id, vector)
+
+        logger.info(
+            "Updated user vector for %s (used %d recent interactions, limit=%d)",
+            msg.user_id,
+            len(recent),
+            limit,
+        )
+    except Exception:
+        logger.warning(
+            "Could not update user vector for %s — product may not be embedded in Qdrant yet. "
+            "Interaction was saved. Vector will be recalculated on the next interaction.",
+            msg.user_id,
+            exc_info=True,
+        )
 
 
 def _handle_message(body: bytes) -> None:
@@ -138,6 +157,7 @@ def main() -> None:
             _handle_message(body)
             ch.basic_ack(delivery_tag=method.delivery_tag)
         except Exception:
+            logger.exception("Failed to process message, nacking: %s", body)
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
 
     channel.basic_qos(prefetch_count=1)
