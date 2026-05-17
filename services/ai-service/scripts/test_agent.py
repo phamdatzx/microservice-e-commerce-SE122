@@ -41,11 +41,7 @@ def run_test(query: str) -> None:
 
 def main() -> None:
     # ── Predefined test queries ───────────────────────────────────────
-    test_queries = [
-        "Tôi muốn mua máy giặt, có sản phẩm nào không?",
-        "Cho tôi xem đơn hàng đang giao",
-        "Tôi có voucher nào không?",
-    ]
+    test_queries = []
 
     print("🚀 E-commerce AI Agent — Test Suite")
     divider("Running predefined queries")

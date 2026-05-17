@@ -126,6 +126,10 @@ class Settings:
     RAG_TOP_K: int = _parse_positive_int_env("RAG_TOP_K", 5)
     RAG_SCORE_THRESHOLD: float = _parse_float_env("RAG_SCORE_THRESHOLD", 0.5)
 
+    # Downstream microservice base URLs
+    PRODUCT_SERVICE_URL: str = os.getenv("PRODUCT_SERVICE_URL", "http://localhost:81")
+    ORDER_SERVICE_URL: str = os.getenv("ORDER_SERVICE_URL", "http://localhost:81")
+
 
 @lru_cache
 def get_settings() -> Settings:
