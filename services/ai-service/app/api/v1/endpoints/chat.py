@@ -1,13 +1,29 @@
 from __future__ import annotations
 
-from typing import Optional
+import json
+import logging
+import re
+from typing import Any, Optional
 
-from fastapi import APIRouter, Header, Request
+from fastapi import APIRouter, Header
 from pydantic import BaseModel
 
 from app.agent.agent import chat
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# ---------------------------------------------------------------------------
+# Default (empty) structured response — used as fallback template
+# ---------------------------------------------------------------------------
+
+_EMPTY_ENTITIES: dict[str, list] = {
+    "products": [],
+    "orders": [],
+    "vouchers": [],
+    "categories": [],
+    "sellers": [],
+}
 
 
 class ChatRequest(BaseModel):
@@ -53,6 +69,42 @@ def _build_user_context_block(
     return "\n".join(lines)
 
 
+def _parse_agent_response(raw: str) -> dict[str, Any]:
+    """
+    Parse the agent's raw output into the structured response format.
+
+    The LLM is instructed to return a JSON object with ``message`` +
+    entity arrays.  If it fails (returns plain text, wraps in a code
+    block, etc.), we gracefully fall back to putting the raw text in
+    ``message`` with all entity arrays empty.
+    """
+    text = raw.strip()
+
+    # Strip markdown code fences (```json ... ``` or ``` ... ```)
+    if text.startswith("```"):
+        text = re.sub(r"^```(?:json)?\s*", "", text)
+        text = re.sub(r"\s*```$", "", text)
+        text = text.strip()
+
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError:
+        logger.warning("Agent output is not valid JSON — wrapping as plain message")
+        return {"message": raw, **_EMPTY_ENTITIES}
+
+    if not isinstance(parsed, dict) or "message" not in parsed:
+        logger.warning("Agent JSON missing 'message' key — wrapping as plain message")
+        return {"message": raw, **_EMPTY_ENTITIES}
+
+    # Ensure all entity arrays exist and are lists
+    result: dict[str, Any] = {"message": parsed["message"]}
+    for key in ("products", "orders", "vouchers", "categories", "sellers"):
+        val = parsed.get(key)
+        result[key] = val if isinstance(val, list) else []
+
+    return result
+
+
 @router.post("/chat")
 def chat_endpoint(
     body: ChatRequest,
@@ -88,5 +140,9 @@ def chat_endpoint(
     else:
         full_input = body.message
 
-    result = chat(full_input, chat_history=body.chat_history)
-    return {"response": result}
+    raw_output = chat(full_input, chat_history=body.chat_history)
+
+    # Parse the structured JSON from the agent, with graceful fallback
+    structured = _parse_agent_response(raw_output)
+
+    return {"response": structured}

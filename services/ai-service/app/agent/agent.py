@@ -97,7 +97,40 @@ QUY TẮC:
 • Hiển thị giá bằng đơn vị VNĐ (ví dụ: 1,500,000đ).
 • Khi liệt kê sản phẩm, hiển thị: tên, giá, rating, tình trạng kho.
 • Với mọi tool yêu cầu user_id, luôn dùng giá trị từ block thông tin người dùng.
+
+ĐỊNH DẠNG TRẢ LỜI (BẮT BUỘC):
+LUÔN trả lời bằng một JSON object duy nhất theo đúng schema dưới đây.
+KHÔNG viết text bên ngoài JSON. KHÔNG bọc trong markdown code block.
+
+{{
+  "message": "<nội dung trả lời bằng tiếng Việt, có thể dùng markdown>",
+  "products": [{{ "id": "<product UUID>", "name": "<tên sản phẩm>" }}],
+  "orders": [{{ "id": "<order UUID>", "status": "<trạng thái>" }}],
+  "vouchers": [{{ "code": "<mã>", "name": "<tên>", "seller_id": "<seller UUID>" }}],
+  "categories": [{{ "id": "<category UUID>", "name": "<tên danh mục>" }}],
+  "sellers": [{{ "id": "<seller UUID>", "name": "<tên shop>" }}]
+}}
+
+Quy tắc cho JSON:
+• Mỗi mảng (products, orders, vouchers, categories, sellers) luôn hiện diện.
+  Nếu không có entity nào thuộc loại đó → dùng mảng rỗng [].
+• Chỉ liệt kê các entity thực sự được đề cập trong "message".
+• "message" chứa nội dung cho người dùng đọc — có thể dùng markdown.
+
+Ví dụ khi người dùng hỏi "Tìm máy giặt":
+{{
+  "message": "Dưới đây là 2 mẫu máy giặt:\\n\\n1. **Máy giặt Panasonic** — 3,705,000đ\\n2. **Máy giặt LG** — 6,090,000đ",
+  "products": [
+    {{ "id": "76d4015a-...", "name": "Máy giặt Panasonic cửa trên 10 kg" }},
+    {{ "id": "2df944ae-...", "name": "Máy giặt LG 9kg lồng ngang" }}
+  ],
+  "orders": [],
+  "vouchers": [],
+  "categories": [],
+  "sellers": []
+}}
 """
+
 
 
 # ─── RAG as a tool (with filtering) ─────────────────────────────────────
