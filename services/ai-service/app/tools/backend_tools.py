@@ -245,7 +245,41 @@ def search_product_catalog(
 
 
 # ---------------------------------------------------------------------------
-# Tool: 4. Get products by seller
+# Tool: 4. Get seller categories
+# ---------------------------------------------------------------------------
+
+@tool
+def get_seller_categories(seller_id: str) -> str:
+    """Get the custom product categories that a seller has created for their shop.
+
+    PREFER this tool over ``get_products_by_seller`` when:
+    - The user asks generally about what a seller/shop sells without requesting
+      a specific product list (e.g. "cửa hàng này bán gì?", "shop này có những
+      loại hàng gì?").
+    - You want a quick, high-level overview of a seller's inventory before
+      deciding whether to fetch actual products.
+
+    These are seller-defined categories (not platform categories), so they
+    directly reflect how the seller organises their own shop.
+
+    Returns a JSON array of seller category objects, each with:
+    - ``id``            — seller category UUID (use as ``seller_category`` filter
+                         in ``get_products_by_seller`` to drill down).
+    - ``name``          — human-readable category name (e.g. "Áo", "Quần").
+    - ``product_count`` — number of products the seller has in this category.
+
+    Args:
+        seller_id: UUID of the seller whose categories to fetch.
+    """
+    try:
+        data = _product_get(f"/seller/{seller_id}/category")
+        return json.dumps(data, ensure_ascii=False)
+    except RuntimeError as exc:
+        return f"Error fetching seller categories: {exc}"
+
+
+# ---------------------------------------------------------------------------
+# Tool: 5. Get products by seller
 # ---------------------------------------------------------------------------
 
 @tool
@@ -258,13 +292,16 @@ def get_products_by_seller(
     sort_by: Optional[str] = None,
     sort_direction: str = "desc",
 ) -> str:
-    """List all products from a specific seller's shop.
+    """List products from a specific seller's shop with pagination and filters.
 
     Use this tool when:
-    - The user asks "what does this shop/seller sell?" or wants to browse
-      a seller's product catalog.
-    - You already know the ``seller_id`` (from a previous product lookup
-      or from the user).
+    - The user wants to browse or search a seller's actual product list.
+    - You already know what category they are interested in (use ``get_seller_categories``
+      first for a general overview, then this tool to drill into specific items).
+
+    NOTE: For a general "what does this shop sell?" question, call
+    ``get_seller_categories`` first — it is faster and gives a clearer overview.
+    Only call this tool when the user wants to see actual products.
 
     Returns a JSON object with:
     - ``products`` — list of product objects from this seller.
@@ -552,6 +589,7 @@ ALL_TOOLS = [
     get_product_by_id,
     get_product_reviews,
     search_product_catalog,
+    get_seller_categories,       # overview of a seller's shop — call before get_products_by_seller
     get_products_by_seller,
     get_seller_vouchers,
     get_categories,

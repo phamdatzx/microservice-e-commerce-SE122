@@ -71,11 +71,16 @@ HƯỚNG DẪN DÙNG TOOL:
    → `get_product_by_id`
 4. Đánh giá / review sản phẩm:
    → `get_product_reviews`
-5. Sản phẩm của một shop:
-   → `get_products_by_seller`
+5. Thông tin về một shop/người bán:
+   a. Tổng quan về shop (shop bán gì, có những loại hàng nào):
+      → `get_seller_categories` — ƯU TIÊN dùng trước, trả về danh mục hàng
+        mà người bán tự tạo, phản ánh trực tiếp cách họ tổ chức cửa hàng.
+   b. Danh sách sản phẩm cụ thể của shop (khi người dùng muốn xem sản phẩm):
+      → `get_products_by_seller` — chỉ gọi sau khi đã có tổng quan từ 5a,
+        hoặc khi người dùng yêu cầu xem sản phẩm rõ ràng.
 6. Voucher / mã giảm giá của shop:
    → `get_seller_vouchers`
-7. Danh mục sản phẩm:
+7. Danh mục sản phẩm (nền tảng):
    → `get_categories` (dùng để lấy category_id cho bộ lọc)
 8. Đơn hàng của người dùng:
    → `get_my_orders` (bắt buộc truyền user_id từ context)
