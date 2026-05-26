@@ -77,26 +77,22 @@ class ChatRequest(BaseModel):
 def _convert_chat_history(raw: list[ChatMessage] | None) -> list[tuple[str, str]]:
     """
     Convert the frontend's ``[{role, content}, ...]`` format into the
-    ``[(human, ai), ...]`` tuple pairs that LangChain expects for the
-    ``chat_history`` variable in the prompt template.
+    ``[(role, content), ...]`` tuples that LangChain's
+    ``MessagesPlaceholder`` expects.
 
-    Pairs are formed greedily: each ``user`` message is paired with the
-    immediately following ``assistant`` message.  Unpaired trailing
-    messages are discarded.
+    LangChain recognises these role strings:
+    - ``"human"`` / ``"user"``  → HumanMessage
+    - ``"ai"`` / ``"assistant"`` → AIMessage
     """
     if not raw:
         return []
 
-    pairs: list[tuple[str, str]] = []
-    i = 0
-    while i < len(raw) - 1:
-        if raw[i].role == "user" and raw[i + 1].role == "assistant":
-            pairs.append((raw[i].content, raw[i + 1].content))
-            i += 2
-        else:
-            i += 1
+    _ROLE_MAP = {"user": "human", "assistant": "ai"}
 
-    return pairs
+    return [
+        (_ROLE_MAP.get(msg.role, msg.role), msg.content)
+        for msg in raw
+    ]
 
 
 def _build_user_context_block(

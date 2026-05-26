@@ -25,20 +25,69 @@ Content-Type: application/json
 
 ```json
 {
-  "message": "Tôi muốn mua máy giặt",
-  "chat_history": [],
+  "message": "Sản phẩm này có size XL không?",
+  "chat_history": [
+    { "role": "user", "content": "Tìm máy giặt" },
+    { "role": "assistant", "content": "Có 2 mẫu máy giặt: Panasonic 3,705,000đ và LG 6,090,000đ" },
+    { "role": "user", "content": "Cái nào rẻ hơn?" },
+    { "role": "assistant", "content": "Máy giặt Panasonic rẻ hơn với giá 3,705,000đ." }
+  ],
   "context": {
-    "current_product_id": "uuid-or-null",
+    "current_product_id": "76d4015a-0475-4075-af24-60d4d6711626",
+    "compare_product_ids": null,
+    "current_seller_id": null,
+    "current_order_id": null,
     "page": "product_detail"
   }
 }
 ```
 
-| Field          | Type           | Required | Description                                                |
-|----------------|----------------|----------|------------------------------------------------------------|
-| `message`      | string         | Yes      | The user's text message                                    |
-| `chat_history` | array \| null  | No       | Previous conversation turns for multi-turn context         |
-| `context`      | object \| null | No       | Extra client-side context (current page, product ID, etc.) |
+| Field          | Type                        | Required | Description                                       |
+|----------------|-----------------------------|----------|---------------------------------------------------|
+| `message`      | string                      | **Yes**  | The user's current text message                   |
+| `chat_history` | array of `ChatMessage` / null | No     | Previous conversation turns (see below)           |
+| `context`      | `ChatContext` object / null | No       | Client-side page context (see below)              |
+
+#### `chat_history` — Conversation History
+
+An ordered array of previous messages. Each item:
+
+| Field     | Type   | Required | Description                          |
+|-----------|--------|----------|--------------------------------------|
+| `role`    | string | **Yes**  | `"user"` or `"assistant"`            |
+| `content` | string | **Yes**  | The message text                     |
+
+Messages must alternate `user` → `assistant` pairs. The backend pairs them automatically; unpaired trailing messages are ignored.
+
+**Example — first message (no history):**
+```json
+{ "message": "Tìm máy giặt", "chat_history": [] }
+```
+
+**Example — follow-up question:**
+```json
+{
+  "message": "Cái nào rẻ hơn?",
+  "chat_history": [
+    { "role": "user", "content": "Tìm máy giặt" },
+    { "role": "assistant", "content": "Có 2 mẫu: Panasonic 3,705,000đ và LG 6,090,000đ" }
+  ]
+}
+```
+
+#### `context` — Client Page Context
+
+All fields are optional. The backend uses these to resolve references like "sản phẩm này" (this product) or "so sánh giúp tôi" (compare for me) without asking the user for IDs.
+
+| Field                  | Type     | Description                                                                 |
+|------------------------|----------|-----------------------------------------------------------------------------|
+| `current_product_id`   | string   | Product UUID the user is currently viewing. Resolves "sản phẩm này".        |
+| `compare_product_ids`  | string[] | List of product UUIDs the user is comparing. Agent fetches details for each.|
+| `current_seller_id`    | string   | Seller UUID of the shop page the user is browsing.                          |
+| `current_order_id`     | string   | Order UUID the user is currently viewing.                                   |
+| `page`                 | string   | Current page name: `"home"`, `"product_detail"`, `"cart"`, `"order_list"`, etc. |
+
+> **Extensible:** Any additional fields not listed above are forwarded to the AI agent as-is. No backend changes needed to add new context fields in the future.
 
 ---
 
