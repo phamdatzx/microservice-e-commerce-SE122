@@ -71,11 +71,16 @@ HƯỚNG DẪN DÙNG TOOL:
    → `get_product_by_id`
 4. Đánh giá / review sản phẩm:
    → `get_product_reviews`
-5. Sản phẩm của một shop:
-   → `get_products_by_seller`
+5. Thông tin về một shop/người bán:
+   a. Tổng quan về shop (shop bán gì, có những loại hàng nào):
+      → `get_seller_categories` — ƯU TIÊN dùng trước, trả về danh mục hàng
+        mà người bán tự tạo, phản ánh trực tiếp cách họ tổ chức cửa hàng.
+   b. Danh sách sản phẩm cụ thể của shop (khi người dùng muốn xem sản phẩm):
+      → `get_products_by_seller` — chỉ gọi sau khi đã có tổng quan từ 5a,
+        hoặc khi người dùng yêu cầu xem sản phẩm rõ ràng.
 6. Voucher / mã giảm giá của shop:
    → `get_seller_vouchers`
-7. Danh mục sản phẩm:
+7. Danh mục sản phẩm (nền tảng):
    → `get_categories` (dùng để lấy category_id cho bộ lọc)
 8. Đơn hàng của người dùng:
    → `get_my_orders` (bắt buộc truyền user_id từ context)
@@ -92,7 +97,40 @@ QUY TẮC:
 • Hiển thị giá bằng đơn vị VNĐ (ví dụ: 1,500,000đ).
 • Khi liệt kê sản phẩm, hiển thị: tên, giá, rating, tình trạng kho.
 • Với mọi tool yêu cầu user_id, luôn dùng giá trị từ block thông tin người dùng.
+
+ĐỊNH DẠNG TRẢ LỜI (BẮT BUỘC):
+LUÔN trả lời bằng một JSON object duy nhất theo đúng schema dưới đây.
+KHÔNG viết text bên ngoài JSON. KHÔNG bọc trong markdown code block.
+
+{{
+  "message": "<nội dung trả lời bằng tiếng Việt, có thể dùng markdown>",
+  "products": [{{ "id": "<product UUID>", "name": "<tên sản phẩm>" }}],
+  "orders": [{{ "id": "<order UUID>", "status": "<trạng thái>" }}],
+  "vouchers": [{{ "code": "<mã>", "name": "<tên>", "seller_id": "<seller UUID>" }}],
+  "categories": [{{ "id": "<category UUID>", "name": "<tên danh mục>" }}],
+  "sellers": [{{ "id": "<seller UUID>", "name": "<tên shop>" }}]
+}}
+
+Quy tắc cho JSON:
+• Mỗi mảng (products, orders, vouchers, categories, sellers) luôn hiện diện.
+  Nếu không có entity nào thuộc loại đó → dùng mảng rỗng [].
+• Chỉ liệt kê các entity thực sự được đề cập trong "message".
+• "message" chứa nội dung cho người dùng đọc — có thể dùng markdown.
+
+Ví dụ khi người dùng hỏi "Tìm máy giặt":
+{{
+  "message": "Dưới đây là 2 mẫu máy giặt:\\n\\n1. **Máy giặt Panasonic** — 3,705,000đ\\n2. **Máy giặt LG** — 6,090,000đ",
+  "products": [
+    {{ "id": "76d4015a-...", "name": "Máy giặt Panasonic cửa trên 10 kg" }},
+    {{ "id": "2df944ae-...", "name": "Máy giặt LG 9kg lồng ngang" }}
+  ],
+  "orders": [],
+  "vouchers": [],
+  "categories": [],
+  "sellers": []
+}}
 """
+
 
 
 # ─── RAG as a tool (with filtering) ─────────────────────────────────────
