@@ -208,12 +208,15 @@ def _build_prompt() -> ChatPromptTemplate:
 
 
 def _build_llm() -> ChatOpenAI:
-    """Instantiate GPT-4o with temperature=0."""
+    """Instantiate GPT-4o with temperature=0 and forced JSON output."""
     settings = get_settings()
     return ChatOpenAI(
         model=settings.OPENAI_MODEL,
         temperature=settings.OPENAI_TEMPERATURE,
         openai_api_key=settings.OPENAI_API_KEY,
+        model_kwargs={
+            "response_format": {"type": "json_object"},
+        },
     )
 
 
