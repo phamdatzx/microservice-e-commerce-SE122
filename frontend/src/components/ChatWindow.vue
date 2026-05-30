@@ -129,7 +129,7 @@ const openChatWithSeller = async (sellerId: string) => {
 
   const existing = contacts.value.find((c) => {
     if (c.isAi) return false
-    const targetId = props.isEmbedded ? c.raw.customerId : c.raw.sellerId
+    const targetId = props.isEmbedded ? c.raw.userId : c.raw.sellerId
     return String(targetId) === String(sellerId)
   })
 
@@ -194,8 +194,8 @@ const scrollToBottom = async () => {
 
 const formatMessage = (msg: any, contact: any) => {
   if (contact.isAi) return msg // Already formatted for AI
-  const isMe =
-    String(msg.senderId) === String(props.isEmbedded ? contact.raw.sellerId : contact.raw.userId)
+  const currentUserId = localStorage.getItem('user_id')
+  const isMe = String(msg.senderId) === String(currentUserId)
   return {
     id: msg._id,
     text: msg.content === '[Image]' ? '' : msg.content,
@@ -235,7 +235,7 @@ const updateContactInList = (message: any) => {
     if (contact.isAi) return null
 
     // Check if the message was sent by the current user
-    const currentUserId = props.isEmbedded ? contact.raw.sellerId : contact.raw.userId
+    const currentUserId = localStorage.getItem('user_id')
     const isMe = String(message.senderId) === String(currentUserId)
     const prefix = isMe ? 'You: ' : ''
 
@@ -309,7 +309,7 @@ const hydrateLastMessagePrefix = async () => {
       )
       if (response.data && response.data.data && response.data.data.length > 0) {
         const lastMsg = response.data.data[0]
-        const currentUserId = props.isEmbedded ? contact.raw.sellerId : contact.raw.userId
+        const currentUserId = localStorage.getItem('user_id')
         const isMe = String(lastMsg.senderId) === String(currentUserId)
 
         if (isMe) {
