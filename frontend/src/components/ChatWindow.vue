@@ -36,6 +36,7 @@ const searchQuery = ref('')
 const filters = ['All', 'Unread', 'Pinned']
 const activeFilter = ref('All')
 const imageInputRef = ref<HTMLInputElement | null>(null)
+const msgInputRef = ref<HTMLInputElement | null>(null)
 const isContentHidden = ref(false)
 const contacts = ref<any[]>([])
 const activeContact = ref<any>(null)
@@ -599,6 +600,11 @@ const selectContact = (contact: any) => {
   } else if (contact) {
     scrollToBottom()
   }
+
+  // Auto-focus the message input
+  nextTick(() => {
+    msgInputRef.value?.focus()
+  })
 }
 
 const markActiveConversationAsRead = () => {
@@ -613,6 +619,9 @@ const markActiveConversationAsRead = () => {
 }
 
 const getAiResponse = async (question: string) => {
+  const aiContact = contacts.value.find((c) => c.isAi)
+  if (!aiContact) return
+
   isAiTyping.value = true
   try {
     let type = 'general'
@@ -631,48 +640,105 @@ const getAiResponse = async (question: string) => {
       if (route.params.sellerId) {
         sellerId = route.params.sellerId as string
       }
+    } else if (route.path.includes('/cart')) {
+      type = 'cart'
+    } else if (route.path.includes('/checkout')) {
+      type = 'checkout'
     }
+
+    const historyMessages = aiContact.messages.slice(0, -1)
+    const chatHistory = historyMessages.map((msg: any) => ({
+      role: msg.sender === 'receiver' ? 'user' : 'assistant',
+      content: msg.text || '',
+    }))
 
     const payload = {
-      type,
-      question,
-      ...(productId && { product_id: productId }),
-      ...(sellerId && { seller_id: sellerId }),
+      message: question,
+      chat_history: chatHistory,
+      context: {
+        page: type,
+        ...(productId && { current_product_id: productId }),
+        ...(sellerId && { current_seller_id: sellerId }),
+      },
     }
 
-    const response = await axios.post(
-      `${import.meta.env.VITE_BE_API_URL}/product/public/chatbot/ask`,
-      payload,
-    )
+    const token = localStorage.getItem('access_token')
+    const headers = token ? { Authorization: `Bearer ${token}` } : {}
+
+    const response = await axios.post(`${import.meta.env.VITE_BE_API_URL}/ai/chat`, payload, {
+      headers,
+    })
 
     let answer = 'Sorry, I currently cannot answer that.'
-    if (response.data && response.data.answer) {
-      answer = response.data.answer
+    let entities = null
+
+    if (response.data && response.data.response) {
+      answer = response.data.response.message
+
+      // Clean up answer by removing raw json blocks if the AI accidentally includes them
+      if (answer) {
+        answer = answer.replace(/```json[\s\S]*?```/g, '').trim()
+      }
+
+      entities = {
+        products: response.data.response.products || [],
+        sellers: response.data.response.sellers || [],
+        vouchers: response.data.response.vouchers || [],
+        orders: response.data.response.orders || [],
+        categories: response.data.response.categories || [],
+      }
+
+      // Enrich products with image and price from product API
+      if (entities.products.length > 0) {
+        const enriched = await Promise.all(
+          entities.products.map(async (prod: any) => {
+            try {
+              const detail = await axios.get(
+                `${import.meta.env.VITE_BE_API_URL}/product/public/${prod.id || prod._id}`,
+              )
+              const data = detail.data?.data || detail.data
+              const priceObj = data?.price
+              return {
+                ...prod,
+                image: data?.images?.[0]?.url || null,
+                priceMin: priceObj?.min ?? null,
+                priceMax: priceObj?.max ?? null,
+              }
+            } catch {
+              return prod
+            }
+          }),
+        )
+        entities.products = enriched
+      }
     }
 
-    // Add AI response message
-    activeContact.value.messages.push({
-      id: 'ai-' + Date.now(),
-      text: answer,
-      sender: 'sender', // 'sender' is left side (other person), 'receiver' is me (right side) in your CSS logic
-      time: new Date().toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-      }),
-      date: 'Today',
-      image: null,
-    })
-    activeContact.value.lastMessage = answer
-    activeContact.value.time = new Date().toLocaleTimeString('en-US', {
+    const nowTime = new Date().toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,
-    }) // simple time update
-    scrollToBottom()
+    })
+
+    // Always push to the captured AI contact, not activeContact
+    aiContact.messages.push({
+      id: 'ai-' + Date.now(),
+      text: answer,
+      sender: 'sender',
+      time: nowTime,
+      date: 'Today',
+      image: null,
+      entities: entities,
+    })
+    aiContact.lastMessage = answer
+    aiContact.time = nowTime
+
+    // Only scroll if user is still viewing the AI conversation
+    if (activeContact.value?.isAi) {
+      scrollToBottom()
+    }
   } catch (err) {
     console.error('AI Error', err)
-    activeContact.value.messages.push({
+    aiContact.messages.push({
       id: 'ai-err-' + Date.now(),
       text: 'Sorry, something went wrong. Please try again.',
       sender: 'sender',
@@ -1004,7 +1070,82 @@ const getMsgClass = (msg: any) => {
                             fit="cover"
                           />
                         </div>
-                        <span v-if="msg.text">{{ msg.text }}</span>
+                        <span v-if="msg.text" style="white-space: pre-wrap">{{ msg.text }}</span>
+
+                        <!-- Hiển thị Entities từ AI -->
+                        <div v-if="msg.entities" class="msg-entities">
+                          <div
+                            v-if="msg.entities.products && msg.entities.products.length > 0"
+                            class="entity-list"
+                          >
+                            <div class="entity-list-label">Sản phẩm liên quan:</div>
+                            <router-link
+                              v-for="prod in msg.entities.products.slice(0, 5)"
+                              :key="prod.id || prod._id"
+                              :to="'/product/' + (prod.id || prod._id)"
+                              class="entity-card product-card"
+                            >
+                              <el-image
+                                v-if="prod.image"
+                                :src="prod.image"
+                                class="entity-img"
+                                fit="cover"
+                              />
+                              <div class="entity-info">
+                                <div class="entity-title">{{ prod.name }}</div>
+                                <div v-if="prod.priceMin != null" class="entity-price">
+                                  <template v-if="prod.priceMax && prod.priceMax !== prod.priceMin">
+                                    {{ Number(prod.priceMin).toLocaleString('vi-VN') }}đ –
+                                    {{ Number(prod.priceMax).toLocaleString('vi-VN') }}đ
+                                  </template>
+                                  <template v-else>
+                                    {{ Number(prod.priceMin).toLocaleString('vi-VN') }}đ
+                                  </template>
+                                </div>
+                              </div>
+                              <span class="entity-arrow">Xem →</span>
+                            </router-link>
+                          </div>
+
+                          <div
+                            v-if="msg.entities.sellers && msg.entities.sellers.length > 0"
+                            class="entity-list"
+                          >
+                            <router-link
+                              v-for="seller in msg.entities.sellers.slice(0, 3)"
+                              :key="seller.id || seller._id"
+                              :to="'/seller-page/' + (seller.id || seller._id)"
+                              class="entity-card"
+                            >
+                              <el-image :src="seller.image" class="entity-img" fit="cover" />
+                              <div class="entity-info">
+                                <div class="entity-title">{{ seller.name }}</div>
+                                <div class="entity-desc">Cửa hàng</div>
+                              </div>
+                            </router-link>
+                          </div>
+
+                          <div
+                            v-if="msg.entities.orders && msg.entities.orders.length > 0"
+                            class="entity-list"
+                          >
+                            <router-link
+                              v-for="order in msg.entities.orders.slice(0, 3)"
+                              :key="order.id || order._id"
+                              to="/profile"
+                              class="entity-card"
+                            >
+                              <div class="entity-info">
+                                <div class="entity-title">
+                                  Đơn hàng #{{ (order.id || order._id)?.slice(-6) }}
+                                </div>
+                                <div class="entity-price">
+                                  {{ order.total_price }}đ - {{ order.status }}
+                                </div>
+                              </div>
+                            </router-link>
+                          </div>
+                        </div>
                         <span class="msg-time">{{ msg.time }}</span>
                       </div>
                     </div>
@@ -1037,6 +1178,7 @@ const getMsgClass = (msg: any) => {
               />
 
               <input
+                ref="msgInputRef"
                 v-model="newMessage"
                 type="text"
                 placeholder="Type a message..."
@@ -1137,8 +1279,8 @@ const getMsgClass = (msg: any) => {
 }
 
 .chat-window {
-  width: 600px;
-  height: 450px;
+  width: 720px;
+  height: 540px;
   background: white;
   border-radius: 8px 8px 0 0;
   display: flex;
@@ -1766,6 +1908,91 @@ const getMsgClass = (msg: any) => {
   width: 100%;
   color: var(--main-color);
   font-size: 24px;
+}
+
+/* AI Entities Styles */
+.msg-entities {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+.entity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.entity-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  padding: 6px;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.2s;
+  min-width: 150px;
+}
+.entity-card:hover {
+  border-color: var(--main-color);
+}
+.entity-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  background: #f5f5f5;
+}
+.entity-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.entity-title {
+  font-size: 12px;
+  font-weight: 500;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #333;
+  line-height: 1.4;
+}
+.entity-price {
+  font-size: 11px;
+  color: var(--main-color);
+  font-weight: 600;
+}
+.entity-desc {
+  font-size: 11px;
+  color: #666;
+}
+.entity-list-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #666;
+  margin-bottom: 2px;
+}
+.product-card {
+  background: #f0fdf4;
+  border-color: #d1fae5;
+  justify-content: space-between;
+}
+.product-card:hover {
+  background: #dcfce7;
+  border-color: var(--main-color);
+}
+.entity-arrow {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--main-color);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 </style>
 
