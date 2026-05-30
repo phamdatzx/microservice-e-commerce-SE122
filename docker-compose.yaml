@@ -76,7 +76,7 @@ services:
     build: ./services/user-service
     container_name: user-service
     env_file:
-      - ./services/user-service/.env
+      - ./services/user-service/.env.compose
     ports:
       - "8185:8085"
     networks:
@@ -109,7 +109,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     env_file:
-      - ./services/product-service/.env
+      - ./services/product-service/.env.compose
     ports:
       - "8186:8085"
     networks:
@@ -141,7 +141,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     env_file:
-      - ./services/order-service/.env
+      - ./services/order-service/.env.compose
     ports:
       - "8187:8085"
     networks:
@@ -171,7 +171,7 @@ services:
     build: ./services/notification-service
     container_name: notification-service
     env_file:
-      - ./services/notification-service/.env
+      - ./services/notification-service/.env.compose
     ports:
       - "8188:8085"
     networks:
@@ -201,6 +201,79 @@ services:
 
       # Service definition
       - "traefik.http.services.notification-service.loadbalancer.server.port=8085"
+    restart: unless-stopped
+
+  # AI service — FastAPI app
+  ai-service:
+    build: ./services/ai-service
+    container_name: ai-service
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    env_file:
+      - ./services/ai-service/.env.compose
+    ports:
+      - "8189:8000"
+    networks:
+      - app-network
+    depends_on:
+      - qdrant
+      - rabbitmq
+    labels:
+      - "traefik.enable=true"
+      # Health check — public (no auth)
+      - "traefik.http.routers.ai-service-public.rule=PathPrefix(`/api/ai/health`)"
+      - "traefik.http.routers.ai-service-public.entrypoints=web"
+      - "traefik.http.routers.ai-service-public.service=ai-service"
+      - "traefik.http.routers.ai-service-public.middlewares=cors-headers"
+      - "traefik.http.routers.ai-service-public.priority=100"
+      # All other routes — CORS + authentication
+      - "traefik.http.routers.ai-service-private.rule=PathPrefix(`/api/ai`)"
+      - "traefik.http.routers.ai-service-private.entrypoints=web"
+      - "traefik.http.routers.ai-service-private.service=ai-service"
+      - "traefik.http.routers.ai-service-private.middlewares=cors-headers,forward-auth"
+      - "traefik.http.routers.ai-service-private.priority=90"
+      # Service definition
+      - "traefik.http.services.ai-service.loadbalancer.server.port=8000"
+    restart: unless-stopped
+
+  # AI worker — embeds new products into Qdrant (RabbitMQ consumer)
+  ai-product-embed-worker:
+    build: ./services/ai-service
+    container_name: ai-product-embed-worker
+    command: python -m app.workers.product_embed_worker
+    env_file:
+      - ./services/ai-service/.env.compose
+    networks:
+      - app-network
+    depends_on:
+      - qdrant
+      - rabbitmq
+    restart: unless-stopped
+
+  # AI worker — updates user vectors in Qdrant (RabbitMQ consumer)
+  ai-user-vector-worker:
+    build: ./services/ai-service
+    container_name: ai-user-vector-worker
+    command: python -m app.workers.user_vector_worker
+    env_file:
+      - ./services/ai-service/.env.compose
+    networks:
+      - app-network
+    depends_on:
+      - qdrant
+      - rabbitmq
+    restart: unless-stopped
+
+  # AI worker — collaborative filtering batch job (runs daily, mirrors Helm CronJob 0 0 * * *)
+  ai-cf-worker:
+    build: ./services/ai-service
+    container_name: ai-cf-worker
+    command: sh -c "python -m app.workers.cf_worker && sleep 86400"
+    env_file:
+      - ./services/ai-service/.env.compose
+    networks:
+      - app-network
+    depends_on:
+      - qdrant
     restart: unless-stopped
 
 networks:
