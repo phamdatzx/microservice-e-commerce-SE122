@@ -28,6 +28,39 @@ const props = defineProps({
 
 const route = useRoute()
 
+const renderMarkdown = (text: string) => {
+  if (!text) return ''
+
+  // Escape HTML first to prevent XSS
+  let html = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+
+  // 1. Process Markdown Images: ![alt](url)
+  html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, url) => {
+    return `<img src="${url}" alt="${alt}" class="chat-embedded-image" />`
+  })
+
+  // 2. Process Markdown Links: [text](url)
+  html = html.replace(/\[(.*?)\]\((.*?)\)/g, (match, textContent, url) => {
+    return `<a href="${url}" target="_blank" class="chat-embedded-link">${textContent}</a>`
+  })
+
+  // 3. Bold: **text**
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+
+  // 4. Italic: *text* or _text_
+  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>')
+
+  // 5. Headings:
+  html = html.replace(/^### (.*?)$/gm, '<h3>$1</h3>')
+  html = html.replace(/^## (.*?)$/gm, '<h2>$1</h2>')
+  html = html.replace(/^# (.*?)$/gm, '<h1>$1</h1>')
+
+  return html
+}
+
 // Constant for AI Contact
 const AI_CONTACT_ID = 'ai-assistant'
 
@@ -1070,7 +1103,11 @@ const getMsgClass = (msg: any) => {
                             fit="cover"
                           />
                         </div>
-                        <span v-if="msg.text" style="white-space: pre-wrap">{{ msg.text }}</span>
+                        <span
+                          v-if="msg.text"
+                          v-html="renderMarkdown(msg.text)"
+                          style="white-space: pre-wrap"
+                        ></span>
 
                         <!-- Hiển thị Entities từ AI -->
                         <div v-if="msg.entities" class="msg-entities">
@@ -1686,6 +1723,45 @@ const getMsgClass = (msg: any) => {
   border: 1px solid #d1fae5;
   color: #333;
 }
+
+.msg-bubble :deep(.chat-embedded-image) {
+  max-width: 100%;
+  max-height: 250px;
+  border-radius: 8px;
+  margin: 8px 0;
+  display: block;
+  object-fit: cover;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.msg-bubble :deep(.chat-embedded-image):hover {
+  transform: scale(1.02);
+}
+
+.msg-bubble :deep(.chat-embedded-link) {
+  color: #3182ce;
+  text-decoration: underline;
+  font-weight: 500;
+}
+
+.msg-bubble :deep(.chat-embedded-link):hover {
+  color: #2b6cb0;
+}
+
+.msg-bubble :deep(h1),
+.msg-bubble :deep(h2),
+.msg-bubble :deep(h3) {
+  margin-top: 12px;
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: inherit;
+}
+
+.msg-bubble :deep(h1) { font-size: 1.35em; }
+.msg-bubble :deep(h2) { font-size: 1.25em; }
+.msg-bubble :deep(h3) { font-size: 1.1em; }
 
 .msg-time {
   position: absolute;
