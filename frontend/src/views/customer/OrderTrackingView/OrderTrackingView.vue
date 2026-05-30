@@ -13,7 +13,7 @@ import {
   Loading,
   Plus,
 } from '@element-plus/icons-vue'
-import { ref, onMounted, computed, defineAsyncComponent } from 'vue'
+import { ref, onMounted, computed, defineAsyncComponent, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
 import axios from 'axios'
@@ -483,17 +483,21 @@ const updateStepsFromInternalStatus = (orderData: any) => {
 }
 
 const fetchOrder = async () => {
-  const orderId = route.params.id
+  const orderId = String(route.params.id)
   if (!orderId) return
 
   isLoading.value = true
   isNotFound.value = false
+  order.value = null
   try {
     let orderData = null
 
-    if (history.state.orderData) {
+    if (history.state?.orderData) {
       try {
-        orderData = JSON.parse(history.state.orderData)
+        const parsed = JSON.parse(history.state.orderData)
+        if (parsed && (parsed.id === orderId || parsed._id === orderId)) {
+          orderData = parsed
+        }
       } catch (e) {
         console.error('Failed to parse order state', e)
       }
@@ -501,10 +505,22 @@ const fetchOrder = async () => {
 
     if (!orderData) {
       const token = localStorage.getItem('access_token')
-      const orderResponse = await axios.get(`${import.meta.env.VITE_BE_API_URL}/order/${orderId}`, {
+      const role = localStorage.getItem('role')
+      const endpoint =
+        role === 'seller'
+          ? `${import.meta.env.VITE_BE_API_URL}/order/seller`
+          : `${import.meta.env.VITE_BE_API_URL}/order`
+      const ordersResponse = await axios.get(endpoint, {
+        params: { limit: 100, page: 1, sort_by: 'created_at', sort_order: 'desc' },
         headers: { Authorization: `Bearer ${token}` },
       })
-      orderData = orderResponse.data.data || orderResponse.data
+      const userOrders = ordersResponse.data?.orders || []
+      orderData = userOrders.find(
+        (o: any) => (o.id || o._id || '').toLowerCase() === orderId.toLowerCase(),
+      )
+      if (!orderData) {
+        throw { response: { status: 404 } }
+      }
     }
 
     order.value = orderData
@@ -542,6 +558,15 @@ onMounted(() => {
   isLoggedIn.value = !!localStorage.getItem('access_token')
   fetchOrder()
 })
+
+watch(
+  () => route.params.id,
+  (newId) => {
+    if (newId) {
+      fetchOrder()
+    }
+  },
+)
 </script>
 
 <template>

@@ -16,6 +16,7 @@ import {
   Picture,
   Loading,
   Service,
+  Tickets,
 } from '@element-plus/icons-vue'
 import { socketService, SOCKET_EVENTS } from '@/utils/socket'
 
@@ -32,10 +33,7 @@ const renderMarkdown = (text: string) => {
   if (!text) return ''
 
   // Escape HTML first to prevent XSS
-  let html = text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
+  let html = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
   // 1. Process Markdown Images: ![alt](url)
   html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, url) => {
@@ -640,6 +638,27 @@ const selectContact = (contact: any) => {
   })
 }
 
+const formatOrderStatus = (status: string) => {
+  if (!status) return { text: 'Không rõ', type: 'info' }
+  const s = status.toUpperCase()
+  switch (s) {
+    case 'TO_PAY':
+      return { text: 'Chờ thanh toán', type: 'warning' }
+    case 'TO_CONFIRM':
+      return { text: 'Chờ xác nhận', type: 'primary' }
+    case 'TO_PICKUP':
+      return { text: 'Chờ lấy hàng', type: 'info' }
+    case 'SHIPPING':
+      return { text: 'Đang vận chuyển', type: 'success' }
+    case 'COMPLETED':
+      return { text: 'Hoàn thành', type: 'success' }
+    case 'CANCELLED':
+      return { text: 'Đã hủy', type: 'danger' }
+    default:
+      return { text: status, type: 'info' }
+  }
+}
+
 const markActiveConversationAsRead = () => {
   if (activeContact.value && !activeContact.value.isRead) {
     activeContact.value.isRead = true
@@ -744,6 +763,39 @@ const getAiResponse = async (question: string) => {
           }),
         )
         entities.products = enriched
+      }
+
+      // Enrich orders with total_price, first item thumbnail, product name, and items count from order API
+      if (entities.orders && entities.orders.length > 0) {
+        const token = localStorage.getItem('access_token')
+        let userOrders: any[] = []
+        try {
+          const res = await axios.get(`${import.meta.env.VITE_BE_API_URL}/order`, {
+            params: { limit: 100, page: 1, sort_by: 'created_at', sort_order: 'desc' },
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          userOrders = res.data?.orders || []
+        } catch (err) {
+          console.error('Failed to pre-fetch orders for chatbot enrichment:', err)
+        }
+
+        const enrichedOrders = entities.orders.map((ord: any) => {
+          const rawId = (ord.id || ord._id || '').toLowerCase()
+          const matched = userOrders.find((o: any) => (o.id || o._id || '').toLowerCase() === rawId)
+          if (matched) {
+            return {
+              ...ord,
+              id: rawId,
+              total_price: matched.total ?? matched.total_price ?? ord.total_price ?? null,
+              status: matched.status ?? ord.status ?? null,
+              image: matched.items?.[0]?.image || null,
+              firstItemName: matched.items?.[0]?.product_name || null,
+              itemCount: matched.items?.length || 0,
+            }
+          }
+          return { ...ord, id: rawId }
+        })
+        entities.orders = enrichedOrders
       }
     }
 
@@ -1118,7 +1170,7 @@ const getMsgClass = (msg: any) => {
                           >
                             <div class="entity-list-label">Sản phẩm liên quan:</div>
                             <router-link
-                              v-for="prod in msg.entities.products.slice(0, 5)"
+                              v-for="prod in msg.entities.products"
                               :key="prod.id || prod._id"
                               :to="'/product/' + (prod.id || prod._id)"
                               class="entity-card product-card"
@@ -1167,20 +1219,41 @@ const getMsgClass = (msg: any) => {
                             v-if="msg.entities.orders && msg.entities.orders.length > 0"
                             class="entity-list"
                           >
+                            <div class="entity-list-label">Đơn hàng liên quan:</div>
                             <router-link
                               v-for="order in msg.entities.orders.slice(0, 3)"
                               :key="order.id || order._id"
-                              to="/profile"
-                              class="entity-card"
+                              :to="'/order-tracking/' + (order.id || order._id)"
+                              class="entity-card order-card"
                             >
                               <div class="entity-info">
                                 <div class="entity-title">
-                                  Đơn hàng #{{ (order.id || order._id)?.slice(-6) }}
+                                  Đơn hàng #{{ (order.id || order._id)?.slice(-6).toUpperCase() }}
                                 </div>
-                                <div class="entity-price">
-                                  {{ order.total_price }}đ - {{ order.status }}
+                                <div v-if="order.firstItemName" class="entity-desc order-item-name">
+                                  {{ order.firstItemName }}
+                                  <span
+                                    v-if="order.itemCount > 1"
+                                    style="color: #888; font-weight: normal"
+                                  >
+                                    (+{{ order.itemCount - 1 }} sản phẩm)
+                                  </span>
+                                </div>
+                                <div class="order-price-status">
+                                  <span v-if="order.total_price != null" class="entity-price">
+                                    {{ Number(order.total_price).toLocaleString('vi-VN') }}đ
+                                  </span>
+                                  <el-tag
+                                    :type="formatOrderStatus(order.status).type"
+                                    size="small"
+                                    effect="plain"
+                                    class="order-status-tag"
+                                  >
+                                    {{ formatOrderStatus(order.status).text }}
+                                  </el-tag>
                                 </div>
                               </div>
+                              <span class="entity-arrow">Chi tiết →</span>
                             </router-link>
                           </div>
                         </div>
@@ -1760,9 +1833,15 @@ const getMsgClass = (msg: any) => {
   color: inherit;
 }
 
-.msg-bubble :deep(h1) { font-size: 1.35em; }
-.msg-bubble :deep(h2) { font-size: 1.25em; }
-.msg-bubble :deep(h3) { font-size: 1.1em; }
+.msg-bubble :deep(h1) {
+  font-size: 1.35em;
+}
+.msg-bubble :deep(h2) {
+  font-size: 1.25em;
+}
+.msg-bubble :deep(h3) {
+  font-size: 1.1em;
+}
 
 .msg-time {
   position: absolute;
@@ -2034,11 +2113,13 @@ const getMsgClass = (msg: any) => {
   font-weight: 500;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  /* autoprefixer: ignore next */
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
   color: #333;
   line-height: 1.4;
+  max-height: 2.8em; /* Fallback for older browsers: 2 lines * 1.4 line-height */
 }
 .entity-price {
   font-size: 11px;
@@ -2070,6 +2151,48 @@ const getMsgClass = (msg: any) => {
   color: var(--main-color);
   white-space: nowrap;
   flex-shrink: 0;
+}
+.order-card {
+  background: #f0fdf4;
+  border-color: #d1fae5;
+  justify-content: space-between;
+}
+.order-card:hover {
+  background: #dcfce7;
+  border-color: var(--main-color);
+}
+.order-card:hover .entity-arrow {
+  color: var(--main-color);
+}
+.order-item-name {
+  font-size: 11px;
+  color: #555;
+  margin-top: 2px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  /* autoprefixer: ignore next */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+  max-height: 2.8em; /* Fallback for older browsers: 2 lines * 1.4 line-height */
+}
+.order-price-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.order-status-tag {
+  background-color: #f0fdf4 !important;
+  border-color: #d1fae5 !important;
+  color: var(--main-color) !important;
+  border-radius: 4px;
+  font-weight: 600;
+  padding: 0 6px;
+  height: 20px;
+  line-height: 18px;
+  font-size: 11px;
 }
 </style>
 
