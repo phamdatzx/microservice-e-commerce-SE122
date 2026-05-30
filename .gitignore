@@ -9,6 +9,7 @@
 *.so
 *.dylib
 *.test
+.env.compose
 
 # Build output
 /bin/
