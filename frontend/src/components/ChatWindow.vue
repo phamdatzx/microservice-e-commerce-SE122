@@ -679,7 +679,8 @@ const getAiResponse = async (question: string) => {
       type = 'checkout'
     }
 
-    const historyMessages = aiContact.messages.slice(0, -1)
+    // Only take the last 10 messages for history to keep payload lightweight
+    const historyMessages = aiContact.messages.slice(-11, -1)
     const chatHistory = historyMessages.map((msg: any) => ({
       role: msg.sender === 'receiver' ? 'user' : 'assistant',
       content: msg.text || '',
