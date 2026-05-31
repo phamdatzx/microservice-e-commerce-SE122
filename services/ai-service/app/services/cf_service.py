@@ -128,7 +128,9 @@ def build_user_item_matrix(
 
     row = user_ids.cat.codes.values
     col = product_ids.cat.codes.values
-    data = agg["score"].values.astype(np.float32)
+    data = agg["score"].apply(
+        lambda x: float(x.to_decimal()) if hasattr(x, "to_decimal") else float(x)
+    ).values.astype(np.float32)
 
     sparse_mat = csr_matrix(
         (data, (row, col)),

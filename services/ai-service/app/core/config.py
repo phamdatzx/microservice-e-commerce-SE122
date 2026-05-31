@@ -79,20 +79,12 @@ class Settings:
     # Qdrant configuration
     QDRANT_URL: str = _require_env("QDRANT_URL")
     QDRANT_API_KEY: str | None = os.getenv("QDRANT_API_KEY") or None
-    QDRANT_COLLECTION_NAME: str = _require_env("QDRANT_COLLECTION_NAME")
     QDRANT_USER_COLLECTION_NAME: str = _require_env("QDRANT_USER_COLLECTION_NAME")
 
     # RabbitMQ configuration (for background workers)
     RABBITMQ_URL: str = _require_env("RABBITMQ_URL")
     PRODUCT_CREATED_QUEUE: str = _require_env("PRODUCT_CREATED_QUEUE")
     USER_VECTOR_QUEUE: str = _require_env("USER_VECTOR_QUEUE")
-
-    # Embedding model configuration
-    EMBEDDING_MODEL_NAME: str = _require_env("EMBEDDING_MODEL_NAME")
-
-    # Intent model configuration
-    INTENT_MODEL_REPO_ID: str = _require_env("INTENT_MODEL_REPO_ID")
-    INTENT_DATASET_URL: str = _require_env("INTENT_DATASET_URL")
 
     # MongoDB (user interaction history + workers that persist to Mongo)
     MONGO_URI: str | None = os.getenv("MONGO_URI") or None
@@ -118,6 +110,25 @@ class Settings:
     ITEM_SIMILARITY_COLLECTION_NAME: str = os.getenv(
         "ITEM_SIMILARITY_COLLECTION_NAME", "item_similarity"
     )
+
+    # OpenAI / LLM + Embedding configuration
+    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+    OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4o")
+    OPENAI_TEMPERATURE: float = _parse_float_env("OPENAI_TEMPERATURE", 0.0)
+    OPENAI_EMBEDDING_MODEL: str = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
+
+    # RAG — Qdrant collection for product document embeddings
+    QDRANT_PRODUCT_DOC_COLLECTION: str = os.getenv(
+        "QDRANT_PRODUCT_DOC_COLLECTION", "product_docs"
+    )
+
+    # RAG — Retrieval settings
+    RAG_TOP_K: int = _parse_positive_int_env("RAG_TOP_K", 5)
+    RAG_SCORE_THRESHOLD: float = _parse_float_env("RAG_SCORE_THRESHOLD", 0.5)
+
+    # Downstream microservice base URLs
+    PRODUCT_SERVICE_URL: str = os.getenv("PRODUCT_SERVICE_URL", "http://localhost:81")
+    ORDER_SERVICE_URL: str = os.getenv("ORDER_SERVICE_URL", "http://localhost:81")
 
 
 @lru_cache

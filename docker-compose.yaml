@@ -32,21 +32,7 @@ services:
       # Dashboard routing
       - "traefik.http.routers.dashboard.entrypoints=web"
       - "traefik.http.routers.dashboard.service=api@internal"
-    restart: unless-stopped
-
-  user-service:
-    build: ./services/user-service
-    container_name: user-service
-    env_file:
-      - ./services/user-service/.env
-    ports:
-      - "8185:8085"
-    networks:
-      - app-network
-    labels:
-      - "traefik.enable=true"
-
-      # CORS Middleware - matches Kubernetes configuration
+      # Shared middlewares (defined here so all routers can reference them)
       - "traefik.http.middlewares.cors-headers.headers.accesscontrolallowmethods=GET,POST,PUT,DELETE,PATCH,OPTIONS"
       - "traefik.http.middlewares.cors-headers.headers.accesscontrolallowheaders=Content-Type,Authorization,X-Requested-With,Accept,Origin,X-User-Id,X-User-Role,X-Username"
       - "traefik.http.middlewares.cors-headers.headers.accesscontrolalloworiginlist=http://localhost:3000,http://localhost:8080,http://localhost:5173,http://localhost:24000,http://djj0amhpbxjv0.cloudfront.net"
@@ -54,6 +40,49 @@ services:
       - "traefik.http.middlewares.cors-headers.headers.accesscontrolexposeheaders=X-User-Id,X-User-Role,X-Username"
       - "traefik.http.middlewares.cors-headers.headers.accesscontrolmaxage=3600"
       - "traefik.http.middlewares.cors-headers.headers.addvaryheader=true"
+      - "traefik.http.middlewares.forward-auth.forwardauth.address=http://user-service:8085/api/user/public/verify"
+      - "traefik.http.middlewares.forward-auth.forwardauth.trustForwardHeader=true"
+      - "traefik.http.middlewares.forward-auth.forwardauth.authResponseHeaders=X-User-Id,X-User-Role,X-Username"
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:v1.13.2
+    container_name: qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  user-service:
+    build: ./services/user-service
+    container_name: user-service
+    env_file:
+      - ./services/user-service/.env.compose
+    ports:
+      - "8185:8085"
+    networks:
+      - app-network
+    labels:
+      - "traefik.enable=true"
 
       # Public routes - CORS only
       - "traefik.http.routers.user-service-public.rule=PathPrefix(`/api/user/public`)"
@@ -69,11 +98,6 @@ services:
       - "traefik.http.routers.user-service-private.middlewares=cors-headers,forward-auth"
       - "traefik.http.routers.user-service-private.priority=90"
 
-      # Forward Auth Middleware
-      - "traefik.http.middlewares.forward-auth.forwardauth.address=http://user-service:8085/api/user/public/verify"
-      - "traefik.http.middlewares.forward-auth.forwardauth.trustForwardHeader=true"
-      - "traefik.http.middlewares.forward-auth.forwardauth.authResponseHeaders=X-User-Id,X-User-Role,X-Username"
-
       # Service definition
       - "traefik.http.services.user-service.loadbalancer.server.port=8085"
     restart: unless-stopped
@@ -85,21 +109,13 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     env_file:
-      - ./services/product-service/.env
+      - ./services/product-service/.env.compose
     ports:
       - "8186:8085"
     networks:
       - app-network
     labels:
       - "traefik.enable=true"
-      # CORS Middleware - matches Kubernetes configuration
-      - "traefik.http.middlewares.cors-headers.headers.accesscontrolallowmethods=GET,POST,PUT,DELETE,PATCH,OPTIONS"
-      - "traefik.http.middlewares.cors-headers.headers.accesscontrolallowheaders=Content-Type,Authorization,X-Requested-With,Accept,Origin,X-User-Id,X-User-Role,X-Username"
-      - "traefik.http.middlewares.cors-headers.headers.accesscontrolalloworiginlist=http://localhost:3000,http://localhost:8080,http://localhost:5173,http://localhost:24000,http://djj0amhpbxjv0.cloudfront.net"
-      - "traefik.http.middlewares.cors-headers.headers.accesscontrolallowcredentials=true"
-      - "traefik.http.middlewares.cors-headers.headers.accesscontrolexposeheaders=X-User-Id,X-User-Role,X-Username"
-      - "traefik.http.middlewares.cors-headers.headers.accesscontrolmaxage=3600"
-      - "traefik.http.middlewares.cors-headers.headers.addvaryheader=true"
       # Public routes - CORS only (higher priority)
       - "traefik.http.routers.product-service-public.rule=PathPrefix(`/api/product/public`)"
       - "traefik.http.routers.product-service-public.entrypoints=web"
@@ -125,21 +141,13 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     env_file:
-      - ./services/order-service/.env
+      - ./services/order-service/.env.compose
     ports:
       - "8187:8085"
     networks:
       - app-network
     labels:
       - "traefik.enable=true"
-      # CORS Middleware - matches Kubernetes configuration
-      - "traefik.http.middlewares.cors-headers.headers.accesscontrolallowmethods=GET,POST,PUT,DELETE,PATCH,OPTIONS"
-      - "traefik.http.middlewares.cors-headers.headers.accesscontrolallowheaders=Content-Type,Authorization,X-Requested-With,Accept,Origin,X-User-Id,X-User-Role,X-Username"
-      - "traefik.http.middlewares.cors-headers.headers.accesscontrolalloworiginlist=http://localhost:3000,http://localhost:8080,http://localhost:5173,http://localhost:24000,http://djj0amhpbxjv0.cloudfront.net"
-      - "traefik.http.middlewares.cors-headers.headers.accesscontrolallowcredentials=true"
-      - "traefik.http.middlewares.cors-headers.headers.accesscontrolexposeheaders=X-User-Id,X-User-Role,X-Username"
-      - "traefik.http.middlewares.cors-headers.headers.accesscontrolmaxage=3600"
-      - "traefik.http.middlewares.cors-headers.headers.addvaryheader=true"
       # Public routes - CORS only (higher priority)
       - "traefik.http.routers.order-service-public.rule=PathPrefix(`/api/order/public`)"
       - "traefik.http.routers.order-service-public.entrypoints=web"
@@ -163,21 +171,13 @@ services:
     build: ./services/notification-service
     container_name: notification-service
     env_file:
-      - ./services/notification-service/.env
+      - ./services/notification-service/.env.compose
     ports:
       - "8188:8085"
     networks:
       - app-network
     labels:
       - "traefik.enable=true"
-      # CORS Middleware - matches Kubernetes configuration
-      - "traefik.http.middlewares.cors-headers.headers.accesscontrolallowmethods=GET,POST,PUT,DELETE,PATCH,OPTIONS"
-      - "traefik.http.middlewares.cors-headers.headers.accesscontrolallowheaders=Content-Type,Authorization,X-Requested-With,Accept,Origin,X-User-Id,X-User-Role,X-Username"
-      - "traefik.http.middlewares.cors-headers.headers.accesscontrolalloworiginlist=http://localhost:3000,http://localhost:8080,http://localhost:5173,http://localhost:24000,http://djj0amhpbxjv0.cloudfront.net"
-      - "traefik.http.middlewares.cors-headers.headers.accesscontrolallowcredentials=true"
-      - "traefik.http.middlewares.cors-headers.headers.accesscontrolexposeheaders=X-User-Id,X-User-Role,X-Username"
-      - "traefik.http.middlewares.cors-headers.headers.accesscontrolmaxage=3600"
-      - "traefik.http.middlewares.cors-headers.headers.addvaryheader=true"
       # Public routes - CORS only (higher priority)
       - "traefik.http.routers.notification-service-public.rule=PathPrefix(`/api/notification/public`)"
       - "traefik.http.routers.notification-service-public.entrypoints=web"
@@ -203,6 +203,83 @@ services:
       - "traefik.http.services.notification-service.loadbalancer.server.port=8085"
     restart: unless-stopped
 
+  # AI service — FastAPI app
+  ai-service:
+    build: ./services/ai-service
+    container_name: ai-service
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    env_file:
+      - ./services/ai-service/.env.compose
+    ports:
+      - "8189:8000"
+    networks:
+      - app-network
+    depends_on:
+      - qdrant
+      - rabbitmq
+    labels:
+      - "traefik.enable=true"
+      # Health check — public (no auth)
+      - "traefik.http.routers.ai-service-public.rule=PathPrefix(`/api/ai/health`)"
+      - "traefik.http.routers.ai-service-public.entrypoints=web"
+      - "traefik.http.routers.ai-service-public.service=ai-service"
+      - "traefik.http.routers.ai-service-public.middlewares=cors-headers"
+      - "traefik.http.routers.ai-service-public.priority=100"
+      # All other routes — CORS + authentication
+      - "traefik.http.routers.ai-service-private.rule=PathPrefix(`/api/ai`)"
+      - "traefik.http.routers.ai-service-private.entrypoints=web"
+      - "traefik.http.routers.ai-service-private.service=ai-service"
+      - "traefik.http.routers.ai-service-private.middlewares=cors-headers,forward-auth"
+      - "traefik.http.routers.ai-service-private.priority=90"
+      # Service definition
+      - "traefik.http.services.ai-service.loadbalancer.server.port=8000"
+    restart: unless-stopped
+
+  # AI worker — embeds new products into Qdrant (RabbitMQ consumer)
+  ai-product-embed-worker:
+    build: ./services/ai-service
+    container_name: ai-product-embed-worker
+    command: python -m app.workers.product_embed_worker
+    env_file:
+      - ./services/ai-service/.env.compose
+    networks:
+      - app-network
+    depends_on:
+      - qdrant
+      - rabbitmq
+    restart: unless-stopped
+
+  # AI worker — updates user vectors in Qdrant (RabbitMQ consumer)
+  ai-user-vector-worker:
+    build: ./services/ai-service
+    container_name: ai-user-vector-worker
+    command: python -m app.workers.user_vector_worker
+    env_file:
+      - ./services/ai-service/.env.compose
+    networks:
+      - app-network
+    depends_on:
+      - qdrant
+      - rabbitmq
+    restart: unless-stopped
+
+  # AI worker — collaborative filtering batch job (runs daily, mirrors Helm CronJob 0 0 * * *)
+  ai-cf-worker:
+    build: ./services/ai-service
+    container_name: ai-cf-worker
+    command: sh -c "python -m app.workers.cf_worker && sleep 86400"
+    env_file:
+      - ./services/ai-service/.env.compose
+    networks:
+      - app-network
+    depends_on:
+      - qdrant
+    restart: unless-stopped
+
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  qdrant_data:
+  rabbitmq_data:

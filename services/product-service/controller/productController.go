@@ -368,3 +368,27 @@ func (c *ProductController) GetSuggestedProducts(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, products)
 }
+
+func (c *ProductController) GetAIRecommendedProducts(ctx *gin.Context) {
+	userID := ctx.GetHeader("X-User-Id")
+	if userID == "" {
+		ctx.Error(error.NewAppError(401, "User ID not found in header"))
+		ctx.Abort()
+		return
+	}
+
+	limitStr := ctx.DefaultQuery("limit", "20")
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit <= 0 {
+		limit = 20
+	}
+
+	products, err := c.service.GetAIRecommendedProducts(userID, limit)
+	if err != nil {
+		ctx.Error(err)
+		ctx.Abort()
+		return
+	}
+
+	ctx.JSON(http.StatusOK, products)
+}

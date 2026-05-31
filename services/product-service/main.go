@@ -34,10 +34,11 @@ func main() {
 	// Wiring dependencies - Product
 	productRepo := repository.NewProductRepository(config.DB)
 	userClient := client.NewUserServiceClient()
+	aiClient := client.NewAIServiceClient()
 	searchHistoryRepo := repository.NewSearchHistoryRepository(config.DB)
 	ratingRepo := repository.NewRatingRepository(config.DB)
 	reportRepo := repository.NewReportRepository(config.DB)
-	
+
 	// Wiring dependencies - Category (needed by ProductService)
 	categoryRepo := repository.NewCategoryRepository(config.DB)
 	categoryService := service.NewCategoryService(categoryRepo)
@@ -47,10 +48,10 @@ func main() {
 	sellerCategoryRepo := repository.NewSellerCategoryRepository(config.DB)
 	sellerCategoryService := service.NewSellerCategoryService(sellerCategoryRepo)
 	sellerCategoryController := controller.NewSellerCategoryController(sellerCategoryService)
-	
+
 	// Initialize ProductService with category repositories
 	_ = model.Product{} // keep model import if not used elsewhere
-	productService := service.NewProductService(productRepo, userClient, searchHistoryRepo, ratingRepo, reportRepo, categoryRepo, sellerCategoryRepo)
+	productService := service.NewProductService(productRepo, userClient, aiClient, searchHistoryRepo, ratingRepo, reportRepo, categoryRepo, sellerCategoryRepo)
 	productController := controller.NewProductController(productService)
 
 	// Wiring dependencies - SavedVoucher (initialize repo first)

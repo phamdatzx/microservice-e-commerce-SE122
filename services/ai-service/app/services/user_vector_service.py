@@ -20,7 +20,7 @@ def _get_product_vector_map(product_ids: List[str]) -> dict[str, List[float]]:
         return {}
 
     result = client.retrieve(
-        collection_name=settings.QDRANT_COLLECTION_NAME,
+        collection_name=settings.QDRANT_PRODUCT_DOC_COLLECTION,
         ids=product_ids,
         with_vectors=True,
         with_payload=False,
@@ -93,7 +93,10 @@ def compute_user_vector_from_interaction_docs(
         pid = str(doc.get("product_id", ""))
         if not pid:
             continue
-        agg[pid] += float(doc.get("score", 0.0))
+        raw_score = doc.get("score", 0.0)
+        # MongoDB may return BSON Decimal128 (e.g. from Go service writes);
+        # call .to_decimal() first if needed, then cast to float.
+        agg[pid] += float(raw_score.to_decimal() if hasattr(raw_score, "to_decimal") else raw_score)
 
     items = [
         UserProductWeight(product_id=pid, weight=w)
@@ -110,7 +113,7 @@ def compute_user_vector_from_interaction_docs(
             kept_items.append(it)
         else:
             logger.warning(
-                "Skipping product_id %s (no vector in Qdrant products collection)",
+                "Skipping product_id %s (no vector in Qdrant product_docs collection)",
                 it.product_id,
             )
 

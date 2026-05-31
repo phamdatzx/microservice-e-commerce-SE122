@@ -1,0 +1,28 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Values.appName }}-cf-worker
+  namespace: default
+  labels:
+    app: {{ .Values.appName }}-cf-worker
+spec:
+  schedule: {{ .Values.schedule | quote }}
+  # Skip new run if the previous one is still running
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: {{ .Values.appName }}-cf-worker
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: cf-worker
+              image: "{{ .Values.image }}:{{ .Values.tag }}"
+              imagePullPolicy: Always
+              envFrom:
+                - secretRef:
+                    name: {{ .Values.appName }}-secret

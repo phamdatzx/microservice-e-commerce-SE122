@@ -32,11 +32,13 @@ type ProductService interface {
 	GetDisabledProductsBySeller(sellerID string, page, limit int) ([]model.Product, int64, error)
 	CheckProductsStatus(userID string, productIDs []string) (*dto.CheckProductStatusResponse, error)
 	GetSuggestedProducts(userID string) ([]model.Product, error)
+	GetAIRecommendedProducts(userID string, limit int) ([]model.Product, error)
 }
 
 type productService struct {
 	repo              repository.ProductRepository
 	userClient        *client.UserServiceClient
+	aiClient          *client.AIServiceClient
 	searchHistoryRepo repository.SearchHistoryRepository
 	ratingRepo        repository.RatingRepository
 	reportRepo        repository.ReportRepository
@@ -44,10 +46,11 @@ type productService struct {
 	sellerCategoryRepo repository.SellerCategoryRepository
 }
 
-func NewProductService(repo repository.ProductRepository, userClient *client.UserServiceClient, searchHistoryRepo repository.SearchHistoryRepository, ratingRepo repository.RatingRepository, reportRepo repository.ReportRepository, categoryRepo repository.CategoryRepository, sellerCategoryRepo repository.SellerCategoryRepository) ProductService {
+func NewProductService(repo repository.ProductRepository, userClient *client.UserServiceClient, aiClient *client.AIServiceClient, searchHistoryRepo repository.SearchHistoryRepository, ratingRepo repository.RatingRepository, reportRepo repository.ReportRepository, categoryRepo repository.CategoryRepository, sellerCategoryRepo repository.SellerCategoryRepository) ProductService {
 	return &productService{
 		repo:              repo,
 		userClient:        userClient,
+		aiClient:          aiClient,
 		searchHistoryRepo: searchHistoryRepo,
 		ratingRepo:        ratingRepo,
 		reportRepo:        reportRepo,
@@ -709,4 +712,42 @@ func (s *productService) GetSuggestedProducts(userID string) ([]model.Product, e
 	}
 
 	return suggestedProducts, nil
+}
+
+func (s *productService) GetAIRecommendedProducts(userID string, limit int) ([]model.Product, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 20
+	}
+
+	// Call ai-service to get ranked product IDs
+	ids, err := s.aiClient.GetUserRecommendations(userID, limit)
+	if err != nil {
+		fmt.Printf("Failed to get AI recommendations for user %s: %v\n", userID, err)
+		return []model.Product{}, nil
+	}
+
+	if len(ids) == 0 {
+		return []model.Product{}, nil
+	}
+
+	// Fetch full product data from DB
+	products, err := s.repo.FindByIDs(ids)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build a lookup map and re-order to match AI ranking
+	productMap := make(map[string]model.Product, len(products))
+	for _, p := range products {
+		productMap[p.ID] = p
+	}
+
+	ordered := make([]model.Product, 0, len(ids))
+	for _, id := range ids {
+		if p, ok := productMap[id]; ok {
+			ordered = append(ordered, p)
+		}
+	}
+
+	return ordered, nil
 }
