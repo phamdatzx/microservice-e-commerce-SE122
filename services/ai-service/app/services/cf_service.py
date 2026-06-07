@@ -18,11 +18,13 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from pymongo import ASCENDING, UpdateOne
+from qdrant_client.http import models as qmodels
 from scipy.sparse import csr_matrix
 from sklearn.metrics.pairwise import cosine_similarity
 
 from app.core.config import get_settings
 from app.services.interaction_service import get_interactions_collection, get_mongo_client
+from app.services.qdrant_service import get_qdrant_client
 
 logger = logging.getLogger(__name__)
 
@@ -274,17 +276,91 @@ def store_item_similarities(
 # ---------------------------------------------------------------------------
 
 
+def _get_content_similar_products(
+    product_id: str,
+    exclude_ids: list[str],
+    limit: int,
+) -> list[dict[str, Any]]:
+    """
+    Find products similar to `product_id` using vector similarity in Qdrant.
+
+    Used as a fallback when CF pre-computed results are insufficient.
+    Returns items in the same shape as CF results: {"product_id": str, "score": float}.
+    """
+    settings = get_settings()
+    client = get_qdrant_client()
+
+    # Retrieve the product's own embedding from Qdrant
+    points = client.retrieve(
+        collection_name=settings.QDRANT_PRODUCT_DOC_COLLECTION,
+        ids=[product_id],
+        with_vectors=True,
+        with_payload=False,
+    )
+
+    if not points or points[0].vector is None:
+        logger.warning(
+            "No embedding found in Qdrant for product_id=%s — skipping content fallback",
+            product_id,
+        )
+        return []
+
+    product_vector = points[0].vector
+
+    # Exclude the product itself and anything already returned by CF
+    all_exclude = list({product_id} | set(exclude_ids))
+
+    query_filter = qmodels.Filter(
+        must_not=[qmodels.HasIdCondition(has_id=all_exclude)]
+    )
+
+    result = client.query_points(
+        collection_name=settings.QDRANT_PRODUCT_DOC_COLLECTION,
+        query=product_vector,
+        query_filter=query_filter,
+        limit=limit,
+        with_payload=False,
+    )
+
+    scored_points = result.points if hasattr(result, "points") else result
+
+    return [
+        {"product_id": str(p.id), "score": round(float(p.score), 6)}
+        for p in scored_points
+    ]
+
+
 def get_cf_recommendations(
     product_id: str, limit: int = 10
 ) -> list[dict[str, Any]]:
     """
-    Return pre-computed similar items for a product from MongoDB.
+    Return similar items for a product.
+
+    Primary source: pre-computed CF similarities stored in MongoDB.
+    Fallback: content-based vector similarity from Qdrant for any missing slots.
     """
     col = _get_similarity_collection()
     doc = col.find_one({"product_id": product_id}, {"_id": 0})
 
-    if not doc or not doc.get("similar_items"):
-        return []
+    cf_items: list[dict[str, Any]] = []
+    if doc and doc.get("similar_items"):
+        cf_items = doc["similar_items"][:limit]
 
-    items = doc["similar_items"]
-    return items[:limit]
+    missing = limit - len(cf_items)
+    if missing > 0:
+        already_returned_ids = [item["product_id"] for item in cf_items]
+        logger.info(
+            "CF returned %d/%d items for product_id=%s — fetching %d from content similarity",
+            len(cf_items),
+            limit,
+            product_id,
+            missing,
+        )
+        content_items = _get_content_similar_products(
+            product_id=product_id,
+            exclude_ids=already_returned_ids,
+            limit=missing,
+        )
+        cf_items.extend(content_items)
+
+    return cf_items

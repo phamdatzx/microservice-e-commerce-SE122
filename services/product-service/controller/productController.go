@@ -392,3 +392,27 @@ func (c *ProductController) GetAIRecommendedProducts(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, products)
 }
+
+func (c *ProductController) GetCFRecommendedProducts(ctx *gin.Context) {
+	productID := ctx.Param("productId")
+	if productID == "" {
+		ctx.Error(error.NewAppError(http.StatusBadRequest, "Product ID is required"))
+		ctx.Abort()
+		return
+	}
+
+	limitStr := ctx.DefaultQuery("limit", "10")
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit <= 0 {
+		limit = 10
+	}
+
+	products, err := c.service.GetCFRecommendedProducts(productID, limit)
+	if err != nil {
+		ctx.Error(err)
+		ctx.Abort()
+		return
+	}
+
+	ctx.JSON(http.StatusOK, products)
+}
