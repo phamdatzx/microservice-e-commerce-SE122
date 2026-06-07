@@ -20,11 +20,13 @@ func RegisterProductRoutes(rg *gin.RouterGroup, c controller.ProductController) 
 		product.GET("/public/search", c.SearchProducts)
 		product.POST("/public/check-status", c.CheckProductsStatus)
 
+		// Public recommendation routes
+		product.GET("/public/cf-recommendations/:productId", c.GetCFRecommendedProducts)
+
 		// Private routes - require authentication
 		product.GET("/recently-viewed-products", c.GetRecentlyViewedProducts)
 		product.GET("/suggested-products", c.GetSuggestedProducts)
 		product.GET("/ai-recommendations", c.GetAIRecommendedProducts)
-		product.GET("/cf-recommendations/:productId", c.GetCFRecommendedProducts)
 
 		// Protected routes - require seller role
 		product.POST("/", middleware.RequireSeller(), c.CreateProduct)

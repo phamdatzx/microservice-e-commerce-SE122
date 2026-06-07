@@ -25,7 +25,7 @@ async def cf_recommend(
     if not raw:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No CF similarities found for product_id={product_id}",
+            detail=f"No similar products found for product_id={product_id} (no CF data and no embedding in Qdrant)",
         )
 
     items = [CFSimilarItem(**item) for item in raw]
