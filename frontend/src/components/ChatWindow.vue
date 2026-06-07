@@ -81,6 +81,114 @@ const isLoadingContacts = ref(false)
 const isLoadingMessages = ref(false)
 const isAiTyping = ref(false)
 
+const compareProducts = ref<{ productId: string; name: string; image?: string }[]>([])
+
+const loadCompareProducts = () => {
+  try {
+    const stored = localStorage.getItem('compare_products')
+    if (stored) {
+      compareProducts.value = JSON.parse(stored)
+    }
+  } catch (e) {
+    console.error('Error loading compare products:', e)
+  }
+}
+
+const saveCompareProducts = () => {
+  localStorage.setItem('compare_products', JSON.stringify(compareProducts.value))
+}
+
+const addToCompare = (product: { productId: string; name: string; image?: string }) => {
+  loadCompareProducts()
+  const exists = compareProducts.value.some(
+    (p) => String(p.productId) === String(product.productId),
+  )
+  if (exists) {
+    ElMessage.warning('This product is already in the comparison list.')
+    return
+  }
+
+  if (compareProducts.value.length >= 4) {
+    ElMessage.warning('You can only compare a maximum of 4 products at a time.')
+    return
+  }
+
+  compareProducts.value.push(product)
+  saveCompareProducts()
+
+  ElMessage.success(`Added "${product.name}" to the comparison list.`)
+
+  // Auto open AI chat window and select AI contact
+  isChatVisible.value = true
+  isContentHidden.value = false
+  const aiContact = contacts.value.find((c) => c.isAi)
+  if (aiContact) {
+    selectContact(aiContact)
+  }
+}
+
+const removeFromCompare = (productId: string) => {
+  compareProducts.value = compareProducts.value.filter(
+    (p) => String(p.productId) !== String(productId),
+  )
+  saveCompareProducts()
+}
+
+const clearAllCompare = () => {
+  compareProducts.value = []
+  saveCompareProducts()
+}
+
+const triggerAiComparison = async () => {
+  if (compareProducts.value.length < 2) {
+    ElMessage.warning('Please select at least 2 products to compare.')
+    return
+  }
+
+  const promptText =
+    `Hãy so sánh các sản phẩm sau đây giúp tôi:\n` +
+    compareProducts.value.map((p) => `- ${p.name}`).join('\n')
+
+  const idsToCompare = [...compareProducts.value.map((p) => p.productId)]
+  clearAllCompare()
+
+  // 1. Add User Message Locally
+  const userMsg = {
+    id: 'local-' + Date.now(),
+    text: promptText,
+    sender: 'receiver', // Right side
+    time: new Date().toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }),
+    date: 'Today',
+    image: null,
+  }
+
+  const aiContact = contacts.value.find((c) => c.isAi)
+  if (aiContact) {
+    aiContact.messages.push(userMsg)
+    aiContact.lastMessage = 'You: ' + promptText
+    aiContact.time = userMsg.time
+  }
+
+  scrollToBottom()
+
+  // 2. Call AI API
+  await getAiResponse(promptText, idsToCompare)
+}
+
+const handleAddToAiCompareEvent = (event: any) => {
+  if (event.detail && event.detail.productId) {
+    addToCompare({
+      productId: event.detail.productId,
+      name: event.detail.name,
+      image: event.detail.image,
+    })
+  }
+}
+
 const aiContactTemplate = {
   id: AI_CONTACT_ID,
   name: 'AI Assistant',
@@ -430,6 +538,8 @@ onMounted(() => {
   }
 
   window.addEventListener('open-chat', handleOpenChatEvent)
+  window.addEventListener('add-to-ai-compare', handleAddToAiCompareEvent)
+  loadCompareProducts()
 
   // Handle focus query param for sellers or direct links
   const focusId = route.query.focus
@@ -568,6 +678,7 @@ const cleanupSocketListeners = () => {
 onUnmounted(() => {
   cleanupSocketListeners()
   window.removeEventListener('open-chat', handleOpenChatEvent)
+  window.removeEventListener('add-to-ai-compare', handleAddToAiCompareEvent)
 })
 
 watch(activeContact, (newVal, oldVal) => {
@@ -670,7 +781,7 @@ const markActiveConversationAsRead = () => {
   }
 }
 
-const getAiResponse = async (question: string) => {
+const getAiResponse = async (question: string, overrideCompareProductIds?: string[]) => {
   const aiContact = contacts.value.find((c) => c.isAi)
   if (!aiContact) return
 
@@ -705,6 +816,9 @@ const getAiResponse = async (question: string) => {
       content: msg.text || '',
     }))
 
+    const compareProductIds =
+      overrideCompareProductIds || compareProducts.value.map((p) => p.productId)
+
     const payload = {
       message: question,
       chat_history: chatHistory,
@@ -712,6 +826,7 @@ const getAiResponse = async (question: string) => {
         page: type,
         ...(productId && { current_product_id: productId }),
         ...(sellerId && { current_seller_id: sellerId }),
+        ...(compareProductIds.length > 0 && { compare_product_ids: compareProductIds }),
       },
     }
 
@@ -1169,32 +1284,51 @@ const getMsgClass = (msg: any) => {
                             class="entity-list"
                           >
                             <div class="entity-list-label">Sản phẩm liên quan:</div>
-                            <router-link
+                            <div
                               v-for="prod in msg.entities.products"
                               :key="prod.id || prod._id"
-                              :to="'/product/' + (prod.id || prod._id)"
-                              class="entity-card product-card"
+                              class="product-entity-wrapper"
                             >
-                              <el-image
-                                v-if="prod.image"
-                                :src="prod.image"
-                                class="entity-img"
-                                fit="cover"
-                              />
-                              <div class="entity-info">
-                                <div class="entity-title">{{ prod.name }}</div>
-                                <div v-if="prod.priceMin != null" class="entity-price">
-                                  <template v-if="prod.priceMax && prod.priceMax !== prod.priceMin">
-                                    {{ Number(prod.priceMin).toLocaleString('vi-VN') }}đ –
-                                    {{ Number(prod.priceMax).toLocaleString('vi-VN') }}đ
-                                  </template>
-                                  <template v-else>
-                                    {{ Number(prod.priceMin).toLocaleString('vi-VN') }}đ
-                                  </template>
+                              <router-link
+                                :to="'/product/' + (prod.id || prod._id)"
+                                class="entity-card product-card"
+                              >
+                                <el-image
+                                  v-if="prod.image"
+                                  :src="prod.image"
+                                  class="entity-img"
+                                  fit="cover"
+                                />
+                                <div class="entity-info">
+                                  <div class="entity-title">{{ prod.name }}</div>
+                                  <div v-if="prod.priceMin != null" class="entity-price">
+                                    <template
+                                      v-if="prod.priceMax && prod.priceMax !== prod.priceMin"
+                                    >
+                                      {{ Number(prod.priceMin).toLocaleString('vi-VN') }}đ –
+                                      {{ Number(prod.priceMax).toLocaleString('vi-VN') }}đ
+                                    </template>
+                                    <template v-else>
+                                      {{ Number(prod.priceMin).toLocaleString('vi-VN') }}đ
+                                    </template>
+                                  </div>
                                 </div>
-                              </div>
-                              <span class="entity-arrow">Xem →</span>
-                            </router-link>
+                                <span class="entity-arrow">Xem →</span>
+                              </router-link>
+                              <button
+                                class="add-to-compare-btn-inline"
+                                @click="
+                                  addToCompare({
+                                    productId: prod.id || prod._id,
+                                    name: prod.name,
+                                    image: prod.image,
+                                  })
+                                "
+                              >
+                                <el-icon style="margin-right: 4px"><ChatDotRound /></el-icon>
+                                Compare
+                              </button>
+                            </div>
                           </div>
 
                           <div
@@ -1277,6 +1411,41 @@ const getMsgClass = (msg: any) => {
                 <div class="preview-remove" @click="removeSelectedImage">
                   <el-icon><Close /></el-icon>
                 </div>
+              </div>
+            </div>
+
+            <!-- Compare Products Bar -->
+            <div
+              v-if="activeContact?.isAi && compareProducts.length > 0"
+              class="compare-products-bar"
+            >
+              <div class="compare-bar-header">
+                <span class="compare-bar-title"
+                  >Compare Products ({{ compareProducts.length }}/4)</span
+                >
+                <button class="clear-compare-btn" @click="clearAllCompare">Clear all</button>
+              </div>
+              <div class="compare-items-container">
+                <div class="compare-items-list">
+                  <div
+                    v-for="prod in compareProducts"
+                    :key="prod.productId"
+                    class="compare-item-pill"
+                  >
+                    <img v-if="prod.image" :src="prod.image" class="compare-item-img" />
+                    <span class="compare-item-name">{{ prod.name }}</span>
+                    <el-icon class="remove-compare-icon" @click="removeFromCompare(prod.productId)"
+                      ><Close
+                    /></el-icon>
+                  </div>
+                </div>
+                <button
+                  class="trigger-compare-btn"
+                  @click="triggerAiComparison"
+                  :disabled="isAiTyping || compareProducts.length < 2"
+                >
+                  <el-icon style="margin-right: 4px"><Tickets /></el-icon> Compare now
+                </button>
               </div>
             </div>
             <div class="input-area">
@@ -2193,6 +2362,166 @@ const getMsgClass = (msg: any) => {
   height: 20px;
   line-height: 18px;
   font-size: 11px;
+}
+
+/* AI Compare Products Bar */
+.compare-products-bar {
+  padding: 10px 16px;
+  background-color: #f0fdf4;
+  border-top: 1px solid #d1fae5;
+  border-bottom: 1px solid #d1fae5;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.compare-bar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.compare-bar-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #16a34a;
+}
+
+.clear-compare-btn {
+  font-size: 11px;
+  color: #ef4444;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.clear-compare-btn:hover {
+  text-decoration: underline;
+}
+
+.compare-items-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.compare-items-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 1;
+  max-height: 80px;
+  overflow-y: auto;
+}
+
+.compare-item-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: white;
+  border: 1px solid #d1fae5;
+  border-radius: 20px;
+  padding: 4px 8px 4px 4px;
+  font-size: 11px;
+  color: #333;
+  max-width: 150px;
+}
+
+.compare-item-img {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.compare-item-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.remove-compare-icon {
+  font-size: 10px;
+  color: #999;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.remove-compare-icon:hover {
+  color: #ef4444;
+}
+
+.trigger-compare-btn {
+  background-color: var(--main-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  transition: opacity 0.2s;
+}
+
+.trigger-compare-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.trigger-compare-btn:disabled {
+  background-color: #cbd5e1;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.product-entity-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: #f0fdf4;
+  border: 1px solid #d1fae5;
+  border-radius: 6px;
+  padding: 4px;
+}
+
+.product-entity-wrapper .product-card {
+  border: none;
+  background: transparent;
+  padding: 4px;
+  width: auto;
+  min-width: unset;
+}
+
+.product-entity-wrapper .product-card:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.add-to-compare-btn-inline {
+  background: white;
+  border: 1px solid #d1fae5;
+  color: var(--main-color);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  margin: 0 4px 4px;
+}
+
+.add-to-compare-btn-inline:hover {
+  background: var(--main-color);
+  color: white;
+  border-color: var(--main-color);
 }
 </style>
 

@@ -4,7 +4,7 @@ import { onMounted, ref, computed, reactive, watch, inject, defineAsyncComponent
 import { quantityFormatNumber } from '@/utils/quantityFormatNumber'
 import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
 import RedFlagIcon from '@/components/icons/RedFlagIcon.vue'
-import { Check, Goods, ShoppingCart, Loading } from '@element-plus/icons-vue'
+import { Check, Goods, ShoppingCart, Loading, ChatDotRound } from '@element-plus/icons-vue'
 import UserComment from '../../components/UserComment.vue'
 import ProductItem from '@/components/ProductItem.vue'
 import RecentlyViewed from '@/components/RecentlyViewed.vue'
@@ -447,6 +447,29 @@ const handleBuyNow = () => {
   localStorage.setItem('instant_checkout_item', JSON.stringify([instantItem]))
   router.push('/checkout?mode=instant')
 }
+
+const addToAiCompare = () => {
+  if (!isLoggedIn.value) {
+    ElNotification({
+      title: 'Login Required',
+      message: 'Please login to use AI comparison.',
+      type: 'warning',
+    })
+    return
+  }
+  if (!product.value) return
+
+  const event = new CustomEvent('add-to-ai-compare', {
+    detail: {
+      productId: product.value.id,
+      name: product.value.name,
+      image: product.value.images?.[0]?.url || null,
+      priceMin: product.value.price?.min || null,
+      priceMax: product.value.price?.max || null,
+    },
+  })
+  window.dispatchEvent(event)
+}
 </script>
 
 <template>
@@ -585,7 +608,7 @@ const handleBuyNow = () => {
               :max="currentStock || 1"
               :disabled="currentStock <= 0"
               size="large"
-              style="width: 100%"
+              style="width: 100%; margin-bottom: 4px"
             />
 
             <el-button
@@ -594,7 +617,7 @@ const handleBuyNow = () => {
               size="large"
               :disabled="currentStock <= 0"
               :loading="isAddingToCart"
-              style="width: 100%; margin: 20px 0"
+              style="width: 100%; margin: 16px 0"
               @click="addToCart"
             >
               <el-icon size="large" style="margin-right: 6px"><ShoppingCart /></el-icon>
@@ -610,6 +633,17 @@ const handleBuyNow = () => {
             >
               <el-icon size="large" style="margin-right: 6px"><Goods /></el-icon>
               Buy Now
+            </el-button>
+            <el-button
+              type="success"
+              color="#22c55e"
+              plain
+              size="large"
+              style="width: 100%; margin: 16px 0 0"
+              @click="addToAiCompare"
+            >
+              <el-icon size="large" style="margin-right: 6px"><ChatDotRound /></el-icon>
+              Compare with AI
             </el-button>
             <!-- <div style="display: flex; align-items: center; margin-top: 24px">
               <el-icon style="fill: var(--main-color)"><HeartIcon /></el-icon>
