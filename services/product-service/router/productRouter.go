@@ -24,6 +24,7 @@ func RegisterProductRoutes(rg *gin.RouterGroup, c controller.ProductController) 
 		product.GET("/recently-viewed-products", c.GetRecentlyViewedProducts)
 		product.GET("/suggested-products", c.GetSuggestedProducts)
 		product.GET("/ai-recommendations", c.GetAIRecommendedProducts)
+		product.GET("/cf-recommendations/:productId", c.GetCFRecommendedProducts)
 
 		// Protected routes - require seller role
 		product.POST("/", middleware.RequireSeller(), c.CreateProduct)
