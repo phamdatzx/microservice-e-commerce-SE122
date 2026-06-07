@@ -152,11 +152,10 @@ const triggerAiComparison = async () => {
   const idsToCompare = [...compareProducts.value.map((p) => p.productId)]
   clearAllCompare()
 
-  // 1. Add User Message Locally
   const userMsg = {
     id: 'local-' + Date.now(),
     text: promptText,
-    sender: 'receiver', // Right side
+    sender: 'receiver',
     time: new Date().toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
@@ -175,7 +174,6 @@ const triggerAiComparison = async () => {
 
   scrollToBottom()
 
-  // 2. Call AI API
   await getAiResponse(promptText, idsToCompare)
 }
 
@@ -786,6 +784,9 @@ const getAiResponse = async (question: string, overrideCompareProductIds?: strin
   if (!aiContact) return
 
   isAiTyping.value = true
+  nextTick(() => {
+    scrollToBottom()
+  })
   try {
     let type = 'general'
     let productId = ''
@@ -953,6 +954,9 @@ const getAiResponse = async (question: string, overrideCompareProductIds?: strin
     })
   } finally {
     isAiTyping.value = false
+    nextTick(() => {
+      msgInputRef.value?.focus()
+    })
   }
 }
 
@@ -971,17 +975,15 @@ const sendMessage = async () => {
   try {
     if (activeContact.value.isAi) {
       if (selectedImageFile.value) {
-        // AI doesn't support images yet in this implementation
         ElMessage.warning('AI Assistant currently only supports text messages.')
         removeSelectedImage()
         return
       }
 
-      // 1. Add User Message Locally
       const userMsg = {
         id: 'local-' + Date.now(),
         text: text,
-        sender: 'receiver', // Right side
+        sender: 'receiver',
         time: new Date().toLocaleTimeString('en-US', {
           hour: '2-digit',
           minute: '2-digit',
@@ -997,13 +999,10 @@ const sendMessage = async () => {
       newMessage.value = ''
       scrollToBottom()
 
-      // 2. Clear input
-      isSending.value = false // Allow input again immediately
+      isSending.value = false
 
-      // 3. Call AI API
       await getAiResponse(text)
     } else {
-      // Normal Chat Logic
       if (selectedImageFile.value) {
         await sendImageMessage()
       } else {
@@ -1401,6 +1400,17 @@ const getMsgClass = (msg: any) => {
                       <span>.</span><span>.</span><span>.</span>
                     </div>
                   </div>
+
+                  <div v-if="activeContact.isAi && isAiTyping" class="msg-row sender">
+                    <div
+                      class="msg-bubble typing-indicator"
+                      style="background-color: white; border: 1px solid #d1fae5"
+                    >
+                      <span style="background-color: #16a34a"></span>
+                      <span style="background-color: #16a34a"></span>
+                      <span style="background-color: #16a34a"></span>
+                    </div>
+                  </div>
                 </div>
               </template>
             </div>
@@ -1463,7 +1473,7 @@ const getMsgClass = (msg: any) => {
                 type="text"
                 placeholder="Type a message..."
                 class="msg-input"
-                :disabled="isSending"
+                :disabled="isSending || (activeContact?.isAi && isAiTyping)"
                 @keyup.enter="sendMessage"
                 @click="markActiveConversationAsRead"
                 @focus="markActiveConversationAsRead"
@@ -1471,15 +1481,21 @@ const getMsgClass = (msg: any) => {
 
               <button
                 class="upload-btn"
-                :disabled="isSending"
+                :disabled="isSending || (activeContact?.isAi && isAiTyping)"
                 @click="handleImageUpload"
                 title="Upload Image"
               >
                 <el-icon><Picture /></el-icon>
               </button>
 
-              <button class="send-btn" :disabled="isSending" @click="sendMessage">
-                <el-icon v-if="isSending" class="is-loading"><Loading /></el-icon>
+              <button
+                class="send-btn"
+                :disabled="isSending || (activeContact?.isAi && isAiTyping)"
+                @click="sendMessage"
+              >
+                <el-icon v-if="isSending || (activeContact?.isAi && isAiTyping)" class="is-loading"
+                  ><Loading
+                /></el-icon>
                 <svg v-else viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
                   <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
                 </svg>
