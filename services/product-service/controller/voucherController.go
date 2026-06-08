@@ -5,6 +5,7 @@ import (
 	"product-service/dto"
 	appError "product-service/error"
 	"product-service/service"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -84,7 +85,7 @@ func (c *VoucherController) List(ctx *gin.Context) {
 	}
 
 	// userID is same as sellerID in this context
-	response, err := c.service.GetVouchersBySeller(sellerID, sellerID)
+	response, err := c.service.GetVouchersBySeller(sellerID, sellerID, true)
 	if err != nil {
 		_ = ctx.Error(err)
 		ctx.Abort()
@@ -156,7 +157,6 @@ func (c *VoucherController) Delete(ctx *gin.Context) {
 		return
 	}
 
-
 	ctx.JSON(http.StatusOK, gin.H{"message": "Delete voucher successfully"})
 }
 
@@ -168,8 +168,10 @@ func (c *VoucherController) GetVouchersBySellerPublic(ctx *gin.Context) {
 		return
 	}
 
+	expired, _ := strconv.ParseBool(ctx.DefaultQuery("expired", "false"))
+
 	// For public route, userID is empty (no authentication)
-	response, err := c.service.GetVouchersBySeller(sellerID, "")
+	response, err := c.service.GetVouchersBySeller(sellerID, "", expired)
 	if err != nil {
 		_ = ctx.Error(err)
 		ctx.Abort()

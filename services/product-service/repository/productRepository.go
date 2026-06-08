@@ -22,6 +22,7 @@ type ProductRepository interface {
 	FindVariantsByIds(variantIDs []string) (map[string]*model.Product, error)
 	UpdateVariantStock(productID string, variantID string, stockDelta int) error
 	SearchProducts(filter bson.M, skip, limit int, sortByTextScore bool, sortField string, sortDirection int) ([]model.Product, int64, error)
+	FindRandom(excludeIDs []string, limit int) ([]model.Product, error)
 }
 
 type productRepository struct {
@@ -287,6 +288,35 @@ func (r *productRepository) UpdateVariantStock(productID string, variantID strin
 		},
 	)
 	return err
+}
+
+func (r *productRepository) FindRandom(excludeIDs []string, limit int) ([]model.Product, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	matchStage := bson.M{
+		"is_disabled": bson.M{"$ne": true},
+	}
+	if len(excludeIDs) > 0 {
+		matchStage["_id"] = bson.M{"$nin": excludeIDs}
+	}
+
+	pipeline := []bson.M{
+		{"$match": matchStage},
+		{"$sample": bson.M{"size": limit}},
+	}
+
+	cursor, err := r.collection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var products []model.Product
+	if err = cursor.All(ctx, &products); err != nil {
+		return nil, err
+	}
+	return products, nil
 }
 
 func (r *productRepository) SearchProducts(filter bson.M, skip, limit int, sortByTextScore bool, sortField string, sortDirection int) ([]model.Product, int64, error) {

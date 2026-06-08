@@ -33,6 +33,8 @@ type ProductService interface {
 	CheckProductsStatus(userID string, productIDs []string) (*dto.CheckProductStatusResponse, error)
 	GetSuggestedProducts(userID string) ([]model.Product, error)
 	GetAIRecommendedProducts(userID string, limit int) ([]model.Product, error)
+	GetCFRecommendedProducts(productID string, limit int) ([]model.Product, error)
+	GetRandomProducts(excludeIDs []string, limit int) ([]model.Product, error)
 }
 
 type productService struct {
@@ -723,6 +725,61 @@ func (s *productService) GetAIRecommendedProducts(userID string, limit int) ([]m
 	ids, err := s.aiClient.GetUserRecommendations(userID, limit)
 	if err != nil {
 		fmt.Printf("Failed to get AI recommendations for user %s: %v\n", userID, err)
+	}
+
+	// Fetch full product data from DB for AI-recommended IDs
+	var ordered []model.Product
+	var returnedIDs []string
+
+	if len(ids) > 0 {
+		products, err := s.repo.FindByIDs(ids)
+		if err != nil {
+			return nil, err
+		}
+
+		productMap := make(map[string]model.Product, len(products))
+		for _, p := range products {
+			productMap[p.ID] = p
+		}
+
+		for _, id := range ids {
+			if p, ok := productMap[id]; ok {
+				ordered = append(ordered, p)
+				returnedIDs = append(returnedIDs, p.ID)
+			}
+		}
+	}
+
+	// Fill remaining slots with random products when AI didn't return enough
+	missing := limit - len(ordered)
+	if missing > 0 {
+		randomProducts, err := s.repo.FindRandom(returnedIDs, missing)
+		if err != nil {
+			fmt.Printf("Failed to fetch random fallback products for user %s: %v\n", userID, err)
+		} else {
+			ordered = append(ordered, randomProducts...)
+		}
+	}
+
+	return ordered, nil
+}
+
+func (s *productService) GetRandomProducts(excludeIDs []string, limit int) ([]model.Product, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 20
+	}
+	return s.repo.FindRandom(excludeIDs, limit)
+}
+
+func (s *productService) GetCFRecommendedProducts(productID string, limit int) ([]model.Product, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 10
+	}
+
+	// Call ai-service to get similar product IDs via collaborative filtering
+	ids, err := s.aiClient.GetCFRecommendations(productID, limit)
+	if err != nil {
+		fmt.Printf("Failed to get CF recommendations for product %s: %v\n", productID, err)
 		return []model.Product{}, nil
 	}
 
@@ -736,7 +793,7 @@ func (s *productService) GetAIRecommendedProducts(userID string, limit int) ([]m
 		return nil, err
 	}
 
-	// Build a lookup map and re-order to match AI ranking
+	// Build a lookup map and re-order to match CF ranking
 	productMap := make(map[string]model.Product, len(products))
 	for _, p := range products {
 		productMap[p.ID] = p

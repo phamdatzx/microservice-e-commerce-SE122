@@ -11,7 +11,7 @@ import (
 type VoucherService interface {
 	CreateVoucher(sellerID string, request dto.VoucherRequest) (dto.VoucherResponse, error)
 	GetVoucherByID(id string, userID string) (dto.VoucherResponse, error)
-	GetVouchersBySeller(sellerID string, userID string) ([]dto.VoucherResponse, error)
+	GetVouchersBySeller(sellerID string, userID string, includeExpired bool) ([]dto.VoucherResponse, error)
 	UpdateVoucher(id string, sellerID string, request dto.VoucherRequest) (dto.VoucherResponse, error)
 	DeleteVoucher(id string, sellerID string) error
 	UseVoucher(userID string, voucherID string) (dto.UseVoucherResponse, error)
@@ -65,7 +65,7 @@ func (s *voucherService) GetVoucherByID(id string, userID string) (dto.VoucherRe
 	return s.mapToResponse(voucher, userID), nil
 }
 
-func (s *voucherService) GetVouchersBySeller(sellerID string, userID string) ([]dto.VoucherResponse, error) {
+func (s *voucherService) GetVouchersBySeller(sellerID string, userID string, includeExpired bool) ([]dto.VoucherResponse, error) {
 	vouchers, err := s.repo.FindBySellerID(sellerID)
 	if err != nil {
 		return nil, err
@@ -73,9 +73,16 @@ func (s *voucherService) GetVouchersBySeller(sellerID string, userID string) ([]
 
 	var responses []dto.VoucherResponse
 	for _, voucher := range vouchers {
+		if !includeExpired && isVoucherExpired(&voucher) {
+			continue
+		}
 		responses = append(responses, s.mapToResponse(&voucher, userID))
 	}
 	return responses, nil
+}
+
+func isVoucherExpired(voucher *model.Voucher) bool {
+	return voucher.Status == "EXPIRED" || time.Now().After(voucher.EndTime)
 }
 
 func (s *voucherService) UpdateVoucher(id string, sellerID string, request dto.VoucherRequest) (dto.VoucherResponse, error) {
