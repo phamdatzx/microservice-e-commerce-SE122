@@ -80,6 +80,8 @@ const sellerInfo = ref<SellerInfo | null>(null)
 const isLoading = ref(true)
 const isAddingToCart = ref(false)
 const productList = ref<any[]>([]) // For related products
+const cfRecommendedProducts = ref<any[]>([])
+const loadingCfRecommendations = ref(false)
 const recentlyViewedRef = ref<any>(null)
 const isLoggedIn = ref(false)
 
@@ -286,6 +288,7 @@ watch(
       Object.keys(selectedOptions).forEach((key) => delete selectedOptions[key])
 
       fetchProduct()
+      fetchCfRecommendations()
 
       // Reset and fetch ratings
       ratingPage.value = 1
@@ -294,28 +297,60 @@ watch(
   },
 )
 
-const fetchSuggestedProducts = async () => {
-  const token = localStorage.getItem('access_token')
-  const headers = token ? { Authorization: `Bearer ${token}` } : {}
+// const fetchSuggestedProducts = async () => {
+//   const token = localStorage.getItem('access_token')
+//   const headers = token ? { Authorization: `Bearer ${token}` } : {}
+//   try {
+//     const response = await axios.get(
+//       `${import.meta.env.VITE_BE_API_URL}/product/suggested-products`,
+//       { headers },
+//     )
+//     if (response.data) {
+//       productList.value = response.data.map((item: any) => ({
+//         id: item.id,
+//         name: item.name,
+//         imageUrl: item.images && item.images.length > 0 ? item.images[0].url : '',
+//         minPrice: item.price.min,
+//         maxPrice: item.price.max,
+//         rating: item.rating,
+//         soldCount: item.sold_count,
+//         location: 'Vietnam',
+//       }))
+//     }
+//   } catch (error) {
+//     console.error('Error fetching suggested products:', error)
+//   }
+// }
+
+const fetchCfRecommendations = async () => {
+  if (!productId.value) return
+  loadingCfRecommendations.value = true
   try {
     const response = await axios.get(
-      `${import.meta.env.VITE_BE_API_URL}/product/suggested-products`,
-      { headers },
+      `${import.meta.env.VITE_BE_API_URL}/product/public/cf-recommendations/${productId.value}?limit=10`,
     )
-    if (response.data) {
-      productList.value = response.data.map((item: any) => ({
+    if (response.data && response.data.length > 0) {
+      cfRecommendedProducts.value = response.data.map((item: any) => ({
         id: item.id,
         name: item.name,
-        imageUrl: item.images && item.images.length > 0 ? item.images[0].url : '',
+        imageUrl:
+          item.images && item.images.length > 0
+            ? item.images.slice().sort((a: any, b: any) => a.order - b.order)[0]?.url || ''
+            : '',
         minPrice: item.price.min,
         maxPrice: item.price.max,
         rating: item.rating,
         soldCount: item.sold_count,
         location: 'Vietnam',
       }))
+    } else {
+      cfRecommendedProducts.value = []
     }
   } catch (error) {
-    console.error('Error fetching suggested products:', error)
+    console.error('Error fetching CF recommendations:', error)
+    cfRecommendedProducts.value = []
+  } finally {
+    loadingCfRecommendations.value = false
   }
 }
 
@@ -324,11 +359,12 @@ onMounted(() => {
   isLoggedIn.value = !!token
   fetchProduct()
   fetchRatings()
+  fetchCfRecommendations()
   syncSplides()
 
-  if (isLoggedIn.value) {
-    fetchSuggestedProducts()
-  }
+  // if (isLoggedIn.value) {
+  //   fetchSuggestedProducts()
+  // }
 })
 
 const syncSplides = () => {
@@ -817,6 +853,40 @@ const addToAiCompare = () => {
       </el-tabs>
     </div>
 
+    <!-- CF Recommendations Section -->
+    <div
+      class="box-shadow border-radius"
+      style="background-color: #fff; padding: 20px; margin-bottom: 20px; border: 1px solid #d1fae5"
+      v-if="cfRecommendedProducts.length"
+      v-loading="loadingCfRecommendations"
+    >
+      <div style="display: flex; align-items: center; margin-bottom: 24px">
+        <h3 style="font-weight: bold; margin: 0">PEOPLE ALSO LIKED</h3>
+      </div>
+
+      <el-row :gutter="20">
+        <el-col
+          :span="4.8"
+          class="el-col-4-8"
+          style="margin-bottom: 20px"
+          v-for="(item, index) in cfRecommendedProducts.slice(0, 10)"
+          :key="index"
+        >
+          <ProductItem
+            :image-url="item.imageUrl"
+            :name="item.name"
+            :min-price="item.minPrice"
+            :max-price="item.maxPrice"
+            :rating="item.rating"
+            :location="item.location"
+            :sold-count="item.soldCount"
+            :id="item.id"
+          />
+        </el-col>
+      </el-row>
+    </div>
+
+    <!-- Suggested Products Section
     <div
       class="box-shadow border-radius"
       style="background-color: #fff; padding: 20px; margin-bottom: 20px"
@@ -849,6 +919,7 @@ const addToAiCompare = () => {
         <p style="font-size: 14px">No related products found.</p>
       </div>
     </div>
+    -->
 
     <RecentlyViewed ref="recentlyViewedRef" v-if="isLoggedIn" />
   </div>
