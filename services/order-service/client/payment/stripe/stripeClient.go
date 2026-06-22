@@ -2,6 +2,7 @@ package stripeclient
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"order-service/config"
@@ -84,6 +85,15 @@ func (s *StripeClient) RefundPayment(ctx context.Context, paymentID string) erro
 }
 
 func (s *StripeClient) ConstructEvent(payload []byte, signature string) (*stripe.Event, error) {
+	// Skip signature validation when webhook secret is not configured (dev/testing only)
+	if s.config.WebhookSecret == "" {
+		var event stripe.Event
+		if err := json.Unmarshal(payload, &event); err != nil {
+			return nil, appError.NewAppErrorWithErr(400, "Invalid webhook payload", err)
+		}
+		return &event, nil
+	}
+
 	if signature == "" {
 		return nil, appError.NewAppError(400, "Missing Stripe-Signature header")
 	}

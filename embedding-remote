@@ -1,0 +1,1 @@
+ssh deploy@myvps "docker exec -i ai-service python -" < services/ai-service/scripts/embed_products.py
