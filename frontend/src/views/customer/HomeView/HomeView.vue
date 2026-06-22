@@ -14,10 +14,12 @@ import { eventBus } from '@/utils/eventBus'
 const fetchedCategories = ref<any[]>([])
 const bestSellers = ref<any[]>([])
 const suggestedProducts = ref<any[]>([])
+const aiRecommendedProducts = ref<any[]>([])
 
 const loadingCategories = ref(false)
 const loadingBestSellers = ref(false)
 const loadingFollowedSellers = ref(false)
+const loadingAiRecommendations = ref(false)
 const isLoggedIn = ref(false)
 
 const fetchBestSellers = async () => {
@@ -98,13 +100,44 @@ const fetchFollowedSellers = async () => {
   }
 }
 
-const fetchSuggestedProducts = async () => {
+// const fetchSuggestedProducts = async () => {
+//   const token = localStorage.getItem('access_token')
+//   if (!token) return
+//
+//   try {
+//     const response = await axios.get(
+//       `${import.meta.env.VITE_BE_API_URL}/product/suggested-products`,
+//       {
+//         headers: {
+//           Authorization: `Bearer ${token}`,
+//         },
+//       },
+//     )
+//     if (response.data) {
+//       suggestedProducts.value = response.data.map((item: any) => ({
+//         id: item.id,
+//         name: item.name,
+//         imageUrl: item.images && item.images.length > 0 ? item.images[0].url : '',
+//         minPrice: item.price.min,
+//         maxPrice: item.price.max,
+//         rating: item.rating,
+//         soldCount: item.sold_count,
+//         location: 'Vietnam',
+//       }))
+//     }
+//   } catch (error) {
+//     console.error('Error fetching suggested products:', error)
+//   }
+// }
+
+const fetchAiRecommendations = async () => {
   const token = localStorage.getItem('access_token')
   if (!token) return
 
+  loadingAiRecommendations.value = true
   try {
     const response = await axios.get(
-      `${import.meta.env.VITE_BE_API_URL}/product/suggested-products`,
+      `${import.meta.env.VITE_BE_API_URL}/product/ai-recommendations?limit=10`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -112,10 +145,13 @@ const fetchSuggestedProducts = async () => {
       },
     )
     if (response.data) {
-      suggestedProducts.value = response.data.map((item: any) => ({
+      aiRecommendedProducts.value = response.data.map((item: any) => ({
         id: item.id,
         name: item.name,
-        imageUrl: item.images && item.images.length > 0 ? item.images[0].url : '',
+        imageUrl:
+          item.images && item.images.length > 0
+            ? item.images.slice().sort((a: any, b: any) => a.order - b.order)[0]?.url || ''
+            : '',
         minPrice: item.price.min,
         maxPrice: item.price.max,
         rating: item.rating,
@@ -124,7 +160,9 @@ const fetchSuggestedProducts = async () => {
       }))
     }
   } catch (error) {
-    console.error('Error fetching suggested products:', error)
+    console.error('Error fetching recommended products:', error)
+  } finally {
+    loadingAiRecommendations.value = false
   }
 }
 
@@ -134,7 +172,8 @@ onMounted(() => {
   fetchFollowedSellers()
   fetchBestSellers()
   if (isLoggedIn.value) {
-    fetchSuggestedProducts()
+    // fetchSuggestedProducts()
+    fetchAiRecommendations()
   }
 
   eventBus.on('user_logged_out', () => {
@@ -286,7 +325,40 @@ onMounted(() => {
       </el-row>
     </div>
 
-    <!-- Suggested Products Section -->
+    <!-- Recommendations Section -->
+    <div
+      v-if="isLoggedIn && aiRecommendedProducts.length > 0"
+      class="box-shadow border-radius"
+      style="background-color: #fff; padding: 20px; margin-bottom: 20px; border: 1px solid #d1fae5"
+      v-loading="loadingAiRecommendations"
+    >
+      <div style="display: flex; align-items: center; margin-bottom: 24px">
+        <h3 style="font-weight: bold; margin: 0">RECOMMENDATION FOR YOU</h3>
+      </div>
+
+      <el-row :gutter="20">
+        <el-col
+          :span="4.8"
+          class="el-col-4-8"
+          v-for="(item, index) in aiRecommendedProducts"
+          :key="index"
+          style="margin-bottom: 20px"
+        >
+          <ProductItem
+            :image-url="item.imageUrl"
+            :name="item.name"
+            :min-price="item.minPrice"
+            :max-price="item.maxPrice"
+            :rating="item.rating"
+            :location="item.location"
+            :sold-count="item.soldCount"
+            :id="item.id"
+          />
+        </el-col>
+      </el-row>
+    </div>
+
+    <!-- Suggested Products Section
     <div
       v-if="suggestedProducts.length > 0"
       class="box-shadow border-radius"
@@ -317,6 +389,7 @@ onMounted(() => {
         </el-col>
       </el-row>
     </div>
+    -->
 
     <RecentlyViewed v-if="isLoggedIn" />
   </main>

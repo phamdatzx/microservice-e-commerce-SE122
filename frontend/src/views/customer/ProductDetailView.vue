@@ -4,7 +4,7 @@ import { onMounted, ref, computed, reactive, watch, inject, defineAsyncComponent
 import { quantityFormatNumber } from '@/utils/quantityFormatNumber'
 import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
 import RedFlagIcon from '@/components/icons/RedFlagIcon.vue'
-import { Check, Goods, ShoppingCart, Loading } from '@element-plus/icons-vue'
+import { Check, Goods, ShoppingCart, Loading, ChatDotRound } from '@element-plus/icons-vue'
 import UserComment from '../../components/UserComment.vue'
 import ProductItem from '@/components/ProductItem.vue'
 import RecentlyViewed from '@/components/RecentlyViewed.vue'
@@ -80,6 +80,8 @@ const sellerInfo = ref<SellerInfo | null>(null)
 const isLoading = ref(true)
 const isAddingToCart = ref(false)
 const productList = ref<any[]>([]) // For related products
+const cfRecommendedProducts = ref<any[]>([])
+const loadingCfRecommendations = ref(false)
 const recentlyViewedRef = ref<any>(null)
 const isLoggedIn = ref(false)
 
@@ -286,6 +288,7 @@ watch(
       Object.keys(selectedOptions).forEach((key) => delete selectedOptions[key])
 
       fetchProduct()
+      fetchCfRecommendations()
 
       // Reset and fetch ratings
       ratingPage.value = 1
@@ -294,28 +297,60 @@ watch(
   },
 )
 
-const fetchSuggestedProducts = async () => {
-  const token = localStorage.getItem('access_token')
-  const headers = token ? { Authorization: `Bearer ${token}` } : {}
+// const fetchSuggestedProducts = async () => {
+//   const token = localStorage.getItem('access_token')
+//   const headers = token ? { Authorization: `Bearer ${token}` } : {}
+//   try {
+//     const response = await axios.get(
+//       `${import.meta.env.VITE_BE_API_URL}/product/suggested-products`,
+//       { headers },
+//     )
+//     if (response.data) {
+//       productList.value = response.data.map((item: any) => ({
+//         id: item.id,
+//         name: item.name,
+//         imageUrl: item.images && item.images.length > 0 ? item.images[0].url : '',
+//         minPrice: item.price.min,
+//         maxPrice: item.price.max,
+//         rating: item.rating,
+//         soldCount: item.sold_count,
+//         location: 'Vietnam',
+//       }))
+//     }
+//   } catch (error) {
+//     console.error('Error fetching suggested products:', error)
+//   }
+// }
+
+const fetchCfRecommendations = async () => {
+  if (!productId.value) return
+  loadingCfRecommendations.value = true
   try {
     const response = await axios.get(
-      `${import.meta.env.VITE_BE_API_URL}/product/suggested-products`,
-      { headers },
+      `${import.meta.env.VITE_BE_API_URL}/product/public/cf-recommendations/${productId.value}?limit=10`,
     )
-    if (response.data) {
-      productList.value = response.data.map((item: any) => ({
+    if (response.data && response.data.length > 0) {
+      cfRecommendedProducts.value = response.data.map((item: any) => ({
         id: item.id,
         name: item.name,
-        imageUrl: item.images && item.images.length > 0 ? item.images[0].url : '',
+        imageUrl:
+          item.images && item.images.length > 0
+            ? item.images.slice().sort((a: any, b: any) => a.order - b.order)[0]?.url || ''
+            : '',
         minPrice: item.price.min,
         maxPrice: item.price.max,
         rating: item.rating,
         soldCount: item.sold_count,
         location: 'Vietnam',
       }))
+    } else {
+      cfRecommendedProducts.value = []
     }
   } catch (error) {
-    console.error('Error fetching suggested products:', error)
+    console.error('Error fetching CF recommendations:', error)
+    cfRecommendedProducts.value = []
+  } finally {
+    loadingCfRecommendations.value = false
   }
 }
 
@@ -324,11 +359,12 @@ onMounted(() => {
   isLoggedIn.value = !!token
   fetchProduct()
   fetchRatings()
+  fetchCfRecommendations()
   syncSplides()
 
-  if (isLoggedIn.value) {
-    fetchSuggestedProducts()
-  }
+  // if (isLoggedIn.value) {
+  //   fetchSuggestedProducts()
+  // }
 })
 
 const syncSplides = () => {
@@ -446,6 +482,29 @@ const handleBuyNow = () => {
 
   localStorage.setItem('instant_checkout_item', JSON.stringify([instantItem]))
   router.push('/checkout?mode=instant')
+}
+
+const addToAiCompare = () => {
+  if (!isLoggedIn.value) {
+    ElNotification({
+      title: 'Login Required',
+      message: 'Please login to use AI comparison.',
+      type: 'warning',
+    })
+    return
+  }
+  if (!product.value) return
+
+  const event = new CustomEvent('add-to-ai-compare', {
+    detail: {
+      productId: product.value.id,
+      name: product.value.name,
+      image: product.value.images?.[0]?.url || null,
+      priceMin: product.value.price?.min || null,
+      priceMax: product.value.price?.max || null,
+    },
+  })
+  window.dispatchEvent(event)
 }
 </script>
 
@@ -585,7 +644,7 @@ const handleBuyNow = () => {
               :max="currentStock || 1"
               :disabled="currentStock <= 0"
               size="large"
-              style="width: 100%"
+              style="width: 100%; margin-bottom: 4px"
             />
 
             <el-button
@@ -594,7 +653,7 @@ const handleBuyNow = () => {
               size="large"
               :disabled="currentStock <= 0"
               :loading="isAddingToCart"
-              style="width: 100%; margin: 20px 0"
+              style="width: 100%; margin: 16px 0"
               @click="addToCart"
             >
               <el-icon size="large" style="margin-right: 6px"><ShoppingCart /></el-icon>
@@ -610,6 +669,17 @@ const handleBuyNow = () => {
             >
               <el-icon size="large" style="margin-right: 6px"><Goods /></el-icon>
               Buy Now
+            </el-button>
+            <el-button
+              type="success"
+              color="#22c55e"
+              plain
+              size="large"
+              style="width: 100%; margin: 16px 0 0"
+              @click="addToAiCompare"
+            >
+              <el-icon size="large" style="margin-right: 6px"><ChatDotRound /></el-icon>
+              Compare with AI
             </el-button>
             <!-- <div style="display: flex; align-items: center; margin-top: 24px">
               <el-icon style="fill: var(--main-color)"><HeartIcon /></el-icon>
@@ -783,6 +853,40 @@ const handleBuyNow = () => {
       </el-tabs>
     </div>
 
+    <!-- CF Recommendations Section -->
+    <div
+      class="box-shadow border-radius"
+      style="background-color: #fff; padding: 20px; margin-bottom: 20px; border: 1px solid #d1fae5"
+      v-if="cfRecommendedProducts.length"
+      v-loading="loadingCfRecommendations"
+    >
+      <div style="display: flex; align-items: center; margin-bottom: 24px">
+        <h3 style="font-weight: bold; margin: 0">PEOPLE ALSO LIKED</h3>
+      </div>
+
+      <el-row :gutter="20">
+        <el-col
+          :span="4.8"
+          class="el-col-4-8"
+          style="margin-bottom: 20px"
+          v-for="(item, index) in cfRecommendedProducts.slice(0, 10)"
+          :key="index"
+        >
+          <ProductItem
+            :image-url="item.imageUrl"
+            :name="item.name"
+            :min-price="item.minPrice"
+            :max-price="item.maxPrice"
+            :rating="item.rating"
+            :location="item.location"
+            :sold-count="item.soldCount"
+            :id="item.id"
+          />
+        </el-col>
+      </el-row>
+    </div>
+
+    <!-- Suggested Products Section
     <div
       class="box-shadow border-radius"
       style="background-color: #fff; padding: 20px; margin-bottom: 20px"
@@ -815,6 +919,7 @@ const handleBuyNow = () => {
         <p style="font-size: 14px">No related products found.</p>
       </div>
     </div>
+    -->
 
     <RecentlyViewed ref="recentlyViewedRef" v-if="isLoggedIn" />
   </div>

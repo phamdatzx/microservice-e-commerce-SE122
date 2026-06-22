@@ -16,6 +16,7 @@ import {
   Picture,
   Loading,
   Service,
+  Tickets,
 } from '@element-plus/icons-vue'
 import { socketService, SOCKET_EVENTS } from '@/utils/socket'
 
@@ -28,6 +29,36 @@ const props = defineProps({
 
 const route = useRoute()
 
+const renderMarkdown = (text: string) => {
+  if (!text) return ''
+
+  // Escape HTML first to prevent XSS
+  let html = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+  // 1. Process Markdown Images: ![alt](url)
+  html = html.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, url) => {
+    return `<img src="${url}" alt="${alt}" class="chat-embedded-image" />`
+  })
+
+  // 2. Process Markdown Links: [text](url)
+  html = html.replace(/\[(.*?)\]\((.*?)\)/g, (match, textContent, url) => {
+    return `<a href="${url}" target="_blank" class="chat-embedded-link">${textContent}</a>`
+  })
+
+  // 3. Bold: **text**
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+
+  // 4. Italic: *text* or _text_
+  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>')
+
+  // 5. Headings:
+  html = html.replace(/^### (.*?)$/gm, '<h3>$1</h3>')
+  html = html.replace(/^## (.*?)$/gm, '<h2>$1</h2>')
+  html = html.replace(/^# (.*?)$/gm, '<h1>$1</h1>')
+
+  return html
+}
+
 // Constant for AI Contact
 const AI_CONTACT_ID = 'ai-assistant'
 
@@ -36,6 +67,7 @@ const searchQuery = ref('')
 const filters = ['All', 'Unread', 'Pinned']
 const activeFilter = ref('All')
 const imageInputRef = ref<HTMLInputElement | null>(null)
+const msgInputRef = ref<HTMLInputElement | null>(null)
 const isContentHidden = ref(false)
 const contacts = ref<any[]>([])
 const activeContact = ref<any>(null)
@@ -48,6 +80,112 @@ const isSending = ref(false)
 const isLoadingContacts = ref(false)
 const isLoadingMessages = ref(false)
 const isAiTyping = ref(false)
+
+const compareProducts = ref<{ productId: string; name: string; image?: string }[]>([])
+
+const loadCompareProducts = () => {
+  try {
+    const stored = localStorage.getItem('compare_products')
+    if (stored) {
+      compareProducts.value = JSON.parse(stored)
+    }
+  } catch (e) {
+    console.error('Error loading compare products:', e)
+  }
+}
+
+const saveCompareProducts = () => {
+  localStorage.setItem('compare_products', JSON.stringify(compareProducts.value))
+}
+
+const addToCompare = (product: { productId: string; name: string; image?: string }) => {
+  loadCompareProducts()
+  const exists = compareProducts.value.some(
+    (p) => String(p.productId) === String(product.productId),
+  )
+  if (exists) {
+    ElMessage.warning('This product is already in the comparison list.')
+    return
+  }
+
+  if (compareProducts.value.length >= 4) {
+    ElMessage.warning('You can only compare a maximum of 4 products at a time.')
+    return
+  }
+
+  compareProducts.value.push(product)
+  saveCompareProducts()
+
+  ElMessage.success(`Added "${product.name}" to the comparison list.`)
+
+  // Auto open AI chat window and select AI contact
+  isChatVisible.value = true
+  isContentHidden.value = false
+  const aiContact = contacts.value.find((c) => c.isAi)
+  if (aiContact) {
+    selectContact(aiContact)
+  }
+}
+
+const removeFromCompare = (productId: string) => {
+  compareProducts.value = compareProducts.value.filter(
+    (p) => String(p.productId) !== String(productId),
+  )
+  saveCompareProducts()
+}
+
+const clearAllCompare = () => {
+  compareProducts.value = []
+  saveCompareProducts()
+}
+
+const triggerAiComparison = async () => {
+  if (compareProducts.value.length < 2) {
+    ElMessage.warning('Please select at least 2 products to compare.')
+    return
+  }
+
+  const promptText =
+    `Hãy so sánh các sản phẩm sau đây giúp tôi:\n` +
+    compareProducts.value.map((p) => `- ${p.name}`).join('\n')
+
+  const idsToCompare = [...compareProducts.value.map((p) => p.productId)]
+  clearAllCompare()
+
+  const userMsg = {
+    id: 'local-' + Date.now(),
+    text: promptText,
+    sender: 'receiver',
+    time: new Date().toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }),
+    date: 'Today',
+    image: null,
+  }
+
+  const aiContact = contacts.value.find((c) => c.isAi)
+  if (aiContact) {
+    aiContact.messages.push(userMsg)
+    aiContact.lastMessage = 'You: ' + promptText
+    aiContact.time = userMsg.time
+  }
+
+  scrollToBottom()
+
+  await getAiResponse(promptText, idsToCompare)
+}
+
+const handleAddToAiCompareEvent = (event: any) => {
+  if (event.detail && event.detail.productId) {
+    addToCompare({
+      productId: event.detail.productId,
+      name: event.detail.name,
+      image: event.detail.image,
+    })
+  }
+}
 
 const aiContactTemplate = {
   id: AI_CONTACT_ID,
@@ -129,7 +267,7 @@ const openChatWithSeller = async (sellerId: string) => {
 
   const existing = contacts.value.find((c) => {
     if (c.isAi) return false
-    const targetId = props.isEmbedded ? c.raw.customerId : c.raw.sellerId
+    const targetId = props.isEmbedded ? c.raw.userId : c.raw.sellerId
     return String(targetId) === String(sellerId)
   })
 
@@ -194,8 +332,8 @@ const scrollToBottom = async () => {
 
 const formatMessage = (msg: any, contact: any) => {
   if (contact.isAi) return msg // Already formatted for AI
-  const isMe =
-    String(msg.senderId) === String(props.isEmbedded ? contact.raw.sellerId : contact.raw.userId)
+  const currentUserId = localStorage.getItem('user_id')
+  const isMe = String(msg.senderId) === String(currentUserId)
   return {
     id: msg._id,
     text: msg.content === '[Image]' ? '' : msg.content,
@@ -235,7 +373,7 @@ const updateContactInList = (message: any) => {
     if (contact.isAi) return null
 
     // Check if the message was sent by the current user
-    const currentUserId = props.isEmbedded ? contact.raw.sellerId : contact.raw.userId
+    const currentUserId = localStorage.getItem('user_id')
     const isMe = String(message.senderId) === String(currentUserId)
     const prefix = isMe ? 'You: ' : ''
 
@@ -309,7 +447,7 @@ const hydrateLastMessagePrefix = async () => {
       )
       if (response.data && response.data.data && response.data.data.length > 0) {
         const lastMsg = response.data.data[0]
-        const currentUserId = props.isEmbedded ? contact.raw.sellerId : contact.raw.userId
+        const currentUserId = localStorage.getItem('user_id')
         const isMe = String(lastMsg.senderId) === String(currentUserId)
 
         if (isMe) {
@@ -398,6 +536,8 @@ onMounted(() => {
   }
 
   window.addEventListener('open-chat', handleOpenChatEvent)
+  window.addEventListener('add-to-ai-compare', handleAddToAiCompareEvent)
+  loadCompareProducts()
 
   // Handle focus query param for sellers or direct links
   const focusId = route.query.focus
@@ -536,6 +676,7 @@ const cleanupSocketListeners = () => {
 onUnmounted(() => {
   cleanupSocketListeners()
   window.removeEventListener('open-chat', handleOpenChatEvent)
+  window.removeEventListener('add-to-ai-compare', handleAddToAiCompareEvent)
 })
 
 watch(activeContact, (newVal, oldVal) => {
@@ -599,6 +740,32 @@ const selectContact = (contact: any) => {
   } else if (contact) {
     scrollToBottom()
   }
+
+  // Auto-focus the message input
+  nextTick(() => {
+    msgInputRef.value?.focus()
+  })
+}
+
+const formatOrderStatus = (status: string) => {
+  if (!status) return { text: 'Không rõ', type: 'info' }
+  const s = status.toUpperCase()
+  switch (s) {
+    case 'TO_PAY':
+      return { text: 'Chờ thanh toán', type: 'warning' }
+    case 'TO_CONFIRM':
+      return { text: 'Chờ xác nhận', type: 'primary' }
+    case 'TO_PICKUP':
+      return { text: 'Chờ lấy hàng', type: 'info' }
+    case 'SHIPPING':
+      return { text: 'Đang vận chuyển', type: 'success' }
+    case 'COMPLETED':
+      return { text: 'Hoàn thành', type: 'success' }
+    case 'CANCELLED':
+      return { text: 'Đã hủy', type: 'danger' }
+    default:
+      return { text: status, type: 'info' }
+  }
 }
 
 const markActiveConversationAsRead = () => {
@@ -612,8 +779,14 @@ const markActiveConversationAsRead = () => {
   }
 }
 
-const getAiResponse = async (question: string) => {
+const getAiResponse = async (question: string, overrideCompareProductIds?: string[]) => {
+  const aiContact = contacts.value.find((c) => c.isAi)
+  if (!aiContact) return
+
   isAiTyping.value = true
+  nextTick(() => {
+    scrollToBottom()
+  })
   try {
     let type = 'general'
     let productId = ''
@@ -631,48 +804,143 @@ const getAiResponse = async (question: string) => {
       if (route.params.sellerId) {
         sellerId = route.params.sellerId as string
       }
+    } else if (route.path.includes('/cart')) {
+      type = 'cart'
+    } else if (route.path.includes('/checkout')) {
+      type = 'checkout'
     }
+
+    // Only take the last 10 messages for history to keep payload lightweight
+    const historyMessages = aiContact.messages.slice(-11, -1)
+    const chatHistory = historyMessages.map((msg: any) => ({
+      role: msg.sender === 'receiver' ? 'user' : 'assistant',
+      content: msg.text || '',
+    }))
+
+    const compareProductIds =
+      overrideCompareProductIds || compareProducts.value.map((p) => p.productId)
 
     const payload = {
-      type,
-      question,
-      ...(productId && { product_id: productId }),
-      ...(sellerId && { seller_id: sellerId }),
+      message: question,
+      chat_history: chatHistory,
+      context: {
+        page: type,
+        ...(productId && { current_product_id: productId }),
+        ...(sellerId && { current_seller_id: sellerId }),
+        ...(compareProductIds.length > 0 && { compare_product_ids: compareProductIds }),
+      },
     }
 
-    const response = await axios.post(
-      `${import.meta.env.VITE_BE_API_URL}/product/public/chatbot/ask`,
-      payload,
-    )
+    const token = localStorage.getItem('access_token')
+    const headers = token ? { Authorization: `Bearer ${token}` } : {}
+
+    const response = await axios.post(`${import.meta.env.VITE_BE_API_URL}/ai/chat`, payload, {
+      headers,
+    })
 
     let answer = 'Sorry, I currently cannot answer that.'
-    if (response.data && response.data.answer) {
-      answer = response.data.answer
+    let entities = null
+
+    if (response.data && response.data.response) {
+      answer = response.data.response.message
+
+      // Clean up answer by removing raw json blocks if the AI accidentally includes them
+      if (answer) {
+        answer = answer.replace(/```json[\s\S]*?```/g, '').trim()
+      }
+
+      entities = {
+        products: response.data.response.products || [],
+        sellers: response.data.response.sellers || [],
+        vouchers: response.data.response.vouchers || [],
+        orders: response.data.response.orders || [],
+        categories: response.data.response.categories || [],
+      }
+
+      // Enrich products with image and price from product API
+      if (entities.products.length > 0) {
+        const enriched = await Promise.all(
+          entities.products.map(async (prod: any) => {
+            try {
+              const detail = await axios.get(
+                `${import.meta.env.VITE_BE_API_URL}/product/public/${prod.id || prod._id}`,
+              )
+              const data = detail.data?.data || detail.data
+              const priceObj = data?.price
+              return {
+                ...prod,
+                image: data?.images?.[0]?.url || null,
+                priceMin: priceObj?.min ?? null,
+                priceMax: priceObj?.max ?? null,
+              }
+            } catch {
+              return prod
+            }
+          }),
+        )
+        entities.products = enriched
+      }
+
+      // Enrich orders with total_price, first item thumbnail, product name, and items count from order API
+      if (entities.orders && entities.orders.length > 0) {
+        const token = localStorage.getItem('access_token')
+        let userOrders: any[] = []
+        try {
+          const res = await axios.get(`${import.meta.env.VITE_BE_API_URL}/order`, {
+            params: { limit: 100, page: 1, sort_by: 'created_at', sort_order: 'desc' },
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          userOrders = res.data?.orders || []
+        } catch (err) {
+          console.error('Failed to pre-fetch orders for chatbot enrichment:', err)
+        }
+
+        const enrichedOrders = entities.orders.map((ord: any) => {
+          const rawId = (ord.id || ord._id || '').toLowerCase()
+          const matched = userOrders.find((o: any) => (o.id || o._id || '').toLowerCase() === rawId)
+          if (matched) {
+            return {
+              ...ord,
+              id: rawId,
+              total_price: matched.total ?? matched.total_price ?? ord.total_price ?? null,
+              status: matched.status ?? ord.status ?? null,
+              image: matched.items?.[0]?.image || null,
+              firstItemName: matched.items?.[0]?.product_name || null,
+              itemCount: matched.items?.length || 0,
+            }
+          }
+          return { ...ord, id: rawId }
+        })
+        entities.orders = enrichedOrders
+      }
     }
 
-    // Add AI response message
-    activeContact.value.messages.push({
-      id: 'ai-' + Date.now(),
-      text: answer,
-      sender: 'sender', // 'sender' is left side (other person), 'receiver' is me (right side) in your CSS logic
-      time: new Date().toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-      }),
-      date: 'Today',
-      image: null,
-    })
-    activeContact.value.lastMessage = answer
-    activeContact.value.time = new Date().toLocaleTimeString('en-US', {
+    const nowTime = new Date().toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,
-    }) // simple time update
-    scrollToBottom()
+    })
+
+    // Always push to the captured AI contact, not activeContact
+    aiContact.messages.push({
+      id: 'ai-' + Date.now(),
+      text: answer,
+      sender: 'sender',
+      time: nowTime,
+      date: 'Today',
+      image: null,
+      entities: entities,
+    })
+    aiContact.lastMessage = answer
+    aiContact.time = nowTime
+
+    // Only scroll if user is still viewing the AI conversation
+    if (activeContact.value?.isAi) {
+      scrollToBottom()
+    }
   } catch (err) {
     console.error('AI Error', err)
-    activeContact.value.messages.push({
+    aiContact.messages.push({
       id: 'ai-err-' + Date.now(),
       text: 'Sorry, something went wrong. Please try again.',
       sender: 'sender',
@@ -686,6 +954,9 @@ const getAiResponse = async (question: string) => {
     })
   } finally {
     isAiTyping.value = false
+    nextTick(() => {
+      msgInputRef.value?.focus()
+    })
   }
 }
 
@@ -704,17 +975,15 @@ const sendMessage = async () => {
   try {
     if (activeContact.value.isAi) {
       if (selectedImageFile.value) {
-        // AI doesn't support images yet in this implementation
         ElMessage.warning('AI Assistant currently only supports text messages.')
         removeSelectedImage()
         return
       }
 
-      // 1. Add User Message Locally
       const userMsg = {
         id: 'local-' + Date.now(),
         text: text,
-        sender: 'receiver', // Right side
+        sender: 'receiver',
         time: new Date().toLocaleTimeString('en-US', {
           hour: '2-digit',
           minute: '2-digit',
@@ -730,13 +999,10 @@ const sendMessage = async () => {
       newMessage.value = ''
       scrollToBottom()
 
-      // 2. Clear input
-      isSending.value = false // Allow input again immediately
+      isSending.value = false
 
-      // 3. Call AI API
       await getAiResponse(text)
     } else {
-      // Normal Chat Logic
       if (selectedImageFile.value) {
         await sendImageMessage()
       } else {
@@ -1004,7 +1270,126 @@ const getMsgClass = (msg: any) => {
                             fit="cover"
                           />
                         </div>
-                        <span v-if="msg.text">{{ msg.text }}</span>
+                        <span
+                          v-if="msg.text"
+                          v-html="renderMarkdown(msg.text)"
+                          style="white-space: pre-wrap"
+                        ></span>
+
+                        <!-- Hiển thị Entities từ AI -->
+                        <div v-if="msg.entities" class="msg-entities">
+                          <div
+                            v-if="msg.entities.products && msg.entities.products.length > 0"
+                            class="entity-list"
+                          >
+                            <div class="entity-list-label">Sản phẩm liên quan:</div>
+                            <div
+                              v-for="prod in msg.entities.products"
+                              :key="prod.id || prod._id"
+                              class="product-entity-wrapper"
+                            >
+                              <router-link
+                                :to="'/product/' + (prod.id || prod._id)"
+                                class="entity-card product-card"
+                              >
+                                <el-image
+                                  v-if="prod.image"
+                                  :src="prod.image"
+                                  class="entity-img"
+                                  fit="cover"
+                                />
+                                <div class="entity-info">
+                                  <div class="entity-title">{{ prod.name }}</div>
+                                  <div v-if="prod.priceMin != null" class="entity-price">
+                                    <template
+                                      v-if="prod.priceMax && prod.priceMax !== prod.priceMin"
+                                    >
+                                      {{ Number(prod.priceMin).toLocaleString('vi-VN') }}đ –
+                                      {{ Number(prod.priceMax).toLocaleString('vi-VN') }}đ
+                                    </template>
+                                    <template v-else>
+                                      {{ Number(prod.priceMin).toLocaleString('vi-VN') }}đ
+                                    </template>
+                                  </div>
+                                </div>
+                                <span class="entity-arrow">Xem →</span>
+                              </router-link>
+                              <button
+                                class="add-to-compare-btn-inline"
+                                @click="
+                                  addToCompare({
+                                    productId: prod.id || prod._id,
+                                    name: prod.name,
+                                    image: prod.image,
+                                  })
+                                "
+                              >
+                                <el-icon style="margin-right: 4px"><ChatDotRound /></el-icon>
+                                Compare
+                              </button>
+                            </div>
+                          </div>
+
+                          <div
+                            v-if="msg.entities.sellers && msg.entities.sellers.length > 0"
+                            class="entity-list"
+                          >
+                            <router-link
+                              v-for="seller in msg.entities.sellers.slice(0, 3)"
+                              :key="seller.id || seller._id"
+                              :to="'/seller-page/' + (seller.id || seller._id)"
+                              class="entity-card"
+                            >
+                              <el-image :src="seller.image" class="entity-img" fit="cover" />
+                              <div class="entity-info">
+                                <div class="entity-title">{{ seller.name }}</div>
+                                <div class="entity-desc">Cửa hàng</div>
+                              </div>
+                            </router-link>
+                          </div>
+
+                          <div
+                            v-if="msg.entities.orders && msg.entities.orders.length > 0"
+                            class="entity-list"
+                          >
+                            <div class="entity-list-label">Đơn hàng liên quan:</div>
+                            <router-link
+                              v-for="order in msg.entities.orders.slice(0, 3)"
+                              :key="order.id || order._id"
+                              :to="'/order-tracking/' + (order.id || order._id)"
+                              class="entity-card order-card"
+                            >
+                              <div class="entity-info">
+                                <div class="entity-title">
+                                  Đơn hàng #{{ (order.id || order._id)?.slice(-6).toUpperCase() }}
+                                </div>
+                                <div v-if="order.firstItemName" class="entity-desc order-item-name">
+                                  {{ order.firstItemName }}
+                                  <span
+                                    v-if="order.itemCount > 1"
+                                    style="color: #888; font-weight: normal"
+                                  >
+                                    (+{{ order.itemCount - 1 }} sản phẩm)
+                                  </span>
+                                </div>
+                                <div class="order-price-status">
+                                  <span v-if="order.total_price != null" class="entity-price">
+                                    {{ Number(order.total_price).toLocaleString('vi-VN') }}đ
+                                  </span>
+                                  <el-tag
+                                    :type="formatOrderStatus(order.status).type"
+                                    size="small"
+                                    effect="plain"
+                                    class="order-status-tag"
+                                  >
+                                    {{ formatOrderStatus(order.status).text }}
+                                  </el-tag>
+                                </div>
+                              </div>
+                              <span class="entity-arrow">Chi tiết →</span>
+                            </router-link>
+                          </div>
+                        </div>
                         <span class="msg-time">{{ msg.time }}</span>
                       </div>
                     </div>
@@ -1013,6 +1398,17 @@ const getMsgClass = (msg: any) => {
                   <div v-if="otherUserTyping" class="msg-row sender">
                     <div class="msg-bubble typing-indicator">
                       <span>.</span><span>.</span><span>.</span>
+                    </div>
+                  </div>
+
+                  <div v-if="activeContact.isAi && isAiTyping" class="msg-row sender">
+                    <div
+                      class="msg-bubble typing-indicator"
+                      style="background-color: white; border: 1px solid #d1fae5"
+                    >
+                      <span style="background-color: #16a34a"></span>
+                      <span style="background-color: #16a34a"></span>
+                      <span style="background-color: #16a34a"></span>
                     </div>
                   </div>
                 </div>
@@ -1027,6 +1423,41 @@ const getMsgClass = (msg: any) => {
                 </div>
               </div>
             </div>
+
+            <!-- Compare Products Bar -->
+            <div
+              v-if="activeContact?.isAi && compareProducts.length > 0"
+              class="compare-products-bar"
+            >
+              <div class="compare-bar-header">
+                <span class="compare-bar-title"
+                  >Compare Products ({{ compareProducts.length }}/4)</span
+                >
+                <button class="clear-compare-btn" @click="clearAllCompare">Clear all</button>
+              </div>
+              <div class="compare-items-container">
+                <div class="compare-items-list">
+                  <div
+                    v-for="prod in compareProducts"
+                    :key="prod.productId"
+                    class="compare-item-pill"
+                  >
+                    <img v-if="prod.image" :src="prod.image" class="compare-item-img" />
+                    <span class="compare-item-name">{{ prod.name }}</span>
+                    <el-icon class="remove-compare-icon" @click="removeFromCompare(prod.productId)"
+                      ><Close
+                    /></el-icon>
+                  </div>
+                </div>
+                <button
+                  class="trigger-compare-btn"
+                  @click="triggerAiComparison"
+                  :disabled="isAiTyping || compareProducts.length < 2"
+                >
+                  <el-icon style="margin-right: 4px"><Tickets /></el-icon> Compare now
+                </button>
+              </div>
+            </div>
             <div class="input-area">
               <input
                 ref="imageInputRef"
@@ -1037,11 +1468,12 @@ const getMsgClass = (msg: any) => {
               />
 
               <input
+                ref="msgInputRef"
                 v-model="newMessage"
                 type="text"
                 placeholder="Type a message..."
                 class="msg-input"
-                :disabled="isSending"
+                :disabled="isSending || (activeContact?.isAi && isAiTyping)"
                 @keyup.enter="sendMessage"
                 @click="markActiveConversationAsRead"
                 @focus="markActiveConversationAsRead"
@@ -1049,15 +1481,21 @@ const getMsgClass = (msg: any) => {
 
               <button
                 class="upload-btn"
-                :disabled="isSending"
+                :disabled="isSending || (activeContact?.isAi && isAiTyping)"
                 @click="handleImageUpload"
                 title="Upload Image"
               >
                 <el-icon><Picture /></el-icon>
               </button>
 
-              <button class="send-btn" :disabled="isSending" @click="sendMessage">
-                <el-icon v-if="isSending" class="is-loading"><Loading /></el-icon>
+              <button
+                class="send-btn"
+                :disabled="isSending || (activeContact?.isAi && isAiTyping)"
+                @click="sendMessage"
+              >
+                <el-icon v-if="isSending || (activeContact?.isAi && isAiTyping)" class="is-loading"
+                  ><Loading
+                /></el-icon>
                 <svg v-else viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
                   <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
                 </svg>
@@ -1137,8 +1575,8 @@ const getMsgClass = (msg: any) => {
 }
 
 .chat-window {
-  width: 600px;
-  height: 450px;
+  width: 720px;
+  height: 540px;
   background: white;
   border-radius: 8px 8px 0 0;
   display: flex;
@@ -1545,6 +1983,51 @@ const getMsgClass = (msg: any) => {
   color: #333;
 }
 
+.msg-bubble :deep(.chat-embedded-image) {
+  max-width: 100%;
+  max-height: 250px;
+  border-radius: 8px;
+  margin: 8px 0;
+  display: block;
+  object-fit: cover;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.msg-bubble :deep(.chat-embedded-image):hover {
+  transform: scale(1.02);
+}
+
+.msg-bubble :deep(.chat-embedded-link) {
+  color: #3182ce;
+  text-decoration: underline;
+  font-weight: 500;
+}
+
+.msg-bubble :deep(.chat-embedded-link):hover {
+  color: #2b6cb0;
+}
+
+.msg-bubble :deep(h1),
+.msg-bubble :deep(h2),
+.msg-bubble :deep(h3) {
+  margin-top: 12px;
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: inherit;
+}
+
+.msg-bubble :deep(h1) {
+  font-size: 1.35em;
+}
+.msg-bubble :deep(h2) {
+  font-size: 1.25em;
+}
+.msg-bubble :deep(h3) {
+  font-size: 1.1em;
+}
+
 .msg-time {
   position: absolute;
   bottom: 2px;
@@ -1766,6 +2249,295 @@ const getMsgClass = (msg: any) => {
   width: 100%;
   color: var(--main-color);
   font-size: 24px;
+}
+
+/* AI Entities Styles */
+.msg-entities {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+.entity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.entity-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  padding: 6px;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.2s;
+  min-width: 150px;
+}
+.entity-card:hover {
+  border-color: var(--main-color);
+}
+.entity-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  background: #f5f5f5;
+}
+.entity-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.entity-title {
+  font-size: 12px;
+  font-weight: 500;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  /* autoprefixer: ignore next */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #333;
+  line-height: 1.4;
+  max-height: 2.8em; /* Fallback for older browsers: 2 lines * 1.4 line-height */
+}
+.entity-price {
+  font-size: 11px;
+  color: var(--main-color);
+  font-weight: 600;
+}
+.entity-desc {
+  font-size: 11px;
+  color: #666;
+}
+.entity-list-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #666;
+  margin-bottom: 2px;
+}
+.product-card {
+  background: #f0fdf4;
+  border-color: #d1fae5;
+  justify-content: space-between;
+}
+.product-card:hover {
+  background: #dcfce7;
+  border-color: var(--main-color);
+}
+.entity-arrow {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--main-color);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.order-card {
+  background: #f0fdf4;
+  border-color: #d1fae5;
+  justify-content: space-between;
+}
+.order-card:hover {
+  background: #dcfce7;
+  border-color: var(--main-color);
+}
+.order-card:hover .entity-arrow {
+  color: var(--main-color);
+}
+.order-item-name {
+  font-size: 11px;
+  color: #555;
+  margin-top: 2px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  /* autoprefixer: ignore next */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+  max-height: 2.8em; /* Fallback for older browsers: 2 lines * 1.4 line-height */
+}
+.order-price-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.order-status-tag {
+  background-color: #f0fdf4 !important;
+  border-color: #d1fae5 !important;
+  color: var(--main-color) !important;
+  border-radius: 4px;
+  font-weight: 600;
+  padding: 0 6px;
+  height: 20px;
+  line-height: 18px;
+  font-size: 11px;
+}
+
+/* AI Compare Products Bar */
+.compare-products-bar {
+  padding: 10px 16px;
+  background-color: #f0fdf4;
+  border-top: 1px solid #d1fae5;
+  border-bottom: 1px solid #d1fae5;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.compare-bar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.compare-bar-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #16a34a;
+}
+
+.clear-compare-btn {
+  font-size: 11px;
+  color: #ef4444;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.clear-compare-btn:hover {
+  text-decoration: underline;
+}
+
+.compare-items-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.compare-items-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 1;
+  max-height: 80px;
+  overflow-y: auto;
+}
+
+.compare-item-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: white;
+  border: 1px solid #d1fae5;
+  border-radius: 20px;
+  padding: 4px 8px 4px 4px;
+  font-size: 11px;
+  color: #333;
+  max-width: 150px;
+}
+
+.compare-item-img {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.compare-item-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.remove-compare-icon {
+  font-size: 10px;
+  color: #999;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.remove-compare-icon:hover {
+  color: #ef4444;
+}
+
+.trigger-compare-btn {
+  background-color: var(--main-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  transition: opacity 0.2s;
+}
+
+.trigger-compare-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.trigger-compare-btn:disabled {
+  background-color: #cbd5e1;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.product-entity-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: #f0fdf4;
+  border: 1px solid #d1fae5;
+  border-radius: 6px;
+  padding: 4px;
+}
+
+.product-entity-wrapper .product-card {
+  border: none;
+  background: transparent;
+  padding: 4px;
+  width: auto;
+  min-width: unset;
+}
+
+.product-entity-wrapper .product-card:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.add-to-compare-btn-inline {
+  background: white;
+  border: 1px solid #d1fae5;
+  color: var(--main-color);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  margin: 0 4px 4px;
+}
+
+.add-to-compare-btn-inline:hover {
+  background: var(--main-color);
+  color: white;
+  border-color: var(--main-color);
 }
 </style>
 
