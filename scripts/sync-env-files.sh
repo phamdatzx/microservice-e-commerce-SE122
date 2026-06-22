@@ -28,7 +28,7 @@ mapfile -t ENV_FILES < <(
       value = $0
       sub(/^[[:space:]]*-[[:space:]]*/, "", value)
       gsub(/["'\''[:space:]]/, "", value)
-      if (value ~ /^(\.\/)?services\/.*\/\.env$/) {
+      if (value ~ /^(\.\/)?services\/.*\/\.env/) {
         sub(/^\.\//, "", value)
         print value
       }

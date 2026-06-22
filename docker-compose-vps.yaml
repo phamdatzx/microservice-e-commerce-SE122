@@ -80,7 +80,7 @@ services:
     image: ghcr.io/${GHCR_OWNER}/user-service:${USER_SERVICE_TAG:-latest}
     container_name: user-service
     env_file:
-      - ./services/user-service/.env
+      - ./services/user-service/.env.compose
     ports:
       - "8185:8085"
     networks:
@@ -112,7 +112,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     env_file:
-      - ./services/product-service/.env
+      - ./services/product-service/.env.compose
     ports:
       - "8186:8085"
     networks:
@@ -144,7 +144,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     env_file:
-      - ./services/order-service/.env
+      - ./services/order-service/.env.compose
     ports:
       - "8187:8085"
     networks:
@@ -175,7 +175,7 @@ services:
     image: ghcr.io/${GHCR_OWNER}/notification-service:${NOTIFICATION_SERVICE_TAG:-latest}
     container_name: notification-service
     env_file:
-      - ./services/notification-service/.env
+      - ./services/notification-service/.env.compose
     ports:
       - "8188:8085"
     networks:
@@ -213,7 +213,7 @@ services:
     container_name: ai-service
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     env_file:
-      - ./services/ai-service/.env
+      - ./services/ai-service/.env.compose
     ports:
       - "8189:8000"
     networks:
@@ -247,7 +247,7 @@ services:
     container_name: ai-product-embed-worker
     command: python -m app.workers.product_embed_worker
     env_file:
-      - ./services/ai-service/.env
+      - ./services/ai-service/.env.compose
     networks:
       - app-network
     depends_on:
@@ -263,7 +263,7 @@ services:
     container_name: ai-user-vector-worker
     command: python -m app.workers.user_vector_worker
     env_file:
-      - ./services/ai-service/.env
+      - ./services/ai-service/.env.compose
     networks:
       - app-network
     depends_on:
@@ -279,7 +279,7 @@ services:
     container_name: ai-cf-worker
     command: sh -c "python -m app.workers.cf_worker && sleep 86400"
     env_file:
-      - ./services/ai-service/.env
+      - ./services/ai-service/.env.compose
     networks:
       - app-network
     depends_on:
