@@ -25,6 +25,7 @@ COPY --from=builder /install /usr/local
 
 # Copy application source
 COPY app/ ./app/
+COPY scripts/ ./scripts/
 
 # Default: run the CF batch worker
 CMD ["python", "-m", "app.workers.cf_worker"]
