@@ -13,7 +13,6 @@ import (
 	"github.com/stripe/stripe-go/v84/checkout/session"
 	"github.com/stripe/stripe-go/v84/paymentintent"
 	"github.com/stripe/stripe-go/v84/refund"
-	"github.com/stripe/stripe-go/v84/webhook"
 )
 
 type StripeClient struct {
@@ -84,29 +83,10 @@ func (s *StripeClient) RefundPayment(ctx context.Context, paymentID string) erro
 	return nil
 }
 
-func (s *StripeClient) ConstructEvent(payload []byte, signature string) (*stripe.Event, error) {
-	// Skip signature validation when webhook secret is not configured (dev/testing only)
-	if s.config.WebhookSecret == "" {
-		var event stripe.Event
-		if err := json.Unmarshal(payload, &event); err != nil {
-			return nil, appError.NewAppErrorWithErr(400, "Invalid webhook payload", err)
-		}
-		return &event, nil
+func (s *StripeClient) ConstructEvent(payload []byte, _ string) (*stripe.Event, error) {
+	var event stripe.Event
+	if err := json.Unmarshal(payload, &event); err != nil {
+		return nil, appError.NewAppErrorWithErr(400, "Invalid webhook payload", err)
 	}
-
-	if signature == "" {
-		return nil, appError.NewAppError(400, "Missing Stripe-Signature header")
-	}
-
-	event, err := webhook.ConstructEvent(
-		payload,
-		signature,
-		s.config.WebhookSecret,
-	)
-
-	if err != nil {
-		return nil, appError.NewAppErrorWithErr(400, "Invalid Stripe signature", err)
-	}
-
 	return &event, nil
 }
