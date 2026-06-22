@@ -70,6 +70,12 @@ services:
       - rabbitmq_data:/var/lib/rabbitmq
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
 
   user-service:
@@ -81,6 +87,9 @@ services:
       - "8185:8085"
     networks:
       - app-network
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
     labels:
       - "traefik.enable=true"
 
@@ -114,6 +123,9 @@ services:
       - "8186:8085"
     networks:
       - app-network
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
     labels:
       - "traefik.enable=true"
       # Public routes - CORS only (higher priority)
@@ -146,6 +158,9 @@ services:
       - "8187:8085"
     networks:
       - app-network
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
     labels:
       - "traefik.enable=true"
       # Public routes - CORS only (higher priority)
@@ -176,6 +191,9 @@ services:
       - "8188:8085"
     networks:
       - app-network
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
     labels:
       - "traefik.enable=true"
       # Public routes - CORS only (higher priority)
@@ -215,8 +233,10 @@ services:
     networks:
       - app-network
     depends_on:
-      - qdrant
-      - rabbitmq
+      qdrant:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
     labels:
       - "traefik.enable=true"
       # Health check — public (no auth)
@@ -245,8 +265,10 @@ services:
     networks:
       - app-network
     depends_on:
-      - qdrant
-      - rabbitmq
+      qdrant:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
     restart: unless-stopped
 
   # AI worker — updates user vectors in Qdrant (RabbitMQ consumer)
@@ -259,8 +281,10 @@ services:
     networks:
       - app-network
     depends_on:
-      - qdrant
-      - rabbitmq
+      qdrant:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
     restart: unless-stopped
 
   # AI worker — collaborative filtering batch job (runs daily, mirrors Helm CronJob 0 0 * * *)
@@ -273,7 +297,10 @@ services:
     networks:
       - app-network
     depends_on:
-      - qdrant
+      qdrant:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
     restart: unless-stopped
 
 networks:
