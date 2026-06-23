@@ -2,12 +2,17 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"product-service/model"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
+
+// ErrInsufficientStock is returned by DecrementVariantStockAtomic when the
+// variant does not have enough stock at the moment of the atomic write.
+var ErrInsufficientStock = errors.New("insufficient stock")
 
 type ProductRepository interface {
 	Create(product *model.Product) error
@@ -20,7 +25,13 @@ type ProductRepository interface {
 	UpdateVariantImages(productID string, variantUpdates map[string]string) error
 	FindBySeller(sellerID string, filter bson.M, skip, limit int, sortField string, sortDirection int) ([]model.Product, int64, error)
 	FindVariantsByIds(variantIDs []string) (map[string]*model.Product, error)
+	// UpdateVariantStock unconditionally applies stockDelta to a variant's stock.
+	// Use for releases (positive delta) only; for reservations use DecrementVariantStockAtomic.
 	UpdateVariantStock(productID string, variantID string, stockDelta int) error
+	// DecrementVariantStockAtomic decrements the variant stock by quantity in a
+	// single atomic operation that only succeeds when stock >= quantity at the
+	// moment of the write. Returns ErrInsufficientStock when the guard fails.
+	DecrementVariantStockAtomic(productID string, variantID string, quantity int) error
 	SearchProducts(filter bson.M, skip, limit int, sortByTextScore bool, sortField string, sortDirection int) ([]model.Product, int64, error)
 	FindRandom(excludeIDs []string, limit int) ([]model.Product, error)
 }
@@ -250,44 +261,61 @@ func (r *productRepository) UpdateVariantStock(productID string, variantID strin
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// Fetch the product first to find the variant
-	var product model.Product
-	err := r.collection.FindOne(ctx, bson.M{"_id": productID}).Decode(&product)
+	result, err := r.collection.UpdateOne(
+		ctx,
+		bson.M{"_id": productID, "variants._id": variantID},
+		bson.M{
+			"$inc": bson.M{
+				"variants.$.stock": stockDelta,
+				"stock":            stockDelta,
+			},
+			"$set": bson.M{"updated_at": time.Now()},
+		},
+	)
 	if err != nil {
 		return err
 	}
-
-	// Find the variant and update its stock
-	variantFound := false
-	for i := range product.Variants {
-		if product.Variants[i].ID == variantID {
-			product.Variants[i].Stock += stockDelta
-			variantFound = true
-			break
-		}
-	}
-
-	if !variantFound {
+	if result.MatchedCount == 0 {
 		return mongo.ErrNoDocuments
 	}
+	return nil
+}
 
-	// Update the entire variants array, product stock, and updated_at
-	product.UpdatedAt = time.Now()
+// DecrementVariantStockAtomic decrements a variant's stock by quantity in one
+// atomic MongoDB operation. The update only matches when variants.$.stock >= quantity,
+// so two concurrent reservations for the same stock can never both succeed.
+// Returns ErrInsufficientStock when the filter does not match (stock too low or
+// variant not found).
+func (r *productRepository) DecrementVariantStockAtomic(productID string, variantID string, quantity int) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
-	_, err = r.collection.UpdateOne(
+	result, err := r.collection.UpdateOne(
 		ctx,
-		bson.M{"_id": productID},
 		bson.M{
-			"$set": bson.M{
-				"variants":   product.Variants,
-				"updated_at": product.UpdatedAt,
-			},
-			"$inc": bson.M{
-				"stock": stockDelta,
+			"_id": productID,
+			"variants": bson.M{
+				"$elemMatch": bson.M{
+					"_id":   variantID,
+					"stock": bson.M{"$gte": quantity},
+				},
 			},
 		},
+		bson.M{
+			"$inc": bson.M{
+				"variants.$.stock": -quantity,
+				"stock":            -quantity,
+			},
+			"$set": bson.M{"updated_at": time.Now()},
+		},
 	)
-	return err
+	if err != nil {
+		return err
+	}
+	if result.MatchedCount == 0 {
+		return ErrInsufficientStock
+	}
+	return nil
 }
 
 func (r *productRepository) FindRandom(excludeIDs []string, limit int) ([]model.Product, error) {
