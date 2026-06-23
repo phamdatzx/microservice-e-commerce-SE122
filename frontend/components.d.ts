@@ -17,6 +17,7 @@ declare module 'vue' {
     CommuneSelect: typeof import('./src/components/profile/CommuneSelect.vue')['default']
     CustomerComment: typeof import('./src/components/CustomerComment.vue')['default']
     DistrictSelect: typeof import('./src/components/profile/DistrictSelect.vue')['default']
+    ElAlert: typeof import('element-plus/es')['ElAlert']
     ElAside: typeof import('element-plus/es')['ElAside']
     ElAutocomplete: typeof import('element-plus/es')['ElAutocomplete']
     ElAvatar: typeof import('element-plus/es')['ElAvatar']

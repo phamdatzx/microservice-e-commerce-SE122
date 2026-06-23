@@ -104,10 +104,13 @@ const fetchVouchers = async () => {
       },
     })
     if (response.data) {
-      vouchers.value = response.data
+      vouchers.value = response.data || []
+    } else {
+      vouchers.value = []
     }
   } catch (error) {
     console.error('Failed to fetch vouchers:', error)
+    vouchers.value = []
   }
 }
 
@@ -123,7 +126,7 @@ const fetchAddresses = async () => {
       },
     })
     if (response.data.status === 200) {
-      addresses.value = response.data.data
+      addresses.value = response.data.data || []
       const defaultAddr = addresses.value.find((a) => a.default)
       if (defaultAddr) {
         selectedAddressId.value = defaultAddr.id
@@ -135,9 +138,12 @@ const fetchAddresses = async () => {
       if (selectedAddressId.value && sellerAddress.value) {
         fetchShippingServices()
       }
+    } else {
+      addresses.value = []
     }
   } catch (error) {
     console.error('Failed to fetch addresses:', error)
+    addresses.value = []
   } finally {
     isLoading.value = false
   }
@@ -414,17 +420,17 @@ const handleStripePayment = async (orderId: string) => {
       window.location.href = response.data.payment_url
     } else {
       ElMessage.warning('Payment session created but no URL provided')
-      router.push('/profile')
+      router.push('/profile/orders')
     }
   } catch (error) {
     console.error('Payment session failed:', error)
     ElMessage.error('Failed to initiate payment')
-    router.push('/profile') // Redirect anyway so user can try paying again from history
+    router.push('/profile/orders') // Redirect anyway so user can try paying again from history
   }
 }
 
 const navigateToAddress = () => {
-  router.push('/profile') // Shortcut to manage addresses
+  router.push('/profile/address') // Shortcut to manage addresses
 }
 
 const selectVoucher = (voucherId: string) => {
@@ -547,8 +553,17 @@ const goToProductDetail = (item: any) => {
             </div>
 
             <div v-if="addresses.length === 0" class="no-address">
-              <p>You have no saved addresses.</p>
-              <el-button type="primary" @click="navigateToAddress">Add Address</el-button>
+              <el-alert
+                title="Delivery Address Required"
+                type="warning"
+                description="Please create a delivery address to complete your checkout and place your order."
+                show-icon
+                :closable="false"
+                style="margin-bottom: 15px"
+              />
+              <el-button type="primary" :icon="Plus" @click="navigateToAddress"
+                >Create New Address</el-button
+              >
             </div>
 
             <div class="address-list">
@@ -661,6 +676,9 @@ const goToProductDetail = (item: any) => {
             >
               Place Order
             </el-button>
+            <p v-if="addresses.length === 0" class="address-warning-text">
+              * Please create a shipping address to place order.
+            </p>
           </div>
         </div>
       </div>
@@ -1009,5 +1027,13 @@ const goToProductDetail = (item: any) => {
   margin-top: 20px;
   background-color: var(--main-color);
   border-color: var(--main-color);
+}
+
+.address-warning-text {
+  color: #ef4444;
+  font-size: 13px;
+  margin-top: 10px;
+  text-align: center;
+  font-weight: 500;
 }
 </style>
