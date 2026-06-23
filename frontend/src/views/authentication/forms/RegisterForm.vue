@@ -20,7 +20,7 @@ const isCheckingUsername = ref(false)
 let debounceTimer: any = null
 
 const checkUsername = async (val: string) => {
-  if (!val) {
+  if (!val || val.length < 3) {
     usernameStatus.value = 'none'
     return
   }
@@ -58,6 +58,15 @@ watch(username, (newVal) => {
 const emits = defineEmits(['success'])
 
 const handleFormSent = () => {
+  if (username.value.length < 3) {
+    ElNotification({
+      title: 'Validation error',
+      message: 'Username must be at least 3 characters long.',
+      type: 'error',
+    })
+    return
+  }
+
   if (usernameStatus.value === 'taken') return
 
   if (isCheckingUsername.value) {
@@ -139,8 +148,8 @@ defineExpose({
       <input
         class="form-input"
         :class="{
-          'input-error': usernameStatus === 'taken',
-          'input-success': usernameStatus === 'available',
+          'input-error': usernameStatus === 'taken' || (username && username.length < 3),
+          'input-success': usernameStatus === 'available' && username.length >= 3,
         }"
         type="text"
         name="username"
@@ -153,13 +162,16 @@ defineExpose({
         Checking availability...
       </div>
       <div
-        v-else-if="usernameStatus === 'available' && username"
+        v-else-if="usernameStatus === 'available' && username && username.length >= 3"
         class="check-status status-available"
       >
         Username available
       </div>
       <div v-else-if="usernameStatus === 'taken'" class="check-status status-taken">
         Username already exists
+      </div>
+      <div v-else-if="username && username.length < 3" class="check-status status-taken">
+        Username must be at least 3 characters long
       </div>
     </div>
 
