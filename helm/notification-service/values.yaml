@@ -1,6 +1,6 @@
 appName: notification-service
 replicas: 1
-image: megumikatou/notification-service
+image: ghcr.io/phamdatzx/notification-service
 tag: latest
 containerPort: 8085
 

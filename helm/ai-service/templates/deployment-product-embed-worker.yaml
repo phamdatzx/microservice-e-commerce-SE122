@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.appName }}-product-embed-worker
+  namespace: default
+  labels:
+    app: {{ .Values.appName }}-product-embed-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.appName }}-product-embed-worker
+  template:
+    metadata:
+      namespace: default
+      labels:
+        app: {{ .Values.appName }}-product-embed-worker
+    spec:
+      containers:
+        - name: product-embed-worker
+          image: "{{ .Values.image }}:{{ .Values.tag }}"
+          imagePullPolicy: Always
+          command: ["python", "-m", "app.workers.product_embed_worker"]
+          envFrom:
+            - secretRef:
+                name: {{ .Values.appName }}-secret

@@ -1,6 +1,13 @@
 appName: ai-service
-image: megumikatou/ai-service
+image: ghcr.io/phamdatzx/ai-service
 tag: latest
+
+replicas: 1
+containerPort: 8000
+
+service:
+  type: ClusterIP
+  port: 8000
 
 # Cron schedule (UTC): midnight every day
 schedule: "0 0 * * *"

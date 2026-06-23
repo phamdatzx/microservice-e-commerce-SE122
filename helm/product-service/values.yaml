@@ -1,6 +1,6 @@
 appName: product-service
 replicas: 1
-image: megumikatou/product-service
+image: ghcr.io/phamdatzx/product-service
 tag: latest
 containerPort: 8085
 

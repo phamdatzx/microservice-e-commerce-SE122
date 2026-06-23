@@ -1,6 +1,12 @@
 resource "aws_eks_cluster" "this" {
   name     = "${var.project}-eks"
+  version  = var.kubernetes_version
   role_arn = aws_iam_role.eks_cluster.arn
+
+  upgrade_policy {
+    support_type = "STANDARD"
+  }
+
   vpc_config {
     subnet_ids = var.subnet_ids
   }
@@ -11,6 +17,7 @@ resource "aws_eks_node_group" "default" {
   node_group_name = "default"
   node_role_arn   = aws_iam_role.eks_node.arn
   subnet_ids      = var.subnet_ids
+  instance_types  = ["t3.medium"]
 
   scaling_config {
     desired_size = 2
@@ -110,4 +117,23 @@ resource "aws_iam_policy" "eks_lb_controller" {
 resource "aws_iam_role_policy_attachment" "eks_lb_controller_attach" {
   policy_arn = aws_iam_policy.eks_lb_controller.arn
   role       = aws_iam_role.eks_node.name
+}
+
+# Managed EKS Add-ons
+resource "aws_eks_addon" "vpc_cni" {
+  cluster_name = aws_eks_cluster.this.name
+  addon_name   = "vpc-cni"
+  depends_on   = [aws_eks_node_group.default]
+}
+
+resource "aws_eks_addon" "coredns" {
+  cluster_name = aws_eks_cluster.this.name
+  addon_name   = "coredns"
+  depends_on   = [aws_eks_node_group.default]
+}
+
+resource "aws_eks_addon" "kube_proxy" {
+  cluster_name = aws_eks_cluster.this.name
+  addon_name   = "kube-proxy"
+  depends_on   = [aws_eks_node_group.default]
 }

@@ -1,0 +1,16 @@
+appName: rabbitmq
+image: rabbitmq
+tag: 3-management
+
+replicas: 1
+containerPort: 5672
+
+service:
+  type: ClusterIP
+  amqpPort: 5672
+  managementPort: 15672
+
+# Default credentials — override these for production
+auth:
+  username: guest
+  password: guest

@@ -1,6 +1,6 @@
 appName: order-service
 replicas: 1
-image: megumikatou/order-service
+image: ghcr.io/phamdatzx/order-service
 tag: latest
 containerPort: 8085
 

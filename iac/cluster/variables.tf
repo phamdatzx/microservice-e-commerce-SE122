@@ -28,3 +28,9 @@ variable "availability_zones" {
   type        = list(string)
   description = "Availability zones for subnets"
 }
+
+variable "kubernetes_version" {
+  type        = string
+  description = "Kubernetes version for the EKS cluster"
+  default     = "1.33"
+}

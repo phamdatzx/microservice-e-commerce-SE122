@@ -28,12 +28,13 @@ providers:
   kubernetesIngress:
     enabled: true
 
-# Logs
-logs:
-  general:
-    level: INFO
-  access:
-    enabled: true
+# General Traefik logs (v41+ key)
+log:
+  level: INFO
+
+# Access logs
+accessLog:
+  enabled: true
 
 # Additional arguments
 additionalArguments:
