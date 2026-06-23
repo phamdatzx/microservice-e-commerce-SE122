@@ -26,6 +26,10 @@ const avatarPreview = ref(props.avatar || '')
 const selectedFile = ref<File | null>(null)
 const isLoading = ref(false)
 
+const defaultAvatar = computed(() => {
+  return `https://ui-avatars.com/api/?name=${localName.value || 'User'}&background=22c55e&color=fff`
+})
+
 const isValidEmail = computed(() => {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(localEmail.value)
 })
@@ -61,9 +65,7 @@ const fetchUserInfo = async () => {
     localName.value = userData.name || ''
     localEmail.value = userData.email || ''
     localPhone.value = userData.phone || ''
-    if (userData.image) {
-      avatarPreview.value = userData.image
-    }
+    avatarPreview.value = userData.image || ''
 
     // Sync with parent
     emit('update:name', localName.value)
@@ -250,7 +252,7 @@ const handleSave = async () => {
       <el-col :span="8">
         <div class="avatar-upload-container">
           <div class="avatar-preview-wrapper">
-            <img :src="avatarPreview" alt="User Avatar" />
+            <img :src="avatarPreview || defaultAvatar" alt="User Avatar" />
           </div>
           <el-upload
             class="avatar-uploader"
