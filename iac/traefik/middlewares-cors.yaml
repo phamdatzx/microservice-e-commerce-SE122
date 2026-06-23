@@ -1,9 +1,8 @@
-# helm/traefik/middlewares-cors.yaml
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
   name: cors-headers
-  namespace: default  # adjust to match your application namespace
+  namespace: default
 spec:
   headers:
     accessControlAllowMethods:
@@ -28,10 +27,10 @@ spec:
       - "http://localhost:5173"
       - "http://phamdatzx.id.vn"
       - "https://phamdatzx.id.vn"
-      - "http://djj0amhpbxjv0.cloudfront.net"
-      # Add your frontend domains here
-      # - "https://yourdomain.com"
-      # - "https://www.yourdomain.com"
+%{ if cloudfront_domain != "" ~}
+      - "https://${cloudfront_domain}"
+      - "http://${cloudfront_domain}"
+%{ endif ~}
     accessControlAllowCredentials: true
     accessControlExposeHeaders:
       - "X-User-Id"

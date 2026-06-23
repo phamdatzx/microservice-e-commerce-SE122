@@ -1,6 +1,6 @@
 appName: user-service
 replicas: 1
-image: megumikatou/user-service
+image: ghcr.io/phamdatzx/user-service
 tag: latest
 containerPort: 8085
 

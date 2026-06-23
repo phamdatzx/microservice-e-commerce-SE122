@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.appName }}-user-vector-worker
+  namespace: default
+  labels:
+    app: {{ .Values.appName }}-user-vector-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.appName }}-user-vector-worker
+  template:
+    metadata:
+      namespace: default
+      labels:
+        app: {{ .Values.appName }}-user-vector-worker
+    spec:
+      containers:
+        - name: user-vector-worker
+          image: "{{ .Values.image }}:{{ .Values.tag }}"
+          imagePullPolicy: Always
+          command: ["python", "-m", "app.workers.user_vector_worker"]
+          envFrom:
+            - secretRef:
+                name: {{ .Values.appName }}-secret

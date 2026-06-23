@@ -451,27 +451,51 @@ def get_my_orders(
     - The user wants to check the status of a specific order.
     - The user asks "Has my order been shipped?" or "What did I buy recently?"
 
+    Order status lifecycle
+    ----------------------
+    Online-payment orders:
+        ``TO_PAY`` → (Stripe paid) → ``TO_CONFIRM`` → ``TO_PICKUP`` → ``SHIPPING`` → ``COMPLETED``
+                                                     ↘ ``CANCELLED``                ↘ ``RETURNED``
+    COD orders:
+        ``TO_CONFIRM`` → ``TO_PICKUP`` → ``SHIPPING`` → ``COMPLETED``
+                       ↘ ``CANCELLED``                ↘ ``RETURNED``
+
+    Status meanings:
+    - ``TO_PAY``      — order created, waiting for the customer to complete
+                        online payment (Stripe).
+    - ``TO_CONFIRM``  — payment received (or COD placed); waiting for the
+                        seller to confirm and arrange pickup.
+    - ``TO_PICKUP``   — seller confirmed and created a GHN shipment; waiting
+                        for the courier to pick up the parcel.
+    - ``SHIPPING``    — parcel is in transit to the customer.
+    - ``COMPLETED``   — order successfully delivered and closed.
+    - ``CANCELLED``   — order was cancelled (payment failure or manual cancel).
+    - ``RETURNED``    — parcel was returned after shipping.
+
     Returns a JSON object with:
     - ``orders`` — list of order objects, each containing:
         - ``id`` — order UUID.
-        - ``status`` — one of: ``pending``, ``confirmed``, ``shipping``,
-          ``delivered``, ``cancelled``, ``returned``.
-        - ``total`` — total amount paid (float, VND).
-        - ``item_count`` — number of items in the order.
+        - ``status`` — one of the statuses described above (uppercase string).
+        - ``total`` — order subtotal (float, VND, excludes delivery fee).
+        - ``delivery_fee`` — shipping cost (integer, VND).
+        - ``item_count`` — number of line items in the order.
         - ``items`` — list of items, each with ``product_name``,
           ``variant_name``, ``price``, ``quantity``.
-        - ``payment_method`` — ``COD`` or ``STRIPE``.
-        - ``payment_status`` — ``PENDING``, ``PAID``, or ``FAILED``.
-        - ``delivery_code`` — shipping tracking code (if dispatched).
-        - ``voucher`` — applied voucher info (if any).
+        - ``payment_method`` — ``"COD"`` or ``"STRIPE"``.
+        - ``payment_status`` — ``"PENDING"``, ``"PAID"``, or ``"FAILED"``.
+        - ``delivery_code`` — GHN tracking code (present once order is
+          in ``TO_PICKUP`` or later).
+        - ``shipping_address`` — full delivery address.
+        - ``voucher`` — applied voucher info (``code``, ``discount_type``,
+          ``discount_value``) or ``null`` if none.
         - ``created_at`` / ``updated_at`` — ISO 8601 timestamps.
     - ``total_count``, ``page``, ``limit``, ``total_pages`` — pagination info.
 
     Args:
         user_id:    UUID of the user whose orders to fetch. Required.
-        status:     Optional filter — ``"pending"``, ``"confirmed"``,
-                    ``"shipping"``, ``"delivered"``, ``"cancelled"``,
-                    ``"returned"``.
+        status:     Optional filter — one of ``"TO_PAY"``, ``"TO_CONFIRM"``,
+                    ``"TO_PICKUP"``, ``"SHIPPING"``, ``"COMPLETED"``,
+                    ``"CANCELLED"``, ``"RETURNED"`` (uppercase, exact match).
         page:       Page number (default 1).
         limit:      Items per page (default 10, max 100).
         sort_by:    ``"total"`` | ``"created_at"``.

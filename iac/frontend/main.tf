@@ -64,6 +64,7 @@ resource "aws_cloudfront_distribution" "vuejs_web" {
   comment             = "${var.project} Vue.js static web"
   price_class         = var.cloudfront_price_class
 
+  # S3 origin for static frontend assets
   origin {
     domain_name = aws_s3_bucket.vuejs_web.bucket_regional_domain_name
     origin_id   = "S3-${aws_s3_bucket.vuejs_web.id}"
@@ -71,6 +72,65 @@ resource "aws_cloudfront_distribution" "vuejs_web" {
     s3_origin_config {
       origin_access_identity = aws_cloudfront_origin_access_identity.vuejs_web.cloudfront_access_identity_path
     }
+  }
+
+  # NLB origin for backend API (HTTP — TLS is not needed on the NLB side)
+  origin {
+    domain_name = var.nlb_hostname
+    origin_id   = "NLB-API"
+
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "http-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  # /socket.io/* → NLB (WebSocket — CloudFront handles WSS→WS upgrade automatically)
+  ordered_cache_behavior {
+    path_pattern     = "/socket.io/*"
+    target_origin_id = "NLB-API"
+
+    allowed_methods = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+    cached_methods  = ["GET", "HEAD"]
+
+    forwarded_values {
+      query_string = true
+      headers      = ["*"]
+      cookies {
+        forward = "all"
+      }
+    }
+
+    viewer_protocol_policy = "redirect-to-https"
+    min_ttl                = 0
+    default_ttl            = 0
+    max_ttl                = 0
+    compress               = false
+  }
+
+  # /api/* → NLB (no caching, all headers/methods forwarded)
+  ordered_cache_behavior {
+    path_pattern     = "/api/*"
+    target_origin_id = "NLB-API"
+
+    allowed_methods = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+    cached_methods  = ["GET", "HEAD"]
+
+    forwarded_values {
+      query_string = true
+      headers      = ["Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"]
+      cookies {
+        forward = "all"
+      }
+    }
+
+    viewer_protocol_policy = "redirect-to-https"
+    min_ttl                = 0
+    default_ttl            = 0
+    max_ttl                = 0
+    compress               = false
   }
 
   default_cache_behavior {

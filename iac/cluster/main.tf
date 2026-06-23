@@ -13,6 +13,7 @@ module "eks" {
   depends_on = [ module.vpc ]
   source = "./modules/eks"  
 
-  project = var.project
-  subnet_ids = module.vpc.private_subnet_ids
+  project            = var.project
+  subnet_ids         = module.vpc.private_subnet_ids
+  kubernetes_version = var.kubernetes_version
 }

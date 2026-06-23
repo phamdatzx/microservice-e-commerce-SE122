@@ -31,3 +31,9 @@ variable "route53_zone_id" {
   type        = string
   default     = ""
 }
+
+variable "nlb_hostname" {
+  description = "Hostname of the Traefik NLB (from kubectl get svc -n traefik)"
+  type        = string
+  default     = ""
+}
