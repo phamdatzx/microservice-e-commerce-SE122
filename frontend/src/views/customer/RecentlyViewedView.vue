@@ -16,8 +16,10 @@ interface Product {
 import axios from 'axios'
 
 const recentlyViewed = ref<Product[]>([])
+const isLoading = ref(true)
 
 const loadRecentlyViewed = async () => {
+  isLoading.value = true
   const token = localStorage.getItem('access_token')
   const headers = token ? { Authorization: `Bearer ${token}` } : {}
   try {
@@ -42,6 +44,8 @@ const loadRecentlyViewed = async () => {
     }
   } catch (error) {
     console.error('Error fetching recently viewed products:', error)
+  } finally {
+    isLoading.value = false
   }
 }
 
@@ -59,38 +63,40 @@ onMounted(() => {
       </div>
     </div>
 
-    <div v-if="recentlyViewed.length > 0" class="products-grid">
-      <el-row :gutter="20">
-        <el-col
-          v-for="item in recentlyViewed"
-          :key="item.id"
-          :xs="24"
-          :sm="12"
-          :md="6"
-          :lg="4.8"
-          class="el-col-4-8"
-          style="margin-bottom: 20px"
-        >
-          <ProductItem
-            :id="item.id"
-            :name="item.name"
-            :image-url="item.imageUrl"
-            :min-price="item.minPrice"
-            :max-price="item.maxPrice"
-            :rating="item.rating"
-            :location="item.location"
-            :sold-count="item.soldCount"
-          />
-        </el-col>
-      </el-row>
-    </div>
+    <div v-loading="isLoading" style="min-height: 300px; display: flex; flex-direction: column;">
+      <div v-if="recentlyViewed.length > 0" class="products-grid">
+        <el-row :gutter="20">
+          <el-col
+            v-for="item in recentlyViewed"
+            :key="item.id"
+            :xs="24"
+            :sm="12"
+            :md="6"
+            :lg="4.8"
+            class="el-col-4-8"
+            style="margin-bottom: 20px"
+          >
+            <ProductItem
+              :id="item.id"
+              :name="item.name"
+              :image-url="item.imageUrl"
+              :min-price="item.minPrice"
+              :max-price="item.maxPrice"
+              :rating="item.rating"
+              :location="item.location"
+              :sold-count="item.soldCount"
+            />
+          </el-col>
+        </el-row>
+      </div>
 
-    <div v-else class="empty-state">
-      <el-empty description="Your recently viewed history is empty">
-        <el-button type="primary" color="var(--main-color)" @click="$router.push('/')">
-          Go Shopping Now
-        </el-button>
-      </el-empty>
+      <div v-else-if="!isLoading" class="empty-state" style="flex: 1;">
+        <el-empty description="Your recently viewed history is empty">
+          <el-button type="primary" color="var(--main-color)" @click="$router.push('/')">
+            Go Shopping Now
+          </el-button>
+        </el-empty>
+      </div>
     </div>
   </div>
 </template>
