@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"product-service/dto"
 	"product-service/model"
@@ -28,7 +29,8 @@ func NewStockReservationService(
 }
 
 func (s *stockReservationService) ReserveStock(orderID string, items []dto.ReserveStockItem) error {
-	// 1. Validate and fetch variant details
+	// 1. Fetch variant → product mapping. Used for both the fast-fail pre-check
+	//    and to resolve productID for each variant.
 	variantIDs := make([]string, len(items))
 	for i, item := range items {
 		variantIDs[i] = item.VariantID
@@ -39,14 +41,16 @@ func (s *stockReservationService) ReserveStock(orderID string, items []dto.Reser
 		return fmt.Errorf("failed to fetch variants: %w", err)
 	}
 
-	// 2. Verify all variants exist and have sufficient stock
+	// 2. Fast-fail pre-check: ensure every variant exists and has enough stock
+	//    according to the snapshot we just read. This is not the concurrency
+	//    guard — that is the atomic decrement below — but it gives callers a
+	//    clear error message before doing any writes.
 	for _, item := range items {
 		product, exists := variantToProduct[item.VariantID]
 		if !exists {
 			return fmt.Errorf("variant %s not found", item.VariantID)
 		}
 
-		// Find the specific variant in the product
 		var variant *model.Variant
 		for i := range product.Variants {
 			if product.Variants[i].ID == item.VariantID {
@@ -54,18 +58,39 @@ func (s *stockReservationService) ReserveStock(orderID string, items []dto.Reser
 				break
 			}
 		}
-
 		if variant == nil {
 			return fmt.Errorf("variant %s not found in product", item.VariantID)
 		}
-
 		if variant.Stock < item.Quantity {
 			return fmt.Errorf("insufficient stock for variant %s: requested %d, available %d",
 				item.VariantID, item.Quantity, variant.Stock)
 		}
 	}
 
-	// 3. Create stock reservations
+	// 3. Atomically decrement each variant's stock one by one.
+	//    DecrementVariantStockAtomic uses a single UpdateOne with a $gte guard,
+	//    so two concurrent requests competing for the same stock cannot both
+	//    succeed — the second one will get ErrInsufficientStock.
+	//
+	//    We track how many items were successfully decremented so we can roll
+	//    back exactly those items if a later decrement fails.
+	for i, item := range items {
+		product := variantToProduct[item.VariantID]
+		if err := s.productRepo.DecrementVariantStockAtomic(product.ID, item.VariantID, item.Quantity); err != nil {
+			// Roll back all decrements that already succeeded (indices 0..i-1).
+			for _, done := range items[:i] {
+				doneProduct := variantToProduct[done.VariantID]
+				_ = s.productRepo.UpdateVariantStock(doneProduct.ID, done.VariantID, done.Quantity)
+			}
+			if errors.Is(err, repository.ErrInsufficientStock) {
+				return fmt.Errorf("insufficient stock for variant %s", item.VariantID)
+			}
+			return fmt.Errorf("failed to decrement stock for variant %s: %w", item.VariantID, err)
+		}
+	}
+
+	// 4. All decrements succeeded. Now persist the reservation records.
+	//    If this write fails we must restore every decremented variant.
 	reservations := make([]model.StockReservation, len(items))
 	for i, item := range items {
 		reservations[i] = model.StockReservation{
@@ -77,20 +102,11 @@ func (s *stockReservationService) ReserveStock(orderID string, items []dto.Reser
 	}
 
 	if err := s.stockReservationRepo.CreateMany(reservations); err != nil {
-		return fmt.Errorf("failed to create stock reservations: %w", err)
-	}
-
-	// 4. Update stock for each variant (decrease stock)
-	for _, item := range items {
-		product := variantToProduct[item.VariantID]
-		stockDelta := -item.Quantity // Negative to decrease
-
-		if err := s.productRepo.UpdateVariantStock(product.ID, item.VariantID, stockDelta); err != nil {
-			// Rollback: try to delete the reservations we just created
-			// Note: This is a simple rollback. In production, consider using MongoDB transactions
-			_ = s.stockReservationRepo.UpdateStatusByOrderID(orderID, "CANCELLED")
-			return fmt.Errorf("failed to update stock for variant %s: %w", item.VariantID, err)
+		for _, item := range items {
+			product := variantToProduct[item.VariantID]
+			_ = s.productRepo.UpdateVariantStock(product.ID, item.VariantID, item.Quantity)
 		}
+		return fmt.Errorf("failed to create stock reservations: %w", err)
 	}
 
 	return nil
