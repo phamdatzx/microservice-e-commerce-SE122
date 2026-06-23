@@ -53,6 +53,10 @@ const openChat = () => {
   window.dispatchEvent(event)
 }
 
+const goToSellerPage = () => {
+  router.push(`/seller-page/${props.sellerInfo.id}`)
+}
+
 const defaultAvatar = computed(() => {
   return `https://ui-avatars.com/api/?name=${props.sellerInfo.name || 'Store'}&background=random`
 })
@@ -68,7 +72,7 @@ const defaultAvatar = computed(() => {
   >
     <div class="seller-info-content">
       <div class="seller-info-left" :class="{ 'header-info-left': layout === 'header' }">
-        <div class="seller-avatar-wrapper">
+        <div class="seller-avatar-wrapper" style="cursor: pointer" @click="goToSellerPage">
           <img
             :src="sellerInfo.image || defaultAvatar"
             class="seller-avatar"
@@ -76,7 +80,9 @@ const defaultAvatar = computed(() => {
           />
         </div>
         <div class="seller-main">
-          <h3 class="seller-name">{{ sellerInfo.name }}</h3>
+          <h3 class="seller-name" style="cursor: pointer" @click="goToSellerPage">
+            {{ sellerInfo.name }}
+          </h3>
 
           <div class="seller-actions">
             <template v-if="showFollowButton">
@@ -205,6 +211,11 @@ const defaultAvatar = computed(() => {
   margin: 0 0 12px 0;
   font-weight: 500;
   color: #000000cc;
+  transition: color 0.2s;
+}
+
+.seller-name:hover {
+  color: var(--main-color);
 }
 
 .layout-header .seller-name {
