@@ -50,9 +50,8 @@ interface Order {
 const activeTab = ref('all')
 const activeSubTab = ref('all')
 const searchKeyword = ref('')
-const dateRange = ref('')
-const sortBy = ref('created_at')
-const sortOrder = ref('descending')
+const dateRange = ref<any>(null)
+const sortSelection = ref('created_at_desc')
 
 const orders = ref<Order[]>([])
 const loading = ref(false)
@@ -66,15 +65,29 @@ const BE_API_URL = import.meta.env.VITE_BE_API_URL
 const fetchOrders = async () => {
   loading.value = true
   try {
+    const lastUnderscore = sortSelection.value.lastIndexOf('_')
+    const sortField =
+      lastUnderscore !== -1 ? sortSelection.value.substring(0, lastUnderscore) : 'created_at'
+    const sortDir =
+      lastUnderscore !== -1 ? sortSelection.value.substring(lastUnderscore + 1) : 'desc'
     const params: any = {
       page: currentPage.value,
       limit: pageSize.value,
-      sort_by: sortBy.value,
-      sort_order: sortOrder.value,
+      sort_by: sortField,
+      sort_order: sortDir,
     }
 
     if (searchKeyword.value) {
-      params.keyword = searchKeyword.value
+      params.search = searchKeyword.value
+    }
+
+    if (dateRange.value && Array.isArray(dateRange.value) && dateRange.value.length === 2) {
+      const start = new Date(dateRange.value[0])
+      start.setHours(0, 0, 0, 0)
+      const end = new Date(dateRange.value[1])
+      end.setHours(0, 0, 0, 0)
+      params.start_date = start.toISOString()
+      params.end_date = end.toISOString()
     }
 
     if (activeTab.value !== 'all') {
@@ -103,7 +116,7 @@ const fetchOrders = async () => {
   }
 }
 
-watch([activeTab, currentPage, pageSize, sortBy, sortOrder, searchKeyword], () => {
+watch([activeTab, currentPage, pageSize, sortSelection, searchKeyword, dateRange], () => {
   fetchOrders()
   // Refresh counts when data might have changed or when switching tabs
   fetchAllTabCounts()
@@ -132,6 +145,15 @@ const fetchAllTabCounts = async () => {
     const promises = statuses.map((item) => {
       const params: any = { page: 1, limit: 1 }
       if (item.status) params.status = item.status
+      if (searchKeyword.value) params.search = searchKeyword.value
+      if (dateRange.value && Array.isArray(dateRange.value) && dateRange.value.length === 2) {
+        const start = new Date(dateRange.value[0])
+        start.setHours(0, 0, 0, 0)
+        const end = new Date(dateRange.value[1])
+        end.setHours(0, 0, 0, 0)
+        params.start_date = start.toISOString()
+        params.end_date = end.toISOString()
+      }
       return axios.get(`${BE_API_URL}/order/seller`, {
         params,
         headers: { Authorization: `Bearer ${token}` },
@@ -282,9 +304,11 @@ const handleUpdateStatus = async (orderId: string, status: string) => {
         <h3>{{ totalCount }} Orders Found</h3>
         <div class="orders-actions">
           <span class="sort-label">Sort by</span>
-          <el-select v-model="sortOrder" placeholder="Created Date" style="width: 200px">
-            <el-option label="Order Created Date: Oldest to Newest" value="ascending" />
-            <el-option label="Order Created Date: Newest to Oldest" value="descending" />
+          <el-select v-model="sortSelection" placeholder="Sort option" style="width: 250px">
+            <el-option label="Created Date: Newest to Oldest" value="created_at_desc" />
+            <el-option label="Created Date: Oldest to Newest" value="created_at_asc" />
+            <el-option label="Total Price: High to Low" value="total_desc" />
+            <el-option label="Total Price: Low to High" value="total_asc" />
           </el-select>
           <el-button
             type="primary"
