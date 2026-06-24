@@ -12,6 +12,7 @@ import (
 type CategoryRepository interface {
 	Create(category *model.Category) error
 	FindByID(id string) (*model.Category, error)
+	FindByIDs(ids []string) ([]model.Category, error)
 	FindAll() ([]model.Category, error)
 	FindByName(name string) ([]model.Category, error)
 	Update(category *model.Category) error
@@ -46,6 +47,24 @@ func (r *categoryRepository) FindByID(id string) (*model.Category, error) {
 	defer cancel()
 	err := r.collection.FindOne(ctx, bson.M{"_id": id}).Decode(&category)
 	return &category, err
+}
+
+func (r *categoryRepository) FindByIDs(ids []string) ([]model.Category, error) {
+	if len(ids) == 0 {
+		return []model.Category{}, nil
+	}
+	var categories []model.Category
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	cursor, err := r.collection.Find(ctx, bson.M{"_id": bson.M{"$in": ids}})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+	if err = cursor.All(ctx, &categories); err != nil {
+		return nil, err
+	}
+	return categories, nil
 }
 
 func (r *categoryRepository) FindAll() ([]model.Category, error) {

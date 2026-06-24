@@ -561,6 +561,8 @@ func (s *orderService) GetSellerOrders(ctx context.Context, sellerID string, req
 		request.PaymentMethod,
 		request.PaymentStatus,
 		request.Search,
+		request.StartDate,
+		request.EndDate,
 		page,
 		limit,
 		request.SortBy,
@@ -613,16 +615,27 @@ func (s *orderService) UpdateOrderStatus(ctx context.Context, userID string, ord
 
 	//validate current status
 	switch oldOrder.Status {
+	case "TO_PAY":
+		// Only the buyer can cancel an unpaid order
+		if request.Status != "CANCELLED" {
+			return appError.NewAppError(400, "Invalid status: TO_PAY orders can only be cancelled")
+		}
+		if oldOrder.User.ID != userID {
+			return appError.NewAppError(403, "Only the buyer can cancel an unpaid order")
+		}
 	case "TO_CONFIRM":
 		if request.Status != "TO_PICKUP" && request.Status != "CANCELLED" {
 			return appError.NewAppError(400, "Invalid status")
 		}
 		if request.Status == "TO_PICKUP" {
-			request, err := s.GHNClient.CreateRequest(*oldOrder, *seller)
+			if oldOrder.Seller.ID != userID {
+				return appError.NewAppError(403, "Only the seller can confirm an order")
+			}
+			ghnRequest, err := s.GHNClient.CreateRequest(*oldOrder, *seller)
 			if err != nil {
 				return err
 			}
-			deliveryCode, err := s.GHNClient.CreateOrder(request)
+			deliveryCode, err := s.GHNClient.CreateOrder(ghnRequest)
 			if err != nil {
 				return err
 			}
@@ -637,7 +650,14 @@ func (s *orderService) UpdateOrderStatus(ctx context.Context, userID string, ord
 			return appError.NewAppError(400, "Invalid status")
 		}
 	default:
-		return appError.NewAppError(409, "Current status of this order can't be updated"+oldOrder.Status)
+		return appError.NewAppError(409, "Current status of this order can't be updated: "+oldOrder.Status)
+	}
+
+	// Release reserved stock when an order is cancelled
+	if request.Status == "CANCELLED" {
+		if err := s.productClient.ReleaseStock(oldOrder.ID); err != nil {
+			fmt.Printf("Warning: failed to release stock for cancelled order %s: %v\n", oldOrder.ID, err)
+		}
 	}
 
 	//update in database
