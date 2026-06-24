@@ -561,6 +561,8 @@ func (s *orderService) GetSellerOrders(ctx context.Context, sellerID string, req
 		request.PaymentMethod,
 		request.PaymentStatus,
 		request.Search,
+		request.StartDate,
+		request.EndDate,
 		page,
 		limit,
 		request.SortBy,

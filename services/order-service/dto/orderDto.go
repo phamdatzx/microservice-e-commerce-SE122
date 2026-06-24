@@ -83,12 +83,14 @@ type OrderVoucherDto struct {
 
 // GetOrdersBySellerRequest contains query parameters for seller orders with enhanced filtering
 type GetOrdersBySellerRequest struct {
-	Status        string `form:"status"`         // Filter by order status
-	PaymentMethod string `form:"payment_method"` // Filter by payment method (COD, STRIPE)
-	PaymentStatus string `form:"payment_status"` // Filter by payment status (PENDING, PAID, FAILED)
-	Search        string `form:"search"`         // Search by order ID or phone
-	Page          int    `form:"page"`           // Page number (default: 1)
-	Limit         int    `form:"limit"`          // Items per page (default: 10, max: 100)
-	SortBy        string `form:"sort_by"`        // Field to sort by: total, created_at
-	SortOrder     string `form:"sort_order"`     // Sort order: asc, desc (default: desc)
+	Status        string     `form:"status"`         // Filter by order status
+	PaymentMethod string     `form:"payment_method"` // Filter by payment method (COD, STRIPE)
+	PaymentStatus string     `form:"payment_status"` // Filter by payment status (PENDING, PAID, FAILED)
+	Search        string     `form:"search"`         // Search by order ID or phone
+	StartDate     *time.Time `form:"start_date"`     // Filter orders created on or after this date (RFC3339)
+	EndDate       *time.Time `form:"end_date"`       // Filter orders created on or before this date (RFC3339)
+	Page          int        `form:"page"`           // Page number (default: 1)
+	Limit         int        `form:"limit"`          // Items per page (default: 10, max: 100)
+	SortBy        string     `form:"sort_by"`        // Field to sort by: total, created_at
+	SortOrder     string     `form:"sort_order"`     // Sort order: asc, desc (default: desc)
 }

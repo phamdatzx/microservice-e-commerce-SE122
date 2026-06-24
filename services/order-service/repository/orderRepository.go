@@ -16,7 +16,7 @@ type OrderRepository interface {
 	FindOrderByID(id string) (*model.Order, error)
 	UpdateOrder(order *model.Order) error
 	FindOrdersByUser(userID string, status string, page, limit int, sortBy, sortOrder string) ([]*model.Order, int64, error)
-	FindOrdersBySeller(sellerID string, status string, paymentMethod string, paymentStatus string, search string, page, limit int, sortBy, sortOrder string) ([]*model.Order, int64, error)
+	FindOrdersBySeller(sellerID string, status string, paymentMethod string, paymentStatus string, search string, startDate, endDate *time.Time, page, limit int, sortBy, sortOrder string) ([]*model.Order, int64, error)
 	VerifyVariantPurchase(userID, productID, variantID string) (bool, error)
 	GetSellerStatistics(sellerID string, from, to time.Time, groupBy string) (int, float64, []map[string]interface{}, error)
 }
@@ -82,7 +82,7 @@ func (r *orderRepository) FindOrdersByUser(userID string, status string, page, l
 	case "created_at":
 		sortOptions = bson.D{{Key: "created_at", Value: sortDirection}}
 	default:
-		sortOptions = bson.D{{Key: "created_at", Value: -1}} // default: newest first
+		sortOptions = bson.D{{Key: "created_at", Value: sortDirection}} // default field, honour sortDirection
 	}
 
 	// Calculate skip
@@ -110,27 +110,42 @@ func (r *orderRepository) FindOrdersByUser(userID string, status string, page, l
 	return orders, totalCount, nil
 }
 
-func (r *orderRepository) FindOrdersBySeller(sellerID string, status string, paymentMethod string, paymentStatus string, search string, page, limit int, sortBy, sortOrder string) ([]*model.Order, int64, error) {
+func (r *orderRepository) FindOrdersBySeller(sellerID string, status string, paymentMethod string, paymentStatus string, search string, startDate, endDate *time.Time, page, limit int, sortBy, sortOrder string) ([]*model.Order, int64, error) {
 	// Build filter
 	filter := bson.M{"seller._id": sellerID}
-	
+
 	if status != "" {
 		filter["status"] = status
 	}
-	
+
 	if paymentMethod != "" {
 		filter["payment_method"] = paymentMethod
 	}
-	
+
 	if paymentStatus != "" {
 		filter["payment_status"] = paymentStatus
 	}
-	
-	// Search by order ID or phone
+
+	// Date range filter on created_at
+	if startDate != nil || endDate != nil {
+		dateFilter := bson.M{}
+		if startDate != nil {
+			dateFilter["$gte"] = startDate
+		}
+		if endDate != nil {
+			// Include the full end day by moving to the start of the next day
+			end := endDate.Add(24*time.Hour - time.Nanosecond)
+			dateFilter["$lte"] = end
+		}
+		filter["created_at"] = dateFilter
+	}
+
+	// Search by order ID or customer name
 	if search != "" {
 		filter["$or"] = []bson.M{
 			{"_id": bson.M{"$regex": search, "$options": "i"}},
-			{"phone": bson.M{"$regex": search, "$options": "i"}},
+			{"shipping_address.phone": bson.M{"$regex": search, "$options": "i"}},
+			{"user.name": bson.M{"$regex": search, "$options": "i"}},
 		}
 	}
 
@@ -153,7 +168,7 @@ func (r *orderRepository) FindOrdersBySeller(sellerID string, status string, pay
 	case "created_at":
 		sortOptions = bson.D{{Key: "created_at", Value: sortDirection}}
 	default:
-		sortOptions = bson.D{{Key: "created_at", Value: -1}} // default: newest first
+		sortOptions = bson.D{{Key: "created_at", Value: sortDirection}} // default field, honour sortDirection
 	}
 
 	// Calculate skip
