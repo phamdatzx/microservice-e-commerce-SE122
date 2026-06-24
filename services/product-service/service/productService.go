@@ -17,7 +17,7 @@ import (
 
 type ProductService interface {
 	CreateProduct(product *model.Product) error
-	GetProductByID(id string, userID string) (*model.Product, error)
+	GetProductByID(id string, userID string) (*dto.ProductDetailResponse, error)
 	GetDisabledProductByID(id string, userID string) (*model.Product, error)
 	GetAllProducts() ([]model.Product, error)
 	UpdateProduct(product *model.Product) error
@@ -111,7 +111,7 @@ func (s *productService) CreateProduct(product *model.Product) error {
 	return nil
 }
 
-func (s *productService) GetProductByID(id string, userID string) (*model.Product, error) {
+func (s *productService) GetProductByID(id string, userID string) (*dto.ProductDetailResponse, error) {
 	product, err := s.repo.FindByID(id)
 	if err != nil {
 		return nil, err
@@ -128,19 +128,33 @@ func (s *productService) GetProductByID(id string, userID string) (*model.Produc
 			UserID:    userID,
 			ProductID: id,
 		}
-		// Save view history asynchronously (don't block the request)
 		go func() {
 			if err := s.searchHistoryRepo.CreateViewHistory(viewHistory); err != nil {
-				// Log error but don't fail the request
 				fmt.Printf("Failed to save view history for user %s: %v\n", userID, err)
 			}
 		}()
-
-		// Publish view interaction to ai-service via RabbitMQ (best-effort)
 		go config.PublishUserInteraction(userID, id, "view", 1)
 	}
 
-	return product, nil
+	// Fetch platform categories
+	categories, err := s.categoryRepo.FindByIDs(product.CategoryIDs)
+	if err != nil {
+		fmt.Printf("Failed to fetch categories for product %s: %v\n", id, err)
+		categories = []model.Category{}
+	}
+
+	// Fetch seller categories
+	sellerCategories, err := s.sellerCategoryRepo.FindByIDs(product.SellerCategoryIDs)
+	if err != nil {
+		fmt.Printf("Failed to fetch seller categories for product %s: %v\n", id, err)
+		sellerCategories = []model.SellerCategory{}
+	}
+
+	return &dto.ProductDetailResponse{
+		Product:          *product,
+		Categories:       categories,
+		SellerCategories: sellerCategories,
+	}, nil
 }
 
 func (s *productService) GetDisabledProductByID(id string, userID string) (*model.Product, error) {
