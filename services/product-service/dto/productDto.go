@@ -2,6 +2,19 @@ package dto
 
 import "product-service/model"
 
+// ProductDetailResponse is the response for GET /public/:id.
+// It embeds the full product plus resolved category and seller-category objects
+// so callers don't need a second request to look up category names/images.
+// CategoryIDs and SellerCategoryIDs are shadowed to hide the raw ID arrays
+// since the resolved objects are already present in Categories/SellerCategories.
+type ProductDetailResponse struct {
+	model.Product
+	CategoryIDs       []string               `json:"-"`
+	SellerCategoryIDs []string               `json:"-"`
+	Categories        []model.Category       `json:"categories"`
+	SellerCategories  []model.SellerCategory `json:"seller_categories"`
+}
+
 // GetProductsQueryParams represents query parameters for getting products
 type GetProductsQueryParams struct {
 	Page          int    `form:"page"`

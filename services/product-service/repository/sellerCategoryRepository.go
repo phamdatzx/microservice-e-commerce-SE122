@@ -12,6 +12,7 @@ import (
 type SellerCategoryRepository interface {
 	Create(sellerCategory *model.SellerCategory) error
 	FindByID(id string) (*model.SellerCategory, error)
+	FindByIDs(ids []string) ([]model.SellerCategory, error)
 	FindBySellerID(sellerID string) ([]model.SellerCategory, error)
 	FindAll() ([]model.SellerCategory, error)
 	Update(sellerCategory *model.SellerCategory) error
@@ -46,6 +47,24 @@ func (r *sellerCategoryRepository) FindByID(id string) (*model.SellerCategory, e
 	defer cancel()
 	err := r.collection.FindOne(ctx, bson.M{"_id": id}).Decode(&sellerCategory)
 	return &sellerCategory, err
+}
+
+func (r *sellerCategoryRepository) FindByIDs(ids []string) ([]model.SellerCategory, error) {
+	if len(ids) == 0 {
+		return []model.SellerCategory{}, nil
+	}
+	var sellerCategories []model.SellerCategory
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	cursor, err := r.collection.Find(ctx, bson.M{"_id": bson.M{"$in": ids}})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+	if err = cursor.All(ctx, &sellerCategories); err != nil {
+		return nil, err
+	}
+	return sellerCategories, nil
 }
 
 func (r *sellerCategoryRepository) FindBySellerID(sellerID string) ([]model.SellerCategory, error) {

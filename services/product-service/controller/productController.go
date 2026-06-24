@@ -47,13 +47,13 @@ func (c *ProductController) GetProductByID(ctx *gin.Context) {
 	// Get userID from header if available (optional - for view history tracking)
 	userID := ctx.GetHeader("X-User-Id")
 
-	product, err := c.service.GetProductByID(id, userID)
+	response, err := c.service.GetProductByID(id, userID)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, product)
+	ctx.JSON(http.StatusOK, response)
 }
 
 func (c *ProductController) GetDisabledProductByID(ctx *gin.Context) {
