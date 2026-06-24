@@ -311,7 +311,6 @@ const handleUpdateStatus = async (orderId: string, status: string) => {
           <!-- Order Header -->
           <div class="order-card-header">
             <div class="user-info">
-              <el-avatar :size="24" icon="User" />
               <span class="username">{{ order.user.name }}</span>
               <el-icon class="chat-icon"><ChatDotRound /></el-icon>
             </div>
