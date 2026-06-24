@@ -247,14 +247,14 @@ const fetchConversations = async () => {
           isAi: false,
         }
       })
-      contacts.value = [aiContactTemplate, ...serverContacts]
+      contacts.value = props.isEmbedded ? serverContacts : [aiContactTemplate, ...serverContacts]
       hydrateLastMessagePrefix()
     } else {
-      contacts.value = [aiContactTemplate]
+      contacts.value = props.isEmbedded ? [] : [aiContactTemplate]
     }
   } catch (error) {
     console.error('Error fetching conversations:', error)
-    contacts.value = [aiContactTemplate]
+    contacts.value = props.isEmbedded ? [] : [aiContactTemplate]
   } finally {
     isLoadingContacts.value = false
   }
@@ -307,8 +307,9 @@ const openChatWithSeller = async (sellerId: string) => {
         raw: conv,
         isAi: false,
       }
-      // Insert after AI contact
-      contacts.value.splice(1, 0, newContact)
+      // Insert after AI contact if present
+      const insertIndex = contacts.value.some((c) => c.isAi) ? 1 : 0
+      contacts.value.splice(insertIndex, 0, newContact)
       selectContact(newContact)
     }
   } catch (error) {
