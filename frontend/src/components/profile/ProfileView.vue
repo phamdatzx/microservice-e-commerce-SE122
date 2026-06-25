@@ -21,6 +21,10 @@ const avatar = ref('')
 const isLoading = ref(false)
 const activeTab = ref('account-info')
 
+const defaultAvatar = computed(() => {
+  return `https://ui-avatars.com/api/?name=${name.value || 'User'}&background=22c55e&color=fff`
+})
+
 const fetchUserInfo = async () => {
   const token = localStorage.getItem('access_token')
   if (!token) return
@@ -129,7 +133,7 @@ const userInfo = computed(() => ({
             </div>
             <div v-else>
               <div class="avatar-wrapper">
-                <img :src="avatar || 'https://placehold.co/140x140'" alt="User Avatar" />
+                <img :src="avatar || defaultAvatar" alt="User Avatar" />
               </div>
               <h3 class="user-name">{{ name }}</h3>
               <p class="user-email">{{ email }}</p>
@@ -217,9 +221,10 @@ const userInfo = computed(() => ({
   width: 140px;
   height: 140px;
   margin: 0 auto 16px;
-  border-radius: 12px;
+  border-radius: 50%;
   overflow: hidden;
   background-color: #e0e0e0;
+  border: 1px solid #eee;
 }
 
 .avatar-wrapper img {

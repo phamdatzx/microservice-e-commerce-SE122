@@ -35,6 +35,18 @@ interface Variant {
   sold_count: number
 }
 
+interface Category {
+  id: string
+  name: string
+  image: string
+}
+
+interface SellerCategory {
+  id: string
+  name: string
+  image: string
+}
+
 interface Product {
   id: string
   name: string
@@ -56,6 +68,8 @@ interface Product {
   option_groups: OptionGroup[]
   variants: Variant[]
   seller_category_ids: string[]
+  categories?: Category[]
+  seller_categories?: SellerCategory[]
 }
 
 interface SellerInfo {
@@ -506,10 +520,35 @@ const addToAiCompare = () => {
   })
   window.dispatchEvent(event)
 }
+
+const handleCategoryClick = (catId: string) => {
+  router.push({ path: '/search', query: { category_ids: catId } })
+}
+
+const handleSellerCategoryClick = (catId: string) => {
+  if (product.value) {
+    router.push({ path: `/seller-page/${product.value.seller_id}`, query: { category_id: catId } })
+  }
+}
 </script>
 
 <template>
   <div class="main-container" v-if="product">
+    <div style="margin: 20px 0 10px; padding: 0 5px">
+      <el-breadcrumb separator="/">
+        <el-breadcrumb-item :to="{ path: '/' }">Home</el-breadcrumb-item>
+        <template v-if="product.categories && product.categories.length > 0">
+          <el-breadcrumb-item
+            v-for="cat in product.categories"
+            :key="cat.id"
+            :to="{ path: '/search', query: { category_ids: cat.id } }"
+          >
+            {{ cat.name }}
+          </el-breadcrumb-item>
+        </template>
+        <el-breadcrumb-item>{{ product.name }}</el-breadcrumb-item>
+      </el-breadcrumb>
+    </div>
     <div class="box-shadow border-radius" style="padding: 20px; margin: 20px 0">
       <el-row :gutter="28">
         <el-col :span="8">
@@ -607,16 +646,44 @@ const addToAiCompare = () => {
           <el-divider style="margin: 20px 0" />
 
           <div>
-            <div style="margin-bottom: 4px" v-if="selectedVariant">
+            <div style="margin-bottom: 6px" v-if="selectedVariant">
               <span style="font-weight: 700; margin-right: 4px">SKU:</span>
               <span>{{ selectedVariant.sku }}</span>
             </div>
 
-            <div style="margin-bottom: 4px">
+            <div style="margin-bottom: 6px">
               <span style="font-weight: 700; margin-right: 4px">STATUS:</span>
               <span :style="{ color: product.is_active ? 'green' : 'red' }">{{
                 product.status
               }}</span>
+            </div>
+
+            <div
+              style="margin-bottom: 6px; display: flex; align-items: center; flex-wrap: wrap"
+              v-if="product.categories && product.categories.length > 0"
+            >
+              <span style="font-weight: 700; margin-right: 8px">CATEGORY:</span>
+              <span v-for="cat in product.categories" :key="cat.id">
+                <el-tag
+                  class="category-tag"
+                  @click="handleCategoryClick(cat.id)"
+                  >{{ cat.name }}</el-tag
+                >
+              </span>
+            </div>
+
+            <div
+              style="margin-bottom: 12px; display: flex; align-items: center; flex-wrap: wrap"
+              v-if="product.seller_categories && product.seller_categories.length > 0"
+            >
+              <span style="font-weight: 700; margin-right: 8px">SHOP CATEGORY:</span>
+              <span v-for="cat in product.seller_categories" :key="cat.id">
+                <el-tag
+                  class="category-tag"
+                  @click="handleSellerCategoryClick(cat.id)"
+                  >{{ cat.name }}</el-tag
+                >
+              </span>
             </div>
           </div>
         </el-col>
@@ -1036,6 +1103,22 @@ const addToAiCompare = () => {
 .rating-filter-btn.active {
   border-color: #22c55e;
   color: #22c55e;
+}
+
+.category-tag {
+  margin-right: 5px;
+  font-weight: 600;
+  background-color: transparent;
+  color: #333;
+  border-color: #333;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.category-tag:hover {
+  color: var(--main-color) !important;
+  border-color: var(--main-color) !important;
+  transform: scale(1.05);
 }
 </style>
 

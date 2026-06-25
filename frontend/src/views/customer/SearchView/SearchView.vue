@@ -33,9 +33,16 @@ const locations = [
 const showAllCategories = ref(false)
 const showAllLocations = ref(false)
 
-const displayedCategories = computed(() =>
-  showAllCategories.value ? categories.value : categories.value.slice(0, 4),
-)
+const displayedCategories = computed(() => {
+  const sorted = [...categories.value].sort((a, b) => {
+    const aSelected = selectedCategory.value.includes(a.id)
+    const bSelected = selectedCategory.value.includes(b.id)
+    if (aSelected && !bSelected) return -1
+    if (!aSelected && bSelected) return 1
+    return 0
+  })
+  return showAllCategories.value ? sorted : sorted.slice(0, 4)
+})
 const displayedLocations = computed(() =>
   showAllLocations.value ? locations : locations.slice(0, 4),
 )

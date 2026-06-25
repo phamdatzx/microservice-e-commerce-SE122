@@ -460,6 +460,10 @@ onMounted(fetchAddresses)
         </div>
       </div>
     </div>
+    
+    <div v-if="addresses.length === 0" class="no-addresses" style="margin-top: 40px">
+      <el-empty description="No addresses found" />
+    </div>
 
     <!-- Address Dialog -->
     <el-dialog

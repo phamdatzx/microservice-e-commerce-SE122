@@ -412,7 +412,7 @@ defineExpose({
 .notification-list {
   overflow-y: auto;
   flex: 1;
-  max-height: 400px;
+  height: 350px;
 }
 
 .notification-item {
@@ -517,7 +517,7 @@ defineExpose({
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px 20px;
+  height: 100%;
   color: #a1a1aa;
   gap: 10px;
 }
@@ -526,7 +526,7 @@ defineExpose({
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 400px;
+  height: 100%;
   color: #22c55e;
 }
 

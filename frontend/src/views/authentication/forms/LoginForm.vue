@@ -42,7 +42,7 @@ const handleFormSent = () => {
     .catch((error) => {
       ElNotification({
         title: 'Login failed!',
-        message: 'Error: ' + error.response.data.message,
+        message: 'Incorrect username or password.',
         type: 'error',
       })
     })

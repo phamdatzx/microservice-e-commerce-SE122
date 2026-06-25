@@ -298,6 +298,11 @@ const handleCategoryChange = async (
 }
 
 onMounted(() => {
+  const catId = route.query.category_id as string
+  if (catId) {
+    selectedCategoryId.value = catId
+    activeTab.value = catId
+  }
   fetchSellerInfo()
   fetchSellerProducts()
   fetchSellerVouchers()
@@ -306,7 +311,14 @@ onMounted(() => {
 })
 
 watch(sellerId, () => {
-  selectedCategoryId.value = null
+  const catId = route.query.category_id as string
+  if (catId) {
+    selectedCategoryId.value = catId
+    activeTab.value = catId
+  } else {
+    selectedCategoryId.value = null
+    activeTab.value = 'home'
+  }
   currentPage.value = 1
   fetchSellerInfo()
   fetchSellerProducts()
@@ -314,6 +326,21 @@ watch(sellerId, () => {
   fetchSavedVouchers()
   fetchSellerCategories()
 })
+
+watch(
+  () => route.query.category_id,
+  (catId) => {
+    if (catId) {
+      selectedCategoryId.value = catId as string
+      activeTab.value = catId as string
+    } else {
+      selectedCategoryId.value = null
+      activeTab.value = 'home'
+    }
+    currentPage.value = 1
+    fetchSellerProducts()
+  }
+)
 
 const sortOptions = computed(() => [
   { label: 'Top Sales', value: 'sold_count', active: sortBy.value === 'sold_count' },
