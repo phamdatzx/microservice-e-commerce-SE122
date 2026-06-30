@@ -121,6 +121,12 @@ def build_user_item_matrix(
     Returns:
         (sparse_matrix, user_ids_array, product_ids_array)
     """
+    # Convert BSON Decimal128 → float before any arithmetic (groupby.sum fails on Decimal128)
+    df = df.copy()
+    df["score"] = df["score"].apply(
+        lambda x: float(x.to_decimal()) if hasattr(x, "to_decimal") else float(x)
+    ).astype(np.float32)
+
     # Aggregate scores: if a user interacted with the same product multiple
     # times, sum the scores.
     agg = df.groupby(["user_id", "product_id"], as_index=False)["score"].sum()
@@ -130,9 +136,7 @@ def build_user_item_matrix(
 
     row = user_ids.cat.codes.values
     col = product_ids.cat.codes.values
-    data = agg["score"].apply(
-        lambda x: float(x.to_decimal()) if hasattr(x, "to_decimal") else float(x)
-    ).values.astype(np.float32)
+    data = agg["score"].values.astype(np.float32)
 
     sparse_mat = csr_matrix(
         (data, (row, col)),

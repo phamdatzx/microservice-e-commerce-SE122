@@ -1,6 +1,6 @@
 # Traefik Configuration for v39.x
 deployment:
-  replicas: 1
+  replicas: ~
 
 # Service configuration
 service:
@@ -51,3 +51,31 @@ ingressRoute:
 # RBAC
 rbac:
   enabled: true
+
+# Autoscaling
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 3
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+# Resource requests/limits (required for HPA CPU metrics)
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
