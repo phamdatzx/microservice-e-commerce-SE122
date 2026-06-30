@@ -72,11 +72,14 @@ HƯỚNG DẪN DÙNG TOOL:
 4. Đánh giá / review sản phẩm:
    → `get_product_reviews`
 5. Thông tin về một shop/người bán:
-   a. Tổng quan về shop (shop bán gì, có những loại hàng nào):
+   a. Hồ sơ người bán (tên shop, rating, bio, avatar):
+      → `get_seller_info` — dùng khi người dùng hỏi "shop này là ai?",
+        "tên shop?", "rating của người bán?".
+   b. Tổng quan về shop (shop bán gì, có những loại hàng nào):
       → `get_seller_categories` — ƯU TIÊN dùng trước, trả về danh mục hàng
         mà người bán tự tạo, phản ánh trực tiếp cách họ tổ chức cửa hàng.
-   b. Danh sách sản phẩm cụ thể của shop (khi người dùng muốn xem sản phẩm):
-      → `get_products_by_seller` — chỉ gọi sau khi đã có tổng quan từ 5a,
+   c. Danh sách sản phẩm cụ thể của shop (khi người dùng muốn xem sản phẩm):
+      → `get_products_by_seller` — chỉ gọi sau khi đã có tổng quan từ 5b,
         hoặc khi người dùng yêu cầu xem sản phẩm rõ ràng.
 6. Voucher / mã giảm giá của shop:
    → `get_seller_vouchers`

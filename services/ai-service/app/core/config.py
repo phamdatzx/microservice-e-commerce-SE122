@@ -129,6 +129,7 @@ class Settings:
     # Downstream microservice base URLs
     PRODUCT_SERVICE_URL: str = os.getenv("PRODUCT_SERVICE_URL", "http://localhost:81")
     ORDER_SERVICE_URL: str = os.getenv("ORDER_SERVICE_URL", "http://localhost:81")
+    USER_SERVICE_URL: str = os.getenv("USER_SERVICE_URL", "http://localhost:81")
 
 
 @lru_cache

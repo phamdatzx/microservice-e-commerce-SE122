@@ -68,6 +68,21 @@ def _product_post(path: str, body: dict) -> dict | list:
     return resp.json()
 
 
+def _user_get(path: str) -> dict | list:
+    """GET request to the user-service public API."""
+    settings = get_settings()
+    url = f"{settings.USER_SERVICE_URL}/api/user/public{path}"
+
+    logger.debug("user-service GET %s", url)
+    resp = httpx.get(url, timeout=10.0)
+
+    if not resp.is_success:
+        raise RuntimeError(
+            f"user-service error {resp.status_code} for GET {path}: {resp.text[:300]}"
+        )
+    return resp.json()
+
+
 def _order_get(path: str, user_id: str, user_role: str = "customer", params: dict | None = None) -> dict | list:
     """GET request to the order-service, injecting the gateway auth headers."""
     settings = get_settings()
@@ -279,7 +294,43 @@ def get_seller_categories(seller_id: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Tool: 5. Get products by seller
+# Tool: 5. Get seller info
+# ---------------------------------------------------------------------------
+
+@tool
+def get_seller_info(seller_id: str) -> str:
+    """Fetch public profile information for a seller / shop.
+
+    Use this tool when:
+    - The user asks for the name, rating, bio, avatar, or contact details
+      of a specific seller or shop.
+    - You need to display the seller's display name alongside their products.
+    - The user asks "Ai bán sản phẩm này?" or "Shop này là ai?".
+
+    Do NOT call this just to list a seller's products or categories — use
+    ``get_seller_categories`` or ``get_products_by_seller`` for those.
+
+    Returns a JSON object with seller profile fields, typically including:
+    - ``id``            — seller UUID.
+    - ``name``          — shop / display name.
+    - ``avatar``        — URL of the shop avatar image.
+    - ``bio``           — short shop description.
+    - ``rating``        — average seller rating (float).
+    - ``product_count`` — total number of products listed.
+    - ``follower_count`` — number of followers.
+
+    Args:
+        seller_id: UUID of the seller to fetch.
+    """
+    try:
+        data = _user_get(f"/seller/{seller_id}")
+        return json.dumps(data, ensure_ascii=False)
+    except RuntimeError as exc:
+        return f"Error fetching seller info: {exc}"
+
+
+# ---------------------------------------------------------------------------
+# Tool: 6. Get products by seller
 # ---------------------------------------------------------------------------
 
 @tool
@@ -332,7 +383,7 @@ def get_products_by_seller(
 
 
 # ---------------------------------------------------------------------------
-# Tool: 5. Get seller vouchers
+# Tool: 7. Get seller vouchers
 # ---------------------------------------------------------------------------
 
 @tool
@@ -614,6 +665,7 @@ ALL_TOOLS = [
     get_product_reviews,
     search_product_catalog,
     get_seller_categories,       # overview of a seller's shop — call before get_products_by_seller
+    get_seller_info,             # seller profile: name, rating, bio, avatar
     get_products_by_seller,
     get_seller_vouchers,
     get_categories,
