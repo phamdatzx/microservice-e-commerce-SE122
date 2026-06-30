@@ -92,6 +92,7 @@ const productId = ref(route.params.id as string)
 const product = ref<Product | null>(null)
 const sellerInfo = ref<SellerInfo | null>(null)
 const isLoading = ref(true)
+const isNotFound = ref(false)
 const isAddingToCart = ref(false)
 const productList = ref<any[]>([]) // For related products
 const cfRecommendedProducts = ref<any[]>([])
@@ -230,6 +231,7 @@ const handleFilterChange = (filter: string) => {
 const fetchProduct = async () => {
   if (!productId.value) return
   isLoading.value = true
+  isNotFound.value = false
   try {
     const userId = localStorage.getItem('user_id')
     const headers: any = {}
@@ -252,6 +254,7 @@ const fetchProduct = async () => {
       })
     }
   } catch (error) {
+    isNotFound.value = true
     console.error('Error fetching product:', error)
   } finally {
     isLoading.value = false
@@ -294,6 +297,7 @@ watch(
     if (newId && newId !== productId.value) {
       productId.value = newId as string
       product.value = null
+      isNotFound.value = false
       buyQuantity.value = 1
       activeTab.value = 'description'
       isDescriptionExpanded.value = false
@@ -553,7 +557,7 @@ const copyProductLink = async () => {
 </script>
 
 <template>
-  <div class="main-container" v-if="product">
+  <div class="main-container" v-if="product && !isNotFound">
     <div class="box-shadow border-radius" style="padding: 20px; margin: 20px 0">
       <el-row :gutter="28">
         <el-col :span="8">
