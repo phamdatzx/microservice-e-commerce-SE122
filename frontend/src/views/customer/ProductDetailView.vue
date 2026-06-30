@@ -4,7 +4,7 @@ import { onMounted, ref, computed, reactive, watch, inject, defineAsyncComponent
 import { quantityFormatNumber } from '@/utils/quantityFormatNumber'
 import { formatNumberWithDots } from '@/utils/formatNumberWithDots'
 import RedFlagIcon from '@/components/icons/RedFlagIcon.vue'
-import { Check, Goods, ShoppingCart, Loading, ChatDotRound } from '@element-plus/icons-vue'
+import { Check, Goods, ShoppingCart, Loading, ChatDotRound, Link } from '@element-plus/icons-vue'
 import UserComment from '../../components/UserComment.vue'
 import ProductItem from '@/components/ProductItem.vue'
 import RecentlyViewed from '@/components/RecentlyViewed.vue'
@@ -530,25 +530,30 @@ const handleSellerCategoryClick = (catId: string) => {
     router.push({ path: `/seller-page/${product.value.seller_id}`, query: { category_id: catId } })
   }
 }
+
+const copyProductLink = async () => {
+  try {
+    await navigator.clipboard.writeText(window.location.href)
+    ElNotification({
+      title: 'Success',
+      message: 'Product link copied to clipboard!',
+      type: 'success',
+      duration: 2000,
+    })
+  } catch (err) {
+    console.error('Failed to copy text: ', err)
+    ElNotification({
+      title: 'Error',
+      message: 'Failed to copy product link.',
+      type: 'error',
+      duration: 2000,
+    })
+  }
+}
 </script>
 
 <template>
   <div class="main-container" v-if="product">
-    <div style="margin: 20px 0 10px; padding: 0 5px">
-      <el-breadcrumb separator="/">
-        <el-breadcrumb-item :to="{ path: '/' }">Home</el-breadcrumb-item>
-        <template v-if="product.categories && product.categories.length > 0">
-          <el-breadcrumb-item
-            v-for="cat in product.categories"
-            :key="cat.id"
-            :to="{ path: '/search', query: { category_ids: cat.id } }"
-          >
-            {{ cat.name }}
-          </el-breadcrumb-item>
-        </template>
-        <el-breadcrumb-item>{{ product.name }}</el-breadcrumb-item>
-      </el-breadcrumb>
-    </div>
     <div class="box-shadow border-radius" style="padding: 20px; margin: 20px 0">
       <el-row :gutter="28">
         <el-col :span="8">
@@ -607,6 +612,24 @@ const handleSellerCategoryClick = (catId: string) => {
               <div>{{ quantityFormatNumber(product.rate_count) }} reviews</div>
               <el-divider direction="vertical" />
               <div>{{ quantityFormatNumber(product.sold_count) }} sold</div>
+              <el-divider direction="vertical" />
+              <el-button
+                type="primary"
+                link
+                style="
+                  display: inline-flex;
+                  align-items: center;
+                  gap: 4px;
+                  padding: 0;
+                  color: var(--main-color);
+                  font-weight: 500;
+                  font-size: 14px;
+                "
+                @click="copyProductLink"
+              >
+                <el-icon style="margin-right: 4px"><Link /></el-icon>
+                Copy Link
+              </el-button>
             </div>
             <!-- <el-button :icon="RedFlagIcon">Report</el-button> -->
           </div>
@@ -664,11 +687,9 @@ const handleSellerCategoryClick = (catId: string) => {
             >
               <span style="font-weight: 700; margin-right: 8px">CATEGORY:</span>
               <span v-for="cat in product.categories" :key="cat.id">
-                <el-tag
-                  class="category-tag"
-                  @click="handleCategoryClick(cat.id)"
-                  >{{ cat.name }}</el-tag
-                >
+                <el-tag class="category-tag" @click="handleCategoryClick(cat.id)">{{
+                  cat.name
+                }}</el-tag>
               </span>
             </div>
 
@@ -678,11 +699,9 @@ const handleSellerCategoryClick = (catId: string) => {
             >
               <span style="font-weight: 700; margin-right: 8px">SHOP CATEGORY:</span>
               <span v-for="cat in product.seller_categories" :key="cat.id">
-                <el-tag
-                  class="category-tag"
-                  @click="handleSellerCategoryClick(cat.id)"
-                  >{{ cat.name }}</el-tag
-                >
+                <el-tag class="category-tag" @click="handleSellerCategoryClick(cat.id)">{{
+                  cat.name
+                }}</el-tag>
               </span>
             </div>
           </div>
