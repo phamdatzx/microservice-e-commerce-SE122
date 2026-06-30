@@ -554,21 +554,6 @@ const copyProductLink = async () => {
 
 <template>
   <div class="main-container" v-if="product">
-    <div style="margin: 20px 0 10px; padding: 0 5px">
-      <el-breadcrumb separator="/">
-        <el-breadcrumb-item :to="{ path: '/' }">Home</el-breadcrumb-item>
-        <template v-if="product.categories && product.categories.length > 0">
-          <el-breadcrumb-item
-            v-for="cat in product.categories"
-            :key="cat.id"
-            :to="{ path: '/search', query: { category_ids: cat.id } }"
-          >
-            {{ cat.name }}
-          </el-breadcrumb-item>
-        </template>
-        <el-breadcrumb-item>{{ product.name }}</el-breadcrumb-item>
-      </el-breadcrumb>
-    </div>
     <div class="box-shadow border-radius" style="padding: 20px; margin: 20px 0">
       <el-row :gutter="28">
         <el-col :span="8">
