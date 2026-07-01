@@ -68,6 +68,22 @@ def _product_post(path: str, body: dict) -> dict | list:
     return resp.json()
 
 
+def _product_private_get(path: str, user_id: str, user_role: str = "customer") -> dict | list:
+    """GET request to the product-service private (authenticated) API."""
+    settings = get_settings()
+    url = f"{settings.PRODUCT_SERVICE_URL}/api/product{path}"
+    headers = {"X-User-Id": user_id, "X-User-Role": user_role}
+
+    logger.debug("product-service (private) GET %s", url)
+    resp = httpx.get(url, headers=headers, timeout=10.0)
+
+    if not resp.is_success:
+        raise RuntimeError(
+            f"product-service error {resp.status_code} for GET {path}: {resp.text[:300]}"
+        )
+    return resp.json()
+
+
 def _user_get(path: str) -> dict | list:
     """GET request to the user-service public API."""
     settings = get_settings()
@@ -657,6 +673,48 @@ def verify_purchase(user_id: str, product_id: str, variant_id: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Tool: 12. Get my saved vouchers
+# ---------------------------------------------------------------------------
+
+@tool
+def get_my_saved_vouchers(user_id: str) -> str:
+    """Fetch all vouchers the current user has saved to their account.
+
+    Use this tool when:
+    - The user asks "Voucher của tôi", "Mã giảm giá đã lưu", or
+      "Tôi có voucher nào?".
+    - The user wants to know which discount codes they have collected and
+      how many times they can still use each one.
+
+    Returns a JSON array of saved-voucher objects, each containing:
+    - ``voucher_id``       — UUID of the voucher.
+    - ``saved_at``         — ISO 8601 timestamp when the user saved it.
+    - ``used_count``       — how many times the user has already used this voucher.
+    - ``max_uses_allowed`` — total uses the user is permitted (from the voucher's
+                             per-user usage limit).
+    - ``voucher``          — full voucher details:
+        - ``code``              — the discount code to apply at checkout.
+        - ``name`` / ``description`` — human-readable label.
+        - ``discount_type``     — ``"FIXED"`` (flat VND) or ``"PERCENTAGE"`` (% off).
+        - ``discount_value``    — amount or percentage.
+        - ``max_discount_value``— cap on discount for PERCENTAGE type.
+        - ``min_order_value``   — minimum cart total required.
+        - ``apply_scope``       — ``"ALL"`` (entire shop) or ``"CATEGORY"``.
+        - ``start_time`` / ``end_time`` — validity period (ISO 8601).
+        - ``status``            — ``"ACTIVE"`` means usable right now.
+        - ``seller_id``         — UUID of the seller who issued the voucher.
+
+    Args:
+        user_id: UUID of the authenticated user. Required.
+    """
+    try:
+        data = _product_private_get("/saved-vouchers", user_id=user_id)
+        return json.dumps(data, ensure_ascii=False)
+    except RuntimeError as exc:
+        return f"Error fetching saved vouchers: {exc}"
+
+
+# ---------------------------------------------------------------------------
 # Aggregate list for the agent
 # ---------------------------------------------------------------------------
 
@@ -674,4 +732,5 @@ ALL_TOOLS = [
     get_my_cart,
     get_cart_count,
     verify_purchase,
+    get_my_saved_vouchers,
 ]

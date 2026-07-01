@@ -93,6 +93,9 @@ HƯỚNG DẪN DÙNG TOOL:
     → `verify_purchase`
 11. Thông tin biến thể sản phẩm (từ ID biến thể):
     → `get_variants_by_ids`
+12. Voucher đã lưu của người dùng:
+    → `get_my_saved_vouchers` — khi người dùng hỏi "voucher của tôi",
+      "mã giảm giá đã lưu", "tôi có voucher nào". Truyền user_id từ context.
 
 QUY TẮC:
 • CHỈ trả lời dựa trên dữ liệu từ các tool. KHÔNG bịa thông tin.
